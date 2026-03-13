@@ -31,11 +31,11 @@ function calcAge(birthDate: string): number | null {
   return age;
 }
 
-export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList["Step5DepDados"] } }) {
+export function Step5DepData({ route }: { route?: { params?: AuthStackParamList["Step5DepData"] } }) {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
-  const editingId = route?.params?.dependenteId;
+  const editingId = route?.params?.dependentId;
   const editing = editingId
     ? state.dependents.find((d) => d.id === editingId)
     : undefined;
@@ -56,14 +56,14 @@ export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList
         type: "UPDATE_DEPENDENT",
         payload: { ...editing, name, birthDate, taxId },
       });
-      navigation.navigate("Step5DepTurmas", { dependenteId: editing.id });
+      navigation.navigate("Step5DepClasses", { dependentId: editing.id });
     } else {
       const newId = `dep-${Date.now()}`;
       dispatch({
         type: "ADD_DEPENDENT",
         payload: { id: newId, name, birthDate, taxId: taxId || undefined, classIds: [] },
       });
-      navigation.navigate("Step5DepTurmas", { dependenteId: newId });
+      navigation.navigate("Step5DepClasses", { dependentId: newId });
     }
   }
 

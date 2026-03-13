@@ -23,7 +23,7 @@ function isValidPassword(value: string) {
   return value.length >= 8;
 }
 
-export function Step0bEmailSenha() {
+export function Step0bCredentials() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
@@ -44,7 +44,7 @@ export function Step0bEmailSenha() {
   function handleNext() {
     if (!validate()) return;
     dispatch({ type: "SET_CREDENTIALS", payload: { email: email.trim(), password } });
-    navigation.navigate("Step4Perfil");
+    navigation.navigate("Step1Profile");
   }
 
   const canContinue = email.length > 0 && password.length > 0 && confirmation.length > 0;

@@ -17,7 +17,7 @@ import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
 import { formatCPF, validateCPF } from "../../../utils/cpf";
 
-export function Step1DadosPessoais() {
+export function Step2PersonalData() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
@@ -38,7 +38,7 @@ export function Step1DadosPessoais() {
   function handleNext() {
     if (!validate()) return;
     dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate, taxId } });
-    navigation.navigate("Step2Contato");
+    navigation.navigate("Step3Contact");
   }
 
   return (

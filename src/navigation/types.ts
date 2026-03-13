@@ -2,16 +2,16 @@
 export type AuthStackParamList = {
   Login: undefined;
   Step0AuthMethod: undefined;
-  Step0bEmailSenha: undefined;
-  Step1DadosPessoais: undefined;
-  Step2Contato: undefined;
-  Step3Endereco: undefined;
-  Step4Perfil: undefined;
-  Step5DepDados: { dependenteId?: string } | undefined;
-  Step5DepTurmas: { dependenteId: string };
-  Step5DepLista: undefined;
-  Step5TurmasProprias: undefined;
-  Step6Revisao: undefined;
+  Step0bCredentials: undefined;
+  Step1Profile: undefined;
+  Step2PersonalData: undefined;
+  Step3Contact: undefined;
+  Step4Address: undefined;
+  Step5DepData: { dependentId?: string } | undefined;
+  Step5DepClasses: { dependentId: string };
+  Step5DepList: undefined;
+  Step5OwnClasses: undefined;
+  Step6Review: undefined;
   Pending: undefined;
 };
 

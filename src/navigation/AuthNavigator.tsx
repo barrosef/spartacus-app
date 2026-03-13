@@ -5,31 +5,31 @@ import { WizardProvider } from "../context/WizardContext";
 
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { Step0AuthMethod } from "../screens/auth/SignupWizard/Step0AuthMethod";
-import { Step0bEmailSenha } from "../screens/auth/SignupWizard/Step0bEmailSenha";
-import { Step1DadosPessoais } from "../screens/auth/SignupWizard/Step1DadosPessoais";
-import { Step2Contato } from "../screens/auth/SignupWizard/Step2Contato";
-import { Step3Endereco } from "../screens/auth/SignupWizard/Step3Endereco";
-import { Step4Perfil } from "../screens/auth/SignupWizard/Step4Perfil";
-import { Step5DepDados } from "../screens/auth/SignupWizard/Step5DepDados";
-import { Step5DepTurmas } from "../screens/auth/SignupWizard/Step5DepTurmas";
-import { Step5DepLista } from "../screens/auth/SignupWizard/Step5DepLista";
-import { Step5TurmasProprias } from "../screens/auth/SignupWizard/Step5TurmasProprias";
-import { Step6Revisao } from "../screens/auth/SignupWizard/Step6Revisao";
+import { Step0bCredentials } from "../screens/auth/SignupWizard/Step0bCredentials";
+import { Step1Profile } from "../screens/auth/SignupWizard/Step1Profile";
+import { Step2PersonalData } from "../screens/auth/SignupWizard/Step2PersonalData";
+import { Step3Contact } from "../screens/auth/SignupWizard/Step3Contact";
+import { Step4Address } from "../screens/auth/SignupWizard/Step4Address";
+import { Step5DepData } from "../screens/auth/SignupWizard/Step5DepData";
+import { Step5DepClasses } from "../screens/auth/SignupWizard/Step5DepClasses";
+import { Step5DepList } from "../screens/auth/SignupWizard/Step5DepList";
+import { Step5OwnClasses } from "../screens/auth/SignupWizard/Step5OwnClasses";
+import { Step6Review } from "../screens/auth/SignupWizard/Step6Review";
 import { PendingScreen } from "../screens/auth/PendingScreen";
 
 const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Login: LoginScreen,
   Step0AuthMethod,
-  Step0bEmailSenha,
-  Step1DadosPessoais,
-  Step2Contato,
-  Step3Endereco,
-  Step4Perfil,
-  Step5DepDados,
-  Step5DepTurmas,
-  Step5DepLista,
-  Step5TurmasProprias,
-  Step6Revisao,
+  Step0bCredentials,
+  Step1Profile,
+  Step2PersonalData,
+  Step3Contact,
+  Step4Address,
+  Step5DepData,
+  Step5DepClasses,
+  Step5DepList,
+  Step5OwnClasses,
+  Step6Review,
   Pending: PendingScreen,
 };
 

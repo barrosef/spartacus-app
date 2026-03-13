@@ -27,7 +27,7 @@ function formatPhone(value: string) {
     .replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-export function Step2Contato() {
+export function Step3Contact() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
@@ -54,7 +54,7 @@ export function Step2Contato() {
 
   function handleNext() {
     dispatch({ type: "SET_CONTACT", payload: { phone, whatsapp } });
-    navigation.navigate("Step3Endereco");
+    navigation.navigate("Step4Address");
   }
 
   return (

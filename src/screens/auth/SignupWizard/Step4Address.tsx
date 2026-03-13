@@ -34,7 +34,7 @@ function formatCEP(value: string) {
   return digits.replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-export function Step3Endereco() {
+export function Step4Address() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
@@ -76,13 +76,13 @@ export function Step3Endereco() {
       roles.every((r) => ["supporter", "sponsor"].includes(r as string));
 
     if (isGuardian) {
-      navigation.navigate("Step5DepDados");
+      navigation.navigate("Step5DepData");
     } else if (hasClassRole) {
-      navigation.navigate("Step5TurmasProprias");
+      navigation.navigate("Step5OwnClasses");
     } else if (onlySupport) {
-      navigation.navigate("Step6Revisao");
+      navigation.navigate("Step6Review");
     } else {
-      navigation.navigate("Step6Revisao");
+      navigation.navigate("Step6Review");
     }
   }
 

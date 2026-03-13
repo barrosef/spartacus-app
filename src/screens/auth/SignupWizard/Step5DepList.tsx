@@ -13,29 +13,29 @@ import { Button } from "../../../components/ui/Button";
 import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
-export function Step5DepLista() {
+export function Step5DepList() {
   const navigation = useAuthNavigation();
   const { state, dispatch, hasClassRole } = useWizard();
   const { dependents } = state;
 
   function handleContinue() {
     if (hasClassRole) {
-      navigation.navigate("Step5TurmasProprias");
+      navigation.navigate("Step5OwnClasses");
     } else {
-      navigation.navigate("Step6Revisao");
+      navigation.navigate("Step6Review");
     }
   }
 
   function handleAddMore() {
-    navigation.navigate("Step5DepDados");
+    navigation.navigate("Step5DepData");
   }
 
   function handleEditDados(depId: string) {
-    navigation.navigate("Step5DepDados", { dependenteId: depId });
+    navigation.navigate("Step5DepData", { dependentId: depId });
   }
 
   function handleEditTurmas(depId: string) {
-    navigation.navigate("Step5DepTurmas", { dependenteId: depId });
+    navigation.navigate("Step5DepClasses", { dependentId: depId });
   }
 
   function handleRemove(depId: string) {

@@ -19,7 +19,7 @@ interface SignupResponse {
   status: string;
 }
 
-export function Step6Revisao() {
+export function Step6Review() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
   const [loading, setLoading] = useState(false);

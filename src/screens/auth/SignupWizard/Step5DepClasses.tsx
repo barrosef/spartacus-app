@@ -5,17 +5,17 @@ import { useWizard } from "../../../context/WizardContext";
 import { useClasses } from "../../../hooks/useClasses";
 import type { AuthStackParamList } from "../../../navigation/types";
 
-export function Step5DepTurmas({ route }: { route?: { params?: AuthStackParamList["Step5DepTurmas"] } }) {
+export function Step5DepClasses({ route }: { route?: { params?: AuthStackParamList["Step5DepClasses"] } }) {
   const navigation = useAuthNavigation();
   const { state, dispatch, hasClassRole } = useWizard();
   const { classes, loading, error } = useClasses();
 
-  const dependenteId = route?.params?.dependenteId;
-  if (!dependenteId) {
+  const dependentId = route?.params?.dependentId;
+  if (!dependentId) {
     navigation.goBack();
     return null;
   }
-  const dep = state.dependents.find((d) => d.id === dependenteId);
+  const dep = state.dependents.find((d) => d.id === dependentId);
 
   if (!dep) {
     navigation.goBack();
@@ -44,7 +44,7 @@ export function Step5DepTurmas({ route }: { route?: { params?: AuthStackParamLis
       type: "UPDATE_DEPENDENT",
       payload: { ...dep!, classIds: selectedIds },
     });
-    navigation.navigate("Step5DepLista");
+    navigation.navigate("Step5DepList");
   }
 
   return (

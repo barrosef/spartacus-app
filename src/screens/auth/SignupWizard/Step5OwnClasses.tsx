@@ -4,7 +4,7 @@ import { SelecaoTurmasScreen } from "../../../components/wizard/SelecaoTurmasScr
 import { useWizard } from "../../../context/WizardContext";
 import { useClasses } from "../../../hooks/useClasses";
 
-export function Step5TurmasProprias() {
+export function Step5OwnClasses() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
   const { classes, loading, error } = useClasses();
@@ -17,7 +17,7 @@ export function Step5TurmasProprias() {
 
   function handleConfirm(selectedIds: string[]) {
     dispatch({ type: "SET_CLASS_IDS", payload: selectedIds });
-    navigation.navigate("Step6Revisao");
+    navigation.navigate("Step6Review");
   }
 
   return (
