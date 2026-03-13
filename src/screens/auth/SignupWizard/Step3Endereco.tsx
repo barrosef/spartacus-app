@@ -38,33 +38,33 @@ export function Step3Endereco() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
-  const [cep, setCep] = useState(state.cep);
-  const [logradouro, setLogradouro] = useState(state.logradouro);
-  const [numero, setNumero] = useState(state.numero);
-  const [complemento, setComplemento] = useState(state.complemento);
-  const [bairro, setBairro] = useState(state.bairro);
-  const [cidade, setCidade] = useState(state.cidade);
-  const [estado, setEstado] = useState(state.estado);
+  const [postalCode, setPostalCode] = useState(state.postalCode);
+  const [street, setStreet] = useState(state.street);
+  const [number, setNumber] = useState(state.number);
+  const [complement, setComplement] = useState(state.complement);
+  const [neighborhood, setNeighborhood] = useState(state.neighborhood);
+  const [city, setCity] = useState(state.city);
+  const [addressState, setAddressState] = useState(state.state);
   const [loadingCep, setLoadingCep] = useState(false);
 
   async function handleCEPBlur() {
-    const digits = cep.replace(/\D/g, "");
+    const digits = postalCode.replace(/\D/g, "");
     if (digits.length !== 8) return;
     setLoadingCep(true);
     const data = await fetchCEP(digits);
     setLoadingCep(false);
     if (data) {
-      setLogradouro(data.logradouro ?? "");
-      setBairro(data.bairro ?? "");
-      setCidade(data.localidade ?? "");
-      setEstado(data.uf ?? "");
+      setStreet(data.logradouro ?? "");
+      setNeighborhood(data.bairro ?? "");
+      setCity(data.localidade ?? "");
+      setAddressState(data.uf ?? "");
     }
   }
 
   function handleNext() {
     dispatch({
-      type: "SET_ENDERECO",
-      payload: { cep, logradouro, numero, complemento, bairro, cidade, estado },
+      type: "SET_ADDRESS",
+      payload: { postalCode, street, number, complement, neighborhood, city, state: addressState },
     });
     const roles: Role[] = state.roles;
     const isGuardian = roles.includes("guardian");
@@ -86,7 +86,7 @@ export function Step3Endereco() {
     }
   }
 
-  const canContinue = cep.replace(/\D/g, "").length === 8 && logradouro && cidade;
+  const canContinue = postalCode.replace(/\D/g, "").length === 8 && street && city;
 
   return (
     <SafeScreen noPadding>
@@ -115,8 +115,8 @@ export function Step3Endereco() {
               label="CEP"
               placeholder="78350-000"
               keyboardType="numeric"
-              value={cep}
-              onChangeText={(v) => setCep(formatCEP(v))}
+              value={postalCode}
+              onChangeText={(v) => setPostalCode(formatCEP(v))}
               onBlur={handleCEPBlur}
               maxLength={9}
               rightIcon={loadingCep ? <ActivityIndicator size="small" color={colors.primary} /> : undefined}
@@ -126,8 +126,8 @@ export function Step3Endereco() {
               label="Logradouro"
               placeholder="Rua das Flores"
               autoCapitalize="words"
-              value={logradouro}
-              onChangeText={setLogradouro}
+              value={street}
+              onChangeText={setStreet}
             />
 
             <View style={styles.row}>
@@ -136,16 +136,16 @@ export function Step3Endereco() {
                   label="Número"
                   placeholder="123"
                   keyboardType="numeric"
-                  value={numero}
-                  onChangeText={setNumero}
+                  value={number}
+                  onChangeText={setNumber}
                 />
               </View>
               <View style={styles.rowLarge}>
                 <Input
                   label="Complemento"
                   placeholder="Apto 2"
-                  value={complemento}
-                  onChangeText={setComplemento}
+                  value={complement}
+                  onChangeText={setComplement}
                 />
               </View>
             </View>
@@ -154,8 +154,8 @@ export function Step3Endereco() {
               label="Bairro"
               placeholder="Centro"
               autoCapitalize="words"
-              value={bairro}
-              onChangeText={setBairro}
+              value={neighborhood}
+              onChangeText={setNeighborhood}
             />
 
             <View style={styles.row}>
@@ -164,8 +164,8 @@ export function Step3Endereco() {
                   label="Cidade"
                   placeholder="Brasnorte"
                   autoCapitalize="words"
-                  value={cidade}
-                  onChangeText={setCidade}
+                  value={city}
+                  onChangeText={setCity}
                 />
               </View>
               <View style={styles.rowSmall}>
@@ -173,8 +173,8 @@ export function Step3Endereco() {
                   label="UF"
                   placeholder="MT"
                   autoCapitalize="characters"
-                  value={estado}
-                  onChangeText={setEstado}
+                  value={addressState}
+                  onChangeText={setAddressState}
                   maxLength={2}
                 />
               </View>

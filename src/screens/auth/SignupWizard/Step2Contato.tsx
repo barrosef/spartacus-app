@@ -32,28 +32,28 @@ export function Step2Contato() {
   const { state, dispatch } = useWizard();
 
   const initialSame =
-    state.whatsapp === "" || state.whatsapp === state.celular;
+    state.whatsapp === "" || state.whatsapp === state.phone;
 
-  const [celular, setCelular] = useState(state.celular);
+  const [phone, setPhone] = useState(state.phone);
   const [whatsapp, setWhatsapp] = useState(
-    initialSame ? state.celular : state.whatsapp
+    initialSame ? state.phone : state.whatsapp
   );
   const [sameAsPhone, setSameAsPhone] = useState(initialSame);
 
-  function handleCelularChange(v: string) {
+  function handlePhoneChange(v: string) {
     const formatted = formatPhone(v);
-    setCelular(formatted);
+    setPhone(formatted);
     if (sameAsPhone) setWhatsapp(formatted);
   }
 
   function toggleSameAsPhone() {
     const next = !sameAsPhone;
     setSameAsPhone(next);
-    setWhatsapp(next ? celular : "");
+    setWhatsapp(next ? phone : "");
   }
 
   function handleNext() {
-    dispatch({ type: "SET_CONTATO", payload: { celular, whatsapp } });
+    dispatch({ type: "SET_CONTACT", payload: { phone, whatsapp } });
     navigation.navigate("Step3Endereco");
   }
 
@@ -84,8 +84,8 @@ export function Step2Contato() {
               label="Celular"
               placeholder="(65) 99999-9999"
               keyboardType="phone-pad"
-              value={celular}
-              onChangeText={handleCelularChange}
+              value={phone}
+              onChangeText={handlePhoneChange}
               maxLength={15}
             />
 
@@ -114,7 +114,7 @@ export function Step2Contato() {
             <Button
               label="Continuar"
               onPress={handleNext}
-              disabled={!celular}
+              disabled={!phone}
             />
           </View>
         </ScrollView>

@@ -1,8 +1,8 @@
 /**
- * SelecaoTurmasScreen — componente reutilizável para seleção de turmas.
- * Usado tanto para dependentes quanto para o próprio usuário.
- * Context chip com nome+idade diferencia o sujeito (amber = dependente, gold = self).
- * Spec: US-01, Seção 10.
+ * SelecaoTurmasScreen — reusable component for class selection.
+ * Used for both dependents and the user themselves.
+ * Context chip with name+age differentiates the subject (amber = dependent, gold = self).
+ * Spec: US-01, Section 10.
  */
 import React, { useState } from "react";
 import {
@@ -11,28 +11,22 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { SafeScreen } from "../ui/SafeScreen";
 import { WizardHeader } from "./WizardHeader";
 import { Button } from "../ui/Button";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
-
-export interface TurmaOption {
-  id: string;
-  nome: string;
-  modalidade: string;
-  horario: string;
-  professor?: string;
-  faixaEtaria?: { min: number; max: number };
-}
+import type { ClassOption } from "../../context/WizardContext";
 
 interface SelecaoTurmasScreenProps {
   contextType: "self" | "dependent";
   personName: string;
   personAge?: number;
   roleLabel: string;
-  turmas: TurmaOption[];
+  classes: ClassOption[];
+  loading?: boolean;
+  error?: string | null;
   initialSelection: string[];
   currentStep: number;
   totalSteps: number;
@@ -46,7 +40,9 @@ export function SelecaoTurmasScreen({
   personName,
   personAge,
   roleLabel,
-  turmas,
+  classes,
+  loading,
+  error,
   initialSelection,
   currentStep,
   totalSteps,
@@ -56,7 +52,7 @@ export function SelecaoTurmasScreen({
 }: SelecaoTurmasScreenProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initialSelection));
 
-  function toggleTurma(id: string) {
+  function toggleClass(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -105,7 +101,18 @@ export function SelecaoTurmasScreen({
             : "Selecione as turmas em que deseja participar."}
         </Text>
 
-        {turmas.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.emptyText}>Carregando turmas...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>⚠️</Text>
+            <Text style={styles.emptyText}>Erro ao carregar turmas</Text>
+            <Text style={styles.emptySubText}>{error}</Text>
+          </View>
+        ) : classes.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔎</Text>
             <Text style={styles.emptyText}>Nenhuma turma disponível no momento.</Text>
@@ -114,34 +121,34 @@ export function SelecaoTurmasScreen({
             </Text>
           </View>
         ) : (
-          <View style={styles.turmaList}>
-            {turmas.map((turma) => {
-              const isSelected = selected.has(turma.id);
+          <View style={styles.classList}>
+            {classes.map((cls) => {
+              const isSelected = selected.has(cls.id);
 
               return (
                 <TouchableOpacity
-                  key={turma.id}
-                  style={[styles.turmaCard, isSelected && styles.turmaCardSelected]}
-                  onPress={() => toggleTurma(turma.id)}
+                  key={cls.id}
+                  style={[styles.classCard, isSelected && styles.classCardSelected]}
+                  onPress={() => toggleClass(cls.id)}
                   activeOpacity={0.8}
                 >
-                  <View style={styles.turmaCardLeft}>
-                    <Text style={[styles.turmaNome, isSelected && styles.turmaNomeSelected]}>
-                      {turma.nome}
+                  <View style={styles.classCardLeft}>
+                    <Text style={[styles.className, isSelected && styles.classNameSelected]}>
+                      {cls.name}
                     </Text>
-                    <Text style={styles.turmaInfo}>
-                      {turma.modalidade} · {turma.horario}
+                    <Text style={styles.classInfo}>
+                      {cls.modality} · {cls.schedule}
                     </Text>
-                    {turma.professor && (
-                      <Text style={styles.turmaProfessor}>Prof. {turma.professor}</Text>
+                    {cls.teacher && (
+                      <Text style={styles.classTeacher}>Prof. {cls.teacher}</Text>
                     )}
-                    {turma.faixaEtaria && (
-                      <Text style={styles.turmaFaixa}>
-                        {turma.faixaEtaria.min}–{turma.faixaEtaria.max} anos
+                    {cls.ageRange && (
+                      <Text style={styles.classAgeRange}>
+                        {cls.ageRange.min}–{cls.ageRange.max} anos
                       </Text>
                     )}
                   </View>
-                  <View style={styles.turmaCardRight}>
+                  <View style={styles.classCardRight}>
                     <View style={[styles.checkCircle, isSelected && styles.checkCircleSelected]}>
                       {isSelected && <Text style={styles.checkMark}>✓</Text>}
                     </View>
@@ -161,6 +168,7 @@ export function SelecaoTurmasScreen({
             }
             onPress={() => onConfirm(Array.from(selected))}
             variant={selected.size === 0 ? "outline" : "primary"}
+            disabled={loading}
           />
         </View>
       </ScrollView>
@@ -224,10 +232,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingHorizontal: spacing.md,
   },
-  turmaList: {
+  classList: {
     gap: spacing.sm,
   },
-  turmaCard: {
+  classCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.card,
@@ -236,39 +244,39 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
   },
-  turmaCardSelected: {
+  classCardSelected: {
     borderColor: colors.primary,
     backgroundColor: "rgba(198,163,78,0.08)",
   },
-  turmaCardLeft: {
+  classCardLeft: {
     flex: 1,
     gap: 2,
   },
-  turmaNome: {
+  className: {
     fontSize: 15,
     fontFamily: typography.fontBodySemiBold,
     color: colors.foreground,
   },
-  turmaNomeSelected: {
+  classNameSelected: {
     color: colors.primary,
   },
-  turmaInfo: {
+  classInfo: {
     fontSize: 13,
     fontFamily: typography.fontBody,
     color: colors.mutedForeground,
   },
-  turmaProfessor: {
+  classTeacher: {
     fontSize: 12,
     fontFamily: typography.fontBody,
     color: colors.mutedForeground,
   },
-  turmaFaixa: {
+  classAgeRange: {
     fontSize: 11,
     fontFamily: typography.fontBodyMedium,
     color: colors.mutedForeground,
     marginTop: 2,
   },
-  turmaCardRight: {
+  classCardRight: {
     marginLeft: spacing.md,
   },
   checkCircle: {

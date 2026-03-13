@@ -7,13 +7,17 @@ import {
   Alert,
 } from "react-native";
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Button } from "../../../components/ui/Button";
 import { useWizard } from "../../../context/WizardContext";
-import { auth } from "../../../lib/firebase";
+import { api, ApiError } from "../../../lib/api";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
+
+interface SignupResponse {
+  uid: string;
+  status: string;
+}
 
 export function Step6Revisao() {
   const navigation = useAuthNavigation();
@@ -32,18 +36,48 @@ export function Step6Revisao() {
   async function handleSubmit() {
     setLoading(true);
     try {
-      // TODO: integrar com POST /auth/signup do backend
-      // Por ora, apenas cria conta no Firebase Auth
-      const { user } = await createUserWithEmailAndPassword(
-        auth,
-        // Temporary: use nome as email placeholder — backend will handle real email
-        `${state.nome.replace(/\s+/g, "").toLowerCase()}@spartacus.temp`,
-        "temp-password-123"
-      );
-      await sendEmailVerification(user);
+      const payload = {
+        authMethod: state.authMethod,
+        email: state.email,
+        password: state.authMethod === "email" ? state.password : undefined,
+        name: state.name,
+        birthDate: state.birthDate,
+        taxId: state.taxId,
+        phone: state.phone,
+        whatsapp: state.whatsapp,
+        postalCode: state.postalCode,
+        street: state.street,
+        number: state.number,
+        complement: state.complement || undefined,
+        neighborhood: state.neighborhood,
+        city: state.city,
+        state: state.state,
+        roles: state.roles,
+        dependents: state.dependents.map((dep) => ({
+          id: dep.id,
+          name: dep.name,
+          birthDate: dep.birthDate,
+          taxId: dep.taxId || undefined,
+          classIds: dep.classIds,
+        })),
+        classIds: state.classIds,
+      };
+
+      await api.post<SignupResponse>("/auth/signup", payload);
       navigation.navigate("Pending");
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "Erro desconhecido";
+      let msg = "Erro desconhecido";
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          msg = "Já existe uma conta com este e-mail ou CPF.";
+        } else if (error.status === 422) {
+          msg = error.message;
+        } else {
+          msg = error.message;
+        }
+      } else if (error instanceof Error) {
+        msg = error.message;
+      }
       Alert.alert("Erro ao criar conta", msg);
     } finally {
       setLoading(false);
@@ -68,29 +102,29 @@ export function Step6Revisao() {
         </Text>
 
         <Section title="Dados Pessoais">
-          <Row label="Nome" value={state.nome} />
-          <Row label="Data de nasc." value={state.dataNascimento} />
-          <Row label="CPF" value={state.cpf} />
+          <Row label="Nome" value={state.name} />
+          <Row label="Data de nasc." value={state.birthDate} />
+          <Row label="CPF" value={state.taxId} />
         </Section>
 
         <Section title="Contato">
-          <Row label="Celular" value={state.celular} />
+          <Row label="Celular" value={state.phone} />
           <Row label="WhatsApp" value={state.whatsapp} />
         </Section>
 
         <Section title="Endereço">
           <Row
             label="Endereço"
-            value={[state.logradouro, state.numero, state.complemento]
+            value={[state.street, state.number, state.complement]
               .filter(Boolean)
               .join(", ")}
           />
-          <Row label="Bairro" value={state.bairro} />
+          <Row label="Bairro" value={state.neighborhood} />
           <Row
             label="Cidade/UF"
-            value={`${state.cidade}/${state.estado}`}
+            value={`${state.city}/${state.state}`}
           />
-          <Row label="CEP" value={state.cep} />
+          <Row label="CEP" value={state.postalCode} />
         </Section>
 
         <Section title="Perfis">
@@ -103,24 +137,24 @@ export function Step6Revisao() {
           </View>
         </Section>
 
-        {state.dependentes.length > 0 && (
+        {state.dependents.length > 0 && (
           <Section title="Dependentes">
-            {state.dependentes.map((dep) => (
+            {state.dependents.map((dep) => (
               <View key={dep.id} style={styles.depRow}>
-                <Text style={styles.depRowName}>{dep.nome}</Text>
+                <Text style={styles.depRowName}>{dep.name}</Text>
                 <Text style={styles.depRowSub}>
-                  {dep.dataNascimento} · {dep.turmasIds.length} turma(s)
+                  {dep.birthDate} · {dep.classIds.length} turma(s)
                 </Text>
               </View>
             ))}
           </Section>
         )}
 
-        {state.turmasPropriaIds.length > 0 && (
+        {state.classIds.length > 0 && (
           <Section title="Turmas selecionadas">
             <Row
               label="Total"
-              value={`${state.turmasPropriaIds.length} turma(s)`}
+              value={`${state.classIds.length} turma(s)`}
             />
           </Section>
         )}
