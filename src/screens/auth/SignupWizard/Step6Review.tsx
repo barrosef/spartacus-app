@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
 } from "react-native";
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Button } from "../../../components/ui/Button";
+import { ErrorModal } from "../../../components/ui/ErrorModal";
 import { useWizard } from "../../../context/WizardContext";
 import { api, ApiError } from "../../../lib/api";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
@@ -23,6 +23,7 @@ export function Step6Review() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
   const [loading, setLoading] = useState(false);
+  const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
   const roleLabels: Record<string, string> = {
     student: "Aluno",
@@ -66,19 +67,24 @@ export function Step6Review() {
       await api.post<SignupResponse>("/auth/signup", payload);
       navigation.navigate("Pending");
     } catch (error: unknown) {
-      let msg = "Erro desconhecido";
+      let title = "Erro ao criar conta";
+      let msg = "Ocorreu um erro inesperado. Tente novamente em alguns instantes.";
       if (error instanceof ApiError) {
         if (error.status === 409) {
-          msg = "Já existe uma conta com este e-mail ou CPF.";
+          title = "Conta já existente";
+          msg = "Já existe uma conta com este e-mail ou CPF. Se você já tem uma conta, faça login.";
         } else if (error.status === 422) {
+          title = "Dados inválidos";
           msg = error.message;
+        } else if (error.status >= 500) {
+          msg = "O servidor encontrou um problema. Tente novamente em alguns instantes.";
         } else {
           msg = error.message;
         }
       } else if (error instanceof Error) {
         msg = error.message;
       }
-      Alert.alert("Erro ao criar conta", msg);
+      setErrorModal({ title, message: msg });
     } finally {
       setLoading(false);
     }
@@ -175,6 +181,13 @@ export function Step6Review() {
           />
         </View>
       </ScrollView>
+
+      <ErrorModal
+        visible={!!errorModal}
+        title={errorModal?.title}
+        message={errorModal?.message ?? ""}
+        onClose={() => setErrorModal(null)}
+      />
     </SafeScreen>
   );
 }
