@@ -13,7 +13,7 @@ import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { DateInput } from "../../../components/ui/DateInput";
-import { useWizard, type Dependent } from "../../../context/WizardContext";
+import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
 import type { AuthStackParamList } from "../../../navigation/types";
 import { formatCPF } from "../../../utils/cpf";

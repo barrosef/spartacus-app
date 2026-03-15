@@ -17,7 +17,11 @@ import { Step5OwnClasses } from "../screens/auth/SignupWizard/Step5OwnClasses";
 import { Step6Review } from "../screens/auth/SignupWizard/Step6Review";
 import { PendingScreen } from "../screens/auth/PendingScreen";
 
-const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
+interface ScreenProps {
+  route?: { params?: AuthStackParamList[AuthScreenName] };
+}
+
+const SCREENS: Record<AuthScreenName, React.ComponentType<ScreenProps>> = {
   Login: LoginScreen,
   Step0AuthMethod,
   Step0bCredentials,
@@ -35,7 +39,7 @@ const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
 
 interface StackEntry {
   screen: AuthScreenName;
-  params?: any;
+  params?: AuthStackParamList[AuthScreenName];
 }
 
 export function AuthNavigator() {

@@ -7,7 +7,7 @@ import type { AuthStackParamList } from "../../../navigation/types";
 
 export function Step5DepClasses({ route }: { route?: { params?: AuthStackParamList["Step5DepClasses"] } }) {
   const navigation = useAuthNavigation();
-  const { state, dispatch, hasClassRole } = useWizard();
+  const { state, dispatch } = useWizard();
   const { classes, loading, error } = useClasses();
 
   const dependentId = route?.params?.dependentId;

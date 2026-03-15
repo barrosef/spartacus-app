@@ -10,13 +10,24 @@ const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? ""
 
 // Lazy-load expo-auth-session and expo-web-browser to avoid crash
 // when native modules are not available (Expo Go without dev build)
-let Google: typeof import("expo-auth-session/providers/google") | null = null;
+let useAuthRequestFn: ((config: { webClientId: string; androidClientId: string }) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [any, any, () => Promise<any>]) | null = null;
+
 try {
-  Google = require("expo-auth-session/providers/google");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Google = require("expo-auth-session/providers/google");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const WebBrowser = require("expo-web-browser");
   WebBrowser.maybeCompleteAuthSession();
+  useAuthRequestFn = Google.useAuthRequest;
 } catch {
   // Native modules not available — Google Sign-In disabled
+}
+
+// Stub hook used when native modules are unavailable
+function useAuthRequestStub(_config: { webClientId: string; androidClientId: string }): [null, null, () => Promise<never>] {
+  return [null, null, () => Promise.reject(new Error("unavailable"))] as const;
 }
 
 export function useGoogleSignIn(onSuccess?: () => void) {
@@ -25,26 +36,20 @@ export function useGoogleSignIn(onSuccess?: () => void) {
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
 
-  // When native modules are missing, return a disabled state
-  if (!Google) {
-    return {
-      signIn: () => setError("Google Sign-In não disponível neste build."),
-      loading: false,
-      error,
-      ready: false,
-    };
-  }
+  const available = useAuthRequestFn !== null;
+  const useAuthRequest = useAuthRequestFn ?? useAuthRequestStub;
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
+  const [request, response, promptAsync] = useAuthRequest({
     webClientId: WEB_CLIENT_ID,
     androidClientId: ANDROID_CLIENT_ID,
   });
 
   useEffect(() => {
+    if (!available || !response) return;
     if (response?.type === "success") {
       const idToken = response.params?.id_token ?? response.authentication?.idToken;
       if (!idToken) {
-        setError("Não foi possível obter o token do Google.");
+        setError("Nao foi possivel obter o token do Google.");
         setLoading(false);
         return;
       }
@@ -58,13 +63,22 @@ export function useGoogleSignIn(onSuccess?: () => void) {
       setError("Login com Google cancelado ou falhou.");
       setLoading(false);
     }
-  }, [response]);
+  }, [response, available]);
+
+  if (!available) {
+    return {
+      signIn: () => setError("Google Sign-In nao disponivel neste build."),
+      loading: false,
+      error,
+      ready: false,
+    };
+  }
 
   function signIn() {
     setError(null);
     setLoading(true);
     promptAsync().catch(() => {
-      setError("Não foi possível abrir o login do Google.");
+      setError("Nao foi possivel abrir o login do Google.");
       setLoading(false);
     });
   }

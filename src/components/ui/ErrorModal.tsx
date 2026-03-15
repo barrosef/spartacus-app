@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
 import { colors, typography, spacing, radius } from "../../theme/tokens";

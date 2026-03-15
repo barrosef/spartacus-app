@@ -21,7 +21,7 @@ interface SignupResponse {
 
 export function Step6Review() {
   const navigation = useAuthNavigation();
-  const { state, dispatch } = useWizard();
+  const { state } = useWizard();
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
