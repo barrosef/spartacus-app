@@ -13,13 +13,13 @@ import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { DateInput } from "../../../components/ui/DateInput";
-import { useWizard, type Dependente } from "../../../context/WizardContext";
+import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
 import type { AuthStackParamList } from "../../../navigation/types";
 import { formatCPF } from "../../../utils/cpf";
 
-function calcAge(dataNascimento: string): number | null {
-  const parts = dataNascimento.split("/");
+function calcAge(birthDate: string): number | null {
+  const parts = birthDate.split("/");
   if (parts.length !== 3) return null;
   const [day, month, year] = parts.map(Number);
   if (!day || !month || !year || year < 1900) return null;
@@ -31,43 +31,43 @@ function calcAge(dataNascimento: string): number | null {
   return age;
 }
 
-export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList["Step5DepDados"] } }) {
+export function Step5DepData({ route }: { route?: { params?: AuthStackParamList["Step5DepData"] } }) {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
-  const editingId = route?.params?.dependenteId;
+  const editingId = route?.params?.dependentId;
   const editing = editingId
-    ? state.dependentes.find((d) => d.id === editingId)
+    ? state.dependents.find((d) => d.id === editingId)
     : undefined;
 
-  const depCount = state.dependentes.length;
+  const depCount = state.dependents.length;
   const isEdit = !!editing;
 
-  const [nome, setNome] = useState(editing?.nome ?? "");
-  const [dataNascimento, setDataNascimento] = useState(editing?.dataNascimento ?? "");
-  const [cpf, setCpf] = useState(editing?.cpf ?? "");
+  const [name, setName] = useState(editing?.name ?? "");
+  const [birthDate, setBirthDate] = useState(editing?.birthDate ?? "");
+  const [taxId, setTaxId] = useState(editing?.taxId ?? "");
 
-  const age = calcAge(dataNascimento);
-  const nomeFirst = nome.trim().split(" ")[0] || "dependente";
+  const age = calcAge(birthDate);
+  const nameFirst = name.trim().split(" ")[0] || "dependente";
 
   function handleNext() {
     if (isEdit && editing) {
       dispatch({
-        type: "UPDATE_DEPENDENTE",
-        payload: { ...editing, nome, dataNascimento, cpf },
+        type: "UPDATE_DEPENDENT",
+        payload: { ...editing, name, birthDate, taxId },
       });
-      navigation.navigate("Step5DepTurmas", { dependenteId: editing.id });
+      navigation.navigate("Step5DepClasses", { dependentId: editing.id });
     } else {
       const newId = `dep-${Date.now()}`;
       dispatch({
-        type: "ADD_DEPENDENTE",
-        payload: { id: newId, nome, dataNascimento, cpf: cpf || undefined, turmasIds: [] },
+        type: "ADD_DEPENDENT",
+        payload: { id: newId, name, birthDate, taxId: taxId || undefined, classIds: [] },
       });
-      navigation.navigate("Step5DepTurmas", { dependenteId: newId });
+      navigation.navigate("Step5DepClasses", { dependentId: newId });
     }
   }
 
-  const canContinue = nome.trim().length >= 2 && dataNascimento.length === 10;
+  const canContinue = name.trim().length >= 2 && birthDate.length === 10;
 
   return (
     <SafeScreen noPadding>
@@ -91,7 +91,7 @@ export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList
           </Text>
           <Text style={styles.description}>
             {isEdit
-              ? `Atualize os dados de ${editing?.nome.split(" ")[0]}.`
+              ? `Atualize os dados de ${editing?.name.split(" ")[0]}.`
               : "Informe os dados do seu dependente."}
           </Text>
 
@@ -106,14 +106,14 @@ export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList
               label="Nome completo"
               placeholder="Maria da Silva"
               autoCapitalize="words"
-              value={nome}
-              onChangeText={setNome}
+              value={name}
+              onChangeText={setName}
             />
 
             <DateInput
               label="Data de nascimento"
-              value={dataNascimento}
-              onChange={setDataNascimento}
+              value={birthDate}
+              onChange={setBirthDate}
               hint="Para menores de 18 anos"
             />
 
@@ -121,8 +121,8 @@ export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList
               label="CPF (opcional)"
               placeholder="000.000.000-00"
               keyboardType="numeric"
-              value={cpf}
-              onChangeText={(v) => setCpf(formatCPF(v))}
+              value={taxId}
+              onChangeText={(v) => setTaxId(formatCPF(v))}
               maxLength={14}
               hint="Necessário apenas para maiores de 12 anos"
             />
@@ -130,7 +130,7 @@ export function Step5DepDados({ route }: { route?: { params?: AuthStackParamList
 
           <View style={styles.footer}>
             <Button
-              label={`Continuar → Turmas de ${nomeFirst}`}
+              label={`Continuar → Turmas de ${nameFirst}`}
               onPress={handleNext}
               disabled={!canContinue}
             />

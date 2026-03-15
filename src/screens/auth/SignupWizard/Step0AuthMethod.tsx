@@ -12,13 +12,13 @@ export function Step0AuthMethod() {
   const { dispatch } = useWizard();
 
   const google = useGoogleSignIn(() => {
-    navigation.navigate("Step4Perfil");
+    navigation.navigate("Step1Profile");
   });
 
   function choose(method: "email" | "google") {
     dispatch({ type: "SET_AUTH_METHOD", payload: method });
     if (method === "email") {
-      navigation.navigate("Step0bEmailSenha");
+      navigation.navigate("Step0bCredentials");
     } else {
       google.signIn();
     }

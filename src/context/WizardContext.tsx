@@ -2,123 +2,124 @@ import React, { createContext, useContext, useReducer } from "react";
 
 export type Role = "student" | "teacher" | "instructor" | "guardian" | "supporter" | "sponsor";
 
-export interface Turma {
+export interface ClassOption {
   id: string;
-  nome: string;
-  modalidade: string;
-  horario: string;
-  faixaEtaria?: { min: number; max: number };
+  name: string;
+  modality: string;
+  schedule: string;
+  teacher?: string;
+  ageRange?: { min: number; max: number };
 }
 
-export interface Dependente {
+export interface Dependent {
   id: string;        // temp client-side id
-  nome: string;
-  dataNascimento: string;
-  cpf?: string;
-  turmasIds: string[];
+  name: string;
+  birthDate: string;
+  taxId?: string;
+  classIds: string[];
 }
 
 export interface WizardState {
-  // Etapa 0 — método de autenticação
+  // Step 0 — auth method
   authMethod: "email" | "google" | null;
   email: string;
-  senha: string;
+  password: string;
 
-  // Etapa 1 — dados pessoais
-  nome: string;
-  dataNascimento: string;
-  cpf: string;
+  // Step 1 — personal data
+  name: string;
+  birthDate: string;
+  taxId: string;
 
-  // Etapa 2 — contato
-  celular: string;
+  // Step 2 — contact
+  phone: string;
   whatsapp: string;
 
-  // Etapa 3 — endereço
-  cep: string;
-  logradouro: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
+  // Step 3 — address
+  postalCode: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
 
-  // Etapa 4 — perfis
+  // Step 4 — roles
   roles: Role[];
 
-  // Etapa 5 — dependentes (se guardian)
-  dependentes: Dependente[];
+  // Step 5 — dependents (if guardian)
+  dependents: Dependent[];
 
-  // Etapa 5 — turmas próprias (se student/teacher/instructor)
-  turmasPropriaIds: string[];
+  // Step 5 — own classes (if student/teacher/instructor)
+  classIds: string[];
 }
 
 const initialState: WizardState = {
   authMethod: null,
   email: "",
-  senha: "",
-  nome: "",
-  dataNascimento: "",
-  cpf: "",
-  celular: "",
+  password: "",
+  name: "",
+  birthDate: "",
+  taxId: "",
+  phone: "",
   whatsapp: "",
-  cep: "",
-  logradouro: "",
-  numero: "",
-  complemento: "",
-  bairro: "",
-  cidade: "",
-  estado: "",
+  postalCode: "",
+  street: "",
+  number: "",
+  complement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
   roles: [],
-  dependentes: [],
-  turmasPropriaIds: [],
+  dependents: [],
+  classIds: [],
 };
 
 type WizardAction =
   | { type: "SET_AUTH_METHOD"; payload: WizardState["authMethod"] }
-  | { type: "SET_CREDENCIAIS"; payload: { email: string; senha: string } }
-  | { type: "SET_DADOS_PESSOAIS"; payload: Pick<WizardState, "nome" | "dataNascimento" | "cpf"> }
-  | { type: "SET_CONTATO"; payload: Pick<WizardState, "celular" | "whatsapp"> }
-  | { type: "SET_ENDERECO"; payload: Pick<WizardState, "cep" | "logradouro" | "numero" | "complemento" | "bairro" | "cidade" | "estado"> }
+  | { type: "SET_CREDENTIALS"; payload: { email: string; password: string } }
+  | { type: "SET_PERSONAL_DATA"; payload: Pick<WizardState, "name" | "birthDate" | "taxId"> }
+  | { type: "SET_CONTACT"; payload: Pick<WizardState, "phone" | "whatsapp"> }
+  | { type: "SET_ADDRESS"; payload: Pick<WizardState, "postalCode" | "street" | "number" | "complement" | "neighborhood" | "city" | "state"> }
   | { type: "SET_ROLES"; payload: Role[] }
-  | { type: "ADD_DEPENDENTE"; payload: Dependente }
-  | { type: "UPDATE_DEPENDENTE"; payload: Dependente }
-  | { type: "REMOVE_DEPENDENTE"; payload: string }
-  | { type: "SET_TURMAS_PROPRIAS"; payload: string[] }
+  | { type: "ADD_DEPENDENT"; payload: Dependent }
+  | { type: "UPDATE_DEPENDENT"; payload: Dependent }
+  | { type: "REMOVE_DEPENDENT"; payload: string }
+  | { type: "SET_CLASS_IDS"; payload: string[] }
   | { type: "RESET" };
 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SET_AUTH_METHOD":
       return { ...state, authMethod: action.payload };
-    case "SET_CREDENCIAIS":
+    case "SET_CREDENTIALS":
       return { ...state, ...action.payload };
-    case "SET_DADOS_PESSOAIS":
+    case "SET_PERSONAL_DATA":
       return { ...state, ...action.payload };
-    case "SET_CONTATO":
+    case "SET_CONTACT":
       return { ...state, ...action.payload };
-    case "SET_ENDERECO":
+    case "SET_ADDRESS":
       return { ...state, ...action.payload };
     case "SET_ROLES":
       return { ...state, roles: action.payload };
-    case "ADD_DEPENDENTE":
+    case "ADD_DEPENDENT":
       return {
         ...state,
-        dependentes: [...state.dependentes, action.payload],
+        dependents: [...state.dependents, action.payload],
       };
-    case "UPDATE_DEPENDENTE":
+    case "UPDATE_DEPENDENT":
       return {
         ...state,
-        dependentes: state.dependentes.map((d) =>
+        dependents: state.dependents.map((d) =>
           d.id === action.payload.id ? action.payload : d
         ),
       };
-    case "REMOVE_DEPENDENTE":
+    case "REMOVE_DEPENDENT":
       return {
         ...state,
-        dependentes: state.dependentes.filter((d) => d.id !== action.payload),
+        dependents: state.dependents.filter((d) => d.id !== action.payload),
       };
-    case "SET_TURMAS_PROPRIAS":
-      return { ...state, turmasPropriaIds: action.payload };
+    case "SET_CLASS_IDS":
+      return { ...state, classIds: action.payload };
     case "RESET":
       return initialState;
     default:
@@ -132,7 +133,7 @@ interface WizardContextValue {
   // Derived helpers
   isGuardian: boolean;
   hasClassRole: boolean;  // student | teacher | instructor
-  skipTurmas: boolean;    // supporter/sponsor only
+  skipClasses: boolean;   // supporter/sponsor only
 }
 
 const WizardContext = createContext<WizardContextValue | null>(null);
@@ -144,12 +145,12 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const hasClassRole = state.roles.some((r) =>
     ["student", "teacher", "instructor"].includes(r)
   );
-  const skipTurmas =
+  const skipClasses =
     state.roles.length > 0 &&
     state.roles.every((r) => ["supporter", "sponsor"].includes(r));
 
   return (
-    <WizardContext.Provider value={{ state, dispatch, isGuardian, hasClassRole, skipTurmas }}>
+    <WizardContext.Provider value={{ state, dispatch, isGuardian, hasClassRole, skipClasses }}>
       {children}
     </WizardContext.Provider>
   );
