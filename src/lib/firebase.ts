@@ -2,9 +2,10 @@ import { initializeApp } from "firebase/app";
 import {
   initializeAuth,
   getAuth,
-  getReactNativePersistence,
   GoogleAuthProvider,
 } from "firebase/auth";
+// @ts-expect-error — exportado via campo "react-native" do @firebase/auth, invisível ao tsc
+import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {

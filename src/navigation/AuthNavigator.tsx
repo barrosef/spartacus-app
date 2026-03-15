@@ -17,11 +17,8 @@ import { Step5OwnClasses } from "../screens/auth/SignupWizard/Step5OwnClasses";
 import { Step6Review } from "../screens/auth/SignupWizard/Step6Review";
 import { PendingScreen } from "../screens/auth/PendingScreen";
 
-interface ScreenProps {
-  route?: { params?: AuthStackParamList[AuthScreenName] };
-}
-
-const SCREENS: Record<AuthScreenName, React.ComponentType<ScreenProps>> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Login: LoginScreen,
   Step0AuthMethod,
   Step0bCredentials,
