@@ -5,11 +5,13 @@ import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { useWizard } from "../../../context/WizardContext";
 import { useGoogleSignIn } from "../../../lib/googleAuth";
+import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
 export function Step0AuthMethod() {
   const navigation = useAuthNavigation();
   const { dispatch } = useWizard();
+  const { setSignupInProgress } = useSignupGuard();
 
   const google = useGoogleSignIn(() => {
     navigation.navigate("Step4Perfil");
@@ -20,6 +22,7 @@ export function Step0AuthMethod() {
     if (method === "email") {
       navigation.navigate("Step0bEmailSenha");
     } else {
+      setSignupInProgress(true);
       google.signIn();
     }
   }

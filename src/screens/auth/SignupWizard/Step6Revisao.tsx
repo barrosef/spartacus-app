@@ -13,11 +13,13 @@ import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Button } from "../../../components/ui/Button";
 import { useWizard } from "../../../context/WizardContext";
 import { auth } from "../../../lib/firebase";
+import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
 export function Step6Revisao() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
+  const { setSignupInProgress } = useSignupGuard();
   const [loading, setLoading] = useState(false);
 
   const roleLabels: Record<string, string> = {
@@ -41,6 +43,7 @@ export function Step6Revisao() {
         "temp-password-123"
       );
       await sendEmailVerification(user);
+      setSignupInProgress(false);
       navigation.navigate("Pending");
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Erro desconhecido";
