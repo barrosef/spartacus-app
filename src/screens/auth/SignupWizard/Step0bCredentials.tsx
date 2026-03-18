@@ -23,31 +23,31 @@ function isValidPassword(value: string) {
   return value.length >= 8;
 }
 
-export function Step0bEmailSenha() {
+export function Step0bCredentials() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
   const [email, setEmail] = useState(state.email);
-  const [senha, setSenha] = useState(state.senha);
-  const [confirmacao, setConfirmacao] = useState(state.senha ? state.senha : "");
+  const [password, setPassword] = useState(state.password);
+  const [confirmation, setConfirmation] = useState(state.password ? state.password : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const e: Record<string, string> = {};
     if (!isValidEmail(email)) e.email = "E-mail inválido";
-    if (!isValidPassword(senha)) e.senha = "A senha deve ter no mínimo 8 caracteres";
-    if (senha !== confirmacao) e.confirmacao = "As senhas não coincidem";
+    if (!isValidPassword(password)) e.password = "A senha deve ter no mínimo 8 caracteres";
+    if (password !== confirmation) e.confirmation = "As senhas não coincidem";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleNext() {
     if (!validate()) return;
-    dispatch({ type: "SET_CREDENCIAIS", payload: { email: email.trim(), senha } });
-    navigation.navigate("Step4Perfil");
+    dispatch({ type: "SET_CREDENTIALS", payload: { email: email.trim(), password } });
+    navigation.navigate("Step1Profile");
   }
 
-  const canContinue = email.length > 0 && senha.length > 0 && confirmacao.length > 0;
+  const canContinue = email.length > 0 && password.length > 0 && confirmation.length > 0;
 
   return (
     <SafeScreen noPadding>
@@ -94,14 +94,14 @@ export function Step0bEmailSenha() {
               label="Senha"
               placeholder="Mínimo 8 caracteres"
               secureTextEntry
-              value={senha}
-              onChangeText={setSenha}
-              error={errors.senha}
+              value={password}
+              onChangeText={setPassword}
+              error={errors.password}
               onBlur={() => {
-                if (senha.length > 0 && !isValidPassword(senha)) {
-                  setErrors((e) => ({ ...e, senha: "A senha deve ter no mínimo 8 caracteres" }));
+                if (password.length > 0 && !isValidPassword(password)) {
+                  setErrors((e) => ({ ...e, password: "A senha deve ter no mínimo 8 caracteres" }));
                 } else {
-                  setErrors((e) => { const n = { ...e }; delete n.senha; return n; });
+                  setErrors((e) => { const n = { ...e }; delete n.password; return n; });
                 }
               }}
             />
@@ -110,14 +110,14 @@ export function Step0bEmailSenha() {
               label="Confirmar senha"
               placeholder="Digite a senha novamente"
               secureTextEntry
-              value={confirmacao}
-              onChangeText={setConfirmacao}
-              error={errors.confirmacao}
+              value={confirmation}
+              onChangeText={setConfirmation}
+              error={errors.confirmation}
               onBlur={() => {
-                if (confirmacao.length > 0 && confirmacao !== senha) {
-                  setErrors((e) => ({ ...e, confirmacao: "As senhas não coincidem" }));
+                if (confirmation.length > 0 && confirmation !== password) {
+                  setErrors((e) => ({ ...e, confirmation: "As senhas não coincidem" }));
                 } else {
-                  setErrors((e) => { const n = { ...e }; delete n.confirmacao; return n; });
+                  setErrors((e) => { const n = { ...e }; delete n.confirmation; return n; });
                 }
               }}
             />

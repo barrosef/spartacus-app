@@ -65,7 +65,7 @@ function YearPicker({ selectedYear, onSelect }: YearPickerProps) {
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: Math.max(0, offset), animated: false });
     }, 50);
-  }, []);
+  }, [selectedYear]);
 
   // Build rows of 4
   const rows: number[][] = [];

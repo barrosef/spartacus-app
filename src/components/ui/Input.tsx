@@ -27,6 +27,8 @@ export function Input({
   rightIcon,
   secureTextEntry,
   style,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
   ...rest
 }: InputProps) {
   const [secure, setSecure] = useState(secureTextEntry ?? false);
@@ -48,8 +50,14 @@ export function Input({
           selectionColor={colors.primary}
           cursorColor={colors.primary}
           secureTextEntry={secure}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocusProp?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlurProp?.(e);
+          }}
           {...rest}
         />
         {secureTextEntry && (

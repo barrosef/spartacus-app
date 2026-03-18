@@ -59,7 +59,7 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
 ];
 
-export function Step4Perfil() {
+export function Step1Profile() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
   const [selected, setSelected] = useState<Set<Role>>(new Set(state.roles));
@@ -78,7 +78,7 @@ export function Step4Perfil() {
 
   function handleNext() {
     dispatch({ type: "SET_ROLES", payload: Array.from(selected) });
-    navigation.navigate("Step1DadosPessoais");
+    navigation.navigate("Step2PersonalData");
   }
 
   return (

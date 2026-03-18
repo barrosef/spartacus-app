@@ -1,9 +1,28 @@
-import React, { useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { AuthNavigator } from "./AuthNavigator";
 import { colors, typography } from "../theme/tokens";
+
+// ── Signup guard ─────────────────────────────────────────────────────────────
+// Google Sign-In creates a Firebase user mid-wizard. Without this guard,
+// onAuthStateChanged fires immediately and swaps to MainNavigator before the
+// wizard can collect the remaining profile data.
+
+interface SignupGuard {
+  signupInProgress: boolean;
+  setSignupInProgress: (v: boolean) => void;
+}
+
+const SignupGuardCtx = createContext<SignupGuard>({
+  signupInProgress: false,
+  setSignupInProgress: () => {},
+});
+
+export function useSignupGuard() {
+  return useContext(SignupGuardCtx);
+}
 
 // Placeholder for main app navigator (post-auth)
 function MainNavigator() {
@@ -18,6 +37,7 @@ function MainNavigator() {
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signupInProgress, setSignupInProgress] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -34,7 +54,13 @@ export function RootNavigator() {
     );
   }
 
-  return user ? <MainNavigator /> : <AuthNavigator />;
+  const showAuth = !user || signupInProgress;
+
+  return (
+    <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
+      {showAuth ? <AuthNavigator /> : <MainNavigator />}
+    </SignupGuardCtx.Provider>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -17,28 +17,28 @@ import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
 import { formatCPF, validateCPF } from "../../../utils/cpf";
 
-export function Step1DadosPessoais() {
+export function Step2PersonalData() {
   const navigation = useAuthNavigation();
   const { state, dispatch } = useWizard();
 
-  const [nome, setNome] = useState(state.nome);
-  const [dataNascimento, setDataNascimento] = useState(state.dataNascimento);
-  const [cpf, setCpf] = useState(state.cpf);
+  const [name, setName] = useState(state.name);
+  const [birthDate, setBirthDate] = useState(state.birthDate);
+  const [taxId, setTaxId] = useState(state.taxId);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const e: Record<string, string> = {};
-    if (nome.trim().length < 3) e.nome = "Nome deve ter pelo menos 3 caracteres";
-    if (dataNascimento.length < 10) e.dataNascimento = "Data inválida";
-    if (!validateCPF(cpf)) e.cpf = "CPF inválido";
+    if (name.trim().length < 3) e.name = "Nome deve ter pelo menos 3 caracteres";
+    if (birthDate.length < 10) e.birthDate = "Data inválida";
+    if (!validateCPF(taxId)) e.taxId = "CPF inválido";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleNext() {
     if (!validate()) return;
-    dispatch({ type: "SET_DADOS_PESSOAIS", payload: { nome, dataNascimento, cpf } });
-    navigation.navigate("Step2Contato");
+    dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate, taxId } });
+    navigation.navigate("Step3Contact");
   }
 
   return (
@@ -68,32 +68,32 @@ export function Step1DadosPessoais() {
               label="Nome completo"
               placeholder="João da Silva"
               autoCapitalize="words"
-              value={nome}
-              onChangeText={setNome}
-              error={errors.nome}
+              value={name}
+              onChangeText={setName}
+              error={errors.name}
               onBlur={() => {
-                if (nome.trim().length > 0 && nome.trim().length < 3) {
-                  setErrors((e) => ({ ...e, nome: "Nome deve ter pelo menos 3 caracteres" }));
+                if (name.trim().length > 0 && name.trim().length < 3) {
+                  setErrors((e) => ({ ...e, name: "Nome deve ter pelo menos 3 caracteres" }));
                 } else {
-                  setErrors((e) => { const n = { ...e }; delete n.nome; return n; });
+                  setErrors((e) => { const n = { ...e }; delete n.name; return n; });
                 }
               }}
             />
 
             <DateInput
               label="Data de nascimento"
-              value={dataNascimento}
-              onChange={setDataNascimento}
-              error={errors.dataNascimento}
+              value={birthDate}
+              onChange={setBirthDate}
+              error={errors.birthDate}
             />
 
             <Input
               label="CPF"
               placeholder="000.000.000-00"
               keyboardType="numeric"
-              value={cpf}
-              onChangeText={(v) => setCpf(formatCPF(v))}
-              error={errors.cpf}
+              value={taxId}
+              onChangeText={(v) => setTaxId(formatCPF(v))}
+              error={errors.taxId}
               maxLength={14}
             />
           </View>
@@ -102,7 +102,7 @@ export function Step1DadosPessoais() {
             <Button
               label="Continuar"
               onPress={handleNext}
-              disabled={!nome || !dataNascimento || !cpf}
+              disabled={!name || !birthDate || !taxId}
             />
           </View>
         </ScrollView>

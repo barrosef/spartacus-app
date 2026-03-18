@@ -13,33 +13,33 @@ import { Button } from "../../../components/ui/Button";
 import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
-export function Step5DepLista() {
+export function Step5DepList() {
   const navigation = useAuthNavigation();
   const { state, dispatch, hasClassRole } = useWizard();
-  const { dependentes } = state;
+  const { dependents } = state;
 
   function handleContinue() {
     if (hasClassRole) {
-      navigation.navigate("Step5TurmasProprias");
+      navigation.navigate("Step5OwnClasses");
     } else {
-      navigation.navigate("Step6Revisao");
+      navigation.navigate("Step6Review");
     }
   }
 
   function handleAddMore() {
-    navigation.navigate("Step5DepDados");
+    navigation.navigate("Step5DepData");
   }
 
   function handleEditDados(depId: string) {
-    navigation.navigate("Step5DepDados", { dependenteId: depId });
+    navigation.navigate("Step5DepData", { dependentId: depId });
   }
 
   function handleEditTurmas(depId: string) {
-    navigation.navigate("Step5DepTurmas", { dependenteId: depId });
+    navigation.navigate("Step5DepClasses", { dependentId: depId });
   }
 
   function handleRemove(depId: string) {
-    dispatch({ type: "REMOVE_DEPENDENTE", payload: depId });
+    dispatch({ type: "REMOVE_DEPENDENT", payload: depId });
   }
 
   return (
@@ -56,26 +56,26 @@ export function Step5DepLista() {
       >
         <Text style={styles.heading}>Dependentes</Text>
         <Text style={styles.description}>
-          {dependentes.length === 0
+          {dependents.length === 0
             ? "Nenhum dependente adicionado ainda."
-            : `${dependentes.length} dependente${dependentes.length !== 1 ? "s" : ""} adicionado${dependentes.length !== 1 ? "s" : ""}.`}
+            : `${dependents.length} dependente${dependents.length !== 1 ? "s" : ""} adicionado${dependents.length !== 1 ? "s" : ""}.`}
         </Text>
 
         <View style={styles.list}>
-          {dependentes.map((dep, idx) => (
+          {dependents.map((dep) => (
             <View key={dep.id} style={styles.depCard}>
               <View style={styles.depCardHeader}>
                 <View style={styles.depAvatar}>
                   <Text style={styles.depAvatarText}>
-                    {dep.nome.charAt(0).toUpperCase()}
+                    {dep.name.charAt(0).toUpperCase()}
                   </Text>
                 </View>
                 <View style={styles.depInfo}>
-                  <Text style={styles.depName}>{dep.nome}</Text>
+                  <Text style={styles.depName}>{dep.name}</Text>
                   <Text style={styles.depSub}>
-                    {dep.dataNascimento}
-                    {dep.turmasIds.length > 0
-                      ? ` · ${dep.turmasIds.length} turma${dep.turmasIds.length !== 1 ? "s" : ""}`
+                    {dep.birthDate}
+                    {dep.classIds.length > 0
+                      ? ` · ${dep.classIds.length} turma${dep.classIds.length !== 1 ? "s" : ""}`
                       : " · Sem turmas"}
                   </Text>
                 </View>
@@ -115,7 +115,7 @@ export function Step5DepLista() {
           <Button
             label={hasClassRole ? "Continuar → Suas Turmas" : "Continuar → Revisão"}
             onPress={handleContinue}
-            disabled={dependentes.length === 0}
+            disabled={dependents.length === 0}
           />
         </View>
       </ScrollView>
