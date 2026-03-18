@@ -12,6 +12,7 @@ import { Button } from "../../../components/ui/Button";
 import { ErrorModal } from "../../../components/ui/ErrorModal";
 import { useWizard } from "../../../context/WizardContext";
 import { api, ApiError } from "../../../lib/api";
+import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
 interface SignupResponse {
@@ -22,6 +23,7 @@ interface SignupResponse {
 export function Step6Review() {
   const navigation = useAuthNavigation();
   const { state } = useWizard();
+  const { setSignupInProgress } = useSignupGuard();
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
@@ -65,6 +67,7 @@ export function Step6Review() {
       };
 
       await api.post<SignupResponse>("/auth/signup", payload);
+      setSignupInProgress(false);
       navigation.navigate("Pending");
     } catch (error: unknown) {
       let title = "Erro ao criar conta";
