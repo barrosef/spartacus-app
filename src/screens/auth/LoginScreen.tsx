@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const logo = require("../../../assets/logo.png");
 import { StatusBar } from "expo-status-bar";
 import { signInWithEmailAndPassword } from "firebase/auth";

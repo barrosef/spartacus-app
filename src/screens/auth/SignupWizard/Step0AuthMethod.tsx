@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const logo = require("../../../../assets/logo.png");
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
