@@ -112,7 +112,7 @@ export function Step0bCredentials() {
           <View style={styles.fields}>
             <Input
               label="E-mail"
-              placeholder="seu@email.com"
+              placeholder="Informe seu e-mail"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -134,7 +134,7 @@ export function Step0bCredentials() {
 
             <Input
               label="Senha"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Crie uma senha (mín. 8 caracteres)"
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -150,7 +150,7 @@ export function Step0bCredentials() {
 
             <Input
               label="Confirmar senha"
-              placeholder="Digite a senha novamente"
+              placeholder="Repita a senha"
               secureTextEntry
               value={confirmation}
               onChangeText={setConfirmation}

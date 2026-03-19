@@ -63,7 +63,7 @@ export function Step2PersonalData() {
           <View style={styles.fields}>
             <Input
               label="Nome completo"
-              placeholder="João da Silva"
+              placeholder="Informe seu nome completo"
               autoCapitalize="words"
               value={name}
               onChangeText={setName}

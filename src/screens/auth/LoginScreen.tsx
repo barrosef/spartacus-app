@@ -68,7 +68,7 @@ export function LoginScreen() {
             <View style={styles.form}>
               <Input
                 label="E-mail"
-                placeholder="seu@email.com"
+                placeholder="Informe seu e-mail"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -78,7 +78,7 @@ export function LoginScreen() {
 
               <Input
                 label="Senha"
-                placeholder="••••••••"
+                placeholder="Informe sua senha"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}

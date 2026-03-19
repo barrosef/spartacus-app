@@ -82,7 +82,7 @@ export function Step3Contact() {
           <View style={styles.fields}>
             <Input
               label="Celular"
-              placeholder="(65) 99999-9999"
+              placeholder="Informe o número"
               keyboardType="phone-pad"
               value={phone}
               onChangeText={handlePhoneChange}
@@ -99,7 +99,7 @@ export function Step3Contact() {
                 <View style={{ marginTop: spacing.sm }}>
                   <Input
                     label="WhatsApp"
-                    placeholder="(65) 99999-9999"
+                    placeholder="Informe o número"
                     keyboardType="phone-pad"
                     value={whatsapp}
                     onChangeText={(v) => setWhatsapp(formatPhone(v))}
