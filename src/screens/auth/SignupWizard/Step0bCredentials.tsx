@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
@@ -13,6 +14,7 @@ import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { useWizard } from "../../../context/WizardContext";
+import { checkEmail } from "../../../lib/api";
 import { colors, typography, spacing } from "../../../theme/tokens";
 
 function isValidEmail(value: string) {
@@ -31,6 +33,37 @@ export function Step0bCredentials() {
   const [password, setPassword] = useState(state.password);
   const [confirmation, setConfirmation] = useState(state.password ? state.password : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  async function handleEmailBlur() {
+    if (!email.trim() || !isValidEmail(email)) {
+      if (email.length > 0 && !isValidEmail(email)) {
+        setErrors((e) => ({ ...e, email: "E-mail inválido" }));
+      }
+      return;
+    }
+    setErrors((e) => { const n = { ...e }; delete n.email; return n; });
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setCheckingEmail(true);
+    try {
+      const { available } = await checkEmail(email.trim(), controller.signal);
+      if (!available) {
+        setErrors((e) => ({ ...e, email: "Este e-mail já está cadastrado" }));
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+    } finally {
+      setCheckingEmail(false);
+    }
+  }
 
   function validate() {
     const e: Record<string, string> = {};
@@ -47,7 +80,12 @@ export function Step0bCredentials() {
     navigation.navigate("Step1Profile");
   }
 
-  const canContinue = email.length > 0 && password.length > 0 && confirmation.length > 0;
+  const canContinue =
+    email.length > 0 &&
+    password.length > 0 &&
+    confirmation.length > 0 &&
+    !checkingEmail &&
+    !errors.email;
 
   return (
     <SafeScreen noPadding>
@@ -79,15 +117,19 @@ export function Step0bCredentials() {
               autoCapitalize="none"
               autoCorrect={false}
               value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-              onBlur={() => {
-                if (email.length > 0 && !isValidEmail(email)) {
-                  setErrors((e) => ({ ...e, email: "E-mail inválido" }));
-                } else {
+              onChangeText={(v) => {
+                setEmail(v);
+                if (errors.email) {
                   setErrors((e) => { const n = { ...e }; delete n.email; return n; });
                 }
               }}
+              error={errors.email}
+              onBlur={handleEmailBlur}
+              rightIcon={
+                checkingEmail ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : undefined
+              }
             />
 
             <Input

@@ -53,7 +53,8 @@ export class ApiError extends Error {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string, signal?: AbortSignal) =>
+    request<T>(path, { signal }),
 
   post: <T>(path: string, data: unknown) =>
     request<T>(path, {
@@ -61,3 +62,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
 };
+
+export async function checkEmail(
+  email: string,
+  signal?: AbortSignal,
+): Promise<{ available: boolean }> {
+  const url = `${BASE_URL}/auth/check-email?email=${encodeURIComponent(email)}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`check-email failed: ${res.status}`);
+  return res.json();
+}
