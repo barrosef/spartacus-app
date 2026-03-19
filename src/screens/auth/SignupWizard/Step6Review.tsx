@@ -45,7 +45,6 @@ export function Step6Review() {
         password: state.authMethod === "email" ? state.password : undefined,
         name: state.name,
         birthDate: state.birthDate,
-        taxId: state.taxId,
         phone: state.phone,
         whatsapp: state.whatsapp,
         postalCode: state.postalCode,
@@ -75,7 +74,7 @@ export function Step6Review() {
       if (error instanceof ApiError) {
         if (error.status === 409) {
           title = "Conta já existente";
-          msg = "Já existe uma conta com este e-mail ou CPF. Se você já tem uma conta, faça login.";
+          msg = "Já existe uma conta com esses dados. Se você já tem uma conta, faça login.";
         } else if (error.status === 422) {
           title = "Dados inválidos";
           msg = error.message;
@@ -113,7 +112,6 @@ export function Step6Review() {
         <Section title="Dados Pessoais">
           <Row label="Nome" value={state.name} />
           <Row label="Data de nasc." value={state.birthDate} />
-          <Row label="CPF" value={state.taxId} />
         </Section>
 
         <Section title="Contato">

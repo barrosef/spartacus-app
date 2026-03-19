@@ -77,7 +77,7 @@ const initialState: WizardState = {
 type WizardAction =
   | { type: "SET_AUTH_METHOD"; payload: WizardState["authMethod"] }
   | { type: "SET_CREDENTIALS"; payload: { email: string; password: string } }
-  | { type: "SET_PERSONAL_DATA"; payload: Pick<WizardState, "name" | "birthDate" | "taxId"> }
+  | { type: "SET_PERSONAL_DATA"; payload: Pick<WizardState, "name" | "birthDate"> }
   | { type: "SET_CONTACT"; payload: Pick<WizardState, "phone" | "whatsapp"> }
   | { type: "SET_ADDRESS"; payload: Pick<WizardState, "postalCode" | "street" | "number" | "complement" | "neighborhood" | "city" | "state"> }
   | { type: "SET_ROLES"; payload: Role[] }
