@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { api } from "../lib/api";
 import { AuthNavigator } from "./AuthNavigator";
+import { PendingScreen } from "../screens/auth/PendingScreen";
 import { colors, typography } from "../theme/tokens";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
@@ -24,7 +26,7 @@ export function useSignupGuard() {
   return useContext(SignupGuardCtx);
 }
 
-// Placeholder for main app navigator (post-auth)
+// Placeholder for main app navigator (post-auth, approved)
 function MainNavigator() {
   return (
     <View style={styles.placeholder}>
@@ -34,18 +36,36 @@ function MainNavigator() {
   );
 }
 
+type AppState = "loading" | "auth" | "pending" | "approved";
+
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [appState, setAppState] = useState<AppState>("loading");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
+
+  const checkApproval = useCallback(async () => {
+    try {
+      const res = await api.get<{ approvalStatus: string }>("/auth/me");
+      if (res.approvalStatus === "approved") {
+        setAppState("approved");
+      } else {
+        setAppState("pending");
+      }
+    } catch {
+      // User not found in backend (no signup yet) or network error
+      setAppState("pending");
+    }
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => setTimedOut(true), 10_000);
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       clearTimeout(timeout);
       setUser(u);
-      setLoading(false);
+      if (!u) {
+        setAppState("auth");
+      }
     });
     return () => {
       clearTimeout(timeout);
@@ -53,7 +73,14 @@ export function RootNavigator() {
     };
   }, []);
 
-  if (loading) {
+  // When user changes and signup is not in progress, check approval
+  useEffect(() => {
+    if (user && !signupInProgress) {
+      checkApproval();
+    }
+  }, [user, signupInProgress, checkApproval]);
+
+  if (appState === "loading") {
     return (
       <View style={styles.loading}>
         <Text style={styles.loadingText}>Spartacus</Text>
@@ -66,11 +93,17 @@ export function RootNavigator() {
     );
   }
 
-  const showAuth = !user || signupInProgress;
+  const showAuth = appState === "auth" || signupInProgress;
 
   return (
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
-      {showAuth ? <AuthNavigator /> : <MainNavigator />}
+      {showAuth ? (
+        <AuthNavigator />
+      ) : appState === "pending" ? (
+        <PendingScreen />
+      ) : (
+        <MainNavigator />
+      )}
     </SignupGuardCtx.Provider>
   );
 }
