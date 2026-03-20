@@ -54,3 +54,6 @@ jobs:
 
       - name: Build Android (EAS)
         run: eas build --platform android --profile production --non-interactive
+
+      - name: Submit to Play Store (internal track)
+        run: eas submit --platform android --profile production --latest --non-interactive

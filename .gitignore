@@ -10,6 +10,9 @@ ios/
 .env
 *.env.local
 
+# Service account keys
+google-sa-key.json
+
 # IDE
 .idea/
 .vscode/
