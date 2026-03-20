@@ -7,6 +7,7 @@ import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { useWizard } from "../../../context/WizardContext";
+import { auth } from "../../../lib/firebase";
 import { useGoogleSignIn } from "../../../lib/googleAuth";
 import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
@@ -17,6 +18,8 @@ export function Step0AuthMethod() {
   const { setSignupInProgress } = useSignupGuard();
 
   const google = useGoogleSignIn(() => {
+    const email = auth.currentUser?.email ?? "";
+    dispatch({ type: "SET_CREDENTIALS", payload: { email, password: "" } });
     navigation.navigate("Step1Profile");
   });
 

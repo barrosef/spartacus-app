@@ -30,12 +30,13 @@ async function request<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const error = new ApiError(
-      body.detail ?? `Erro ${res.status}`,
-      res.status,
-      body,
-    );
-    throw error;
+    let message = `Erro ${res.status}`;
+    if (Array.isArray(body.detail)) {
+      message = body.detail.map((e: { msg?: string }) => e.msg ?? "").filter(Boolean).join("; ");
+    } else if (typeof body.detail === "string") {
+      message = body.detail;
+    }
+    throw new ApiError(message, res.status, body);
   }
 
   return res.json() as Promise<T>;

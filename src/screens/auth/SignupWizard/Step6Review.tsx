@@ -45,6 +45,7 @@ export function Step6Review() {
         password: state.authMethod === "email" ? state.password : undefined,
         name: state.name,
         birthDate: state.birthDate,
+        taxId: state.taxId || undefined,
         phone: state.phone,
         whatsapp: state.whatsapp,
         postalCode: state.postalCode,
@@ -65,10 +66,12 @@ export function Step6Review() {
         classIds: state.classIds,
       };
 
+      console.warn("[SIGNUP PAYLOAD]", JSON.stringify(payload));
       await api.post<SignupResponse>("/auth/signup", payload);
       setSignupInProgress(false);
       navigation.navigate("Pending");
     } catch (error: unknown) {
+      console.warn("[SIGNUP ERROR]", JSON.stringify(error instanceof ApiError ? { status: error.status, message: error.message, body: error.body } : error));
       let title = "Erro ao criar conta";
       let msg = "Ocorreu um erro inesperado. Tente novamente em alguns instantes.";
       if (error instanceof ApiError) {

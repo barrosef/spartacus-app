@@ -6,9 +6,7 @@ node_modules/
 android/
 ios/
 
-# Environment
-.env
-*.env.local
+# NOTE: .env is NOT ignored here — EAS needs it for EXPO_PUBLIC_* vars
 
 # IDE
 .idea/
@@ -20,12 +18,11 @@ ios/
 Thumbs.db
 
 # Build artifacts
-*.apk
-*.aab
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
+*.aab
 web-build/

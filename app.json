@@ -8,12 +8,15 @@
     "platforms": [
       "android"
     ],
+    "icon": "./assets/logo.png",
     "splash": {
       "backgroundColor": "#0B0D12"
     },
     "android": {
       "package": "br.com.spartacus.app",
+      "versionCode": 11,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0B0D12"
       }
     },
@@ -23,7 +26,20 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-asset"
     ]
   }
 }
