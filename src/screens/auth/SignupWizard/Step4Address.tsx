@@ -113,7 +113,7 @@ export function Step4Address() {
           <View style={styles.fields}>
             <Input
               label="CEP"
-              placeholder="78350-000"
+              placeholder="Informe o CEP"
               keyboardType="numeric"
               value={postalCode}
               onChangeText={(v) => setPostalCode(formatCEP(v))}
@@ -124,7 +124,7 @@ export function Step4Address() {
 
             <Input
               label="Logradouro"
-              placeholder="Rua das Flores"
+              placeholder="Informe o logradouro"
               autoCapitalize="words"
               value={street}
               onChangeText={setStreet}
@@ -134,7 +134,7 @@ export function Step4Address() {
               <View style={styles.rowSmall}>
                 <Input
                   label="Número"
-                  placeholder="123"
+                  placeholder="N.º"
                   keyboardType="numeric"
                   value={number}
                   onChangeText={setNumber}
@@ -143,7 +143,7 @@ export function Step4Address() {
               <View style={styles.rowLarge}>
                 <Input
                   label="Complemento"
-                  placeholder="Apto 2"
+                  placeholder="Ex: Apto, Bloco"
                   value={complement}
                   onChangeText={setComplement}
                 />
@@ -152,7 +152,7 @@ export function Step4Address() {
 
             <Input
               label="Bairro"
-              placeholder="Centro"
+              placeholder="Informe o bairro"
               autoCapitalize="words"
               value={neighborhood}
               onChangeText={setNeighborhood}
@@ -162,7 +162,7 @@ export function Step4Address() {
               <View style={styles.rowLarge}>
                 <Input
                   label="Cidade"
-                  placeholder="Brasnorte"
+                  placeholder="Informe a cidade"
                   autoCapitalize="words"
                   value={city}
                   onChangeText={setCity}
@@ -171,7 +171,7 @@ export function Step4Address() {
               <View style={styles.rowSmall}>
                 <Input
                   label="UF"
-                  placeholder="MT"
+                  placeholder="UF"
                   autoCapitalize="characters"
                   value={addressState}
                   onChangeText={setAddressState}

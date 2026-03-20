@@ -1,9 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const logo = require("../../../../assets/logo.png");
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { useWizard } from "../../../context/WizardContext";
+import { auth } from "../../../lib/firebase";
 import { useGoogleSignIn } from "../../../lib/googleAuth";
 import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
@@ -14,6 +18,8 @@ export function Step0AuthMethod() {
   const { setSignupInProgress } = useSignupGuard();
 
   const google = useGoogleSignIn(() => {
+    const email = auth.currentUser?.email ?? "";
+    dispatch({ type: "SET_CREDENTIALS", payload: { email, password: "" } });
     navigation.navigate("Step1Profile");
   });
 
@@ -39,9 +45,7 @@ export function Step0AuthMethod() {
       <View style={styles.content}>
         {/* Logo mini */}
         <View style={styles.logoArea}>
-          <View style={styles.shieldWrapper}>
-            <Text style={{ fontSize: 36 }}>🛡️</Text>
-          </View>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
           <Text style={styles.title}>Criar Conta</Text>
           <Text style={styles.subtitle}>Escolha como deseja se cadastrar</Text>
         </View>
@@ -123,21 +127,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.xl,
   },
-  shieldWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: "rgba(198,163,78,0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.sm,
   },
   title: {
     fontSize: 26,

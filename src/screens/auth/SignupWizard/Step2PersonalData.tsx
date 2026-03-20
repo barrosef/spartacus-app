@@ -15,7 +15,6 @@ import { Button } from "../../../components/ui/Button";
 import { DateInput } from "../../../components/ui/DateInput";
 import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
-import { formatCPF, validateCPF } from "../../../utils/cpf";
 
 export function Step2PersonalData() {
   const navigation = useAuthNavigation();
@@ -23,21 +22,19 @@ export function Step2PersonalData() {
 
   const [name, setName] = useState(state.name);
   const [birthDate, setBirthDate] = useState(state.birthDate);
-  const [taxId, setTaxId] = useState(state.taxId);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const e: Record<string, string> = {};
     if (name.trim().length < 3) e.name = "Nome deve ter pelo menos 3 caracteres";
     if (birthDate.length < 10) e.birthDate = "Data inválida";
-    if (!validateCPF(taxId)) e.taxId = "CPF inválido";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleNext() {
     if (!validate()) return;
-    dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate, taxId } });
+    dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate } });
     navigation.navigate("Step3Contact");
   }
 
@@ -66,7 +63,7 @@ export function Step2PersonalData() {
           <View style={styles.fields}>
             <Input
               label="Nome completo"
-              placeholder="João da Silva"
+              placeholder="Informe seu nome completo"
               autoCapitalize="words"
               value={name}
               onChangeText={setName}
@@ -86,23 +83,13 @@ export function Step2PersonalData() {
               onChange={setBirthDate}
               error={errors.birthDate}
             />
-
-            <Input
-              label="CPF"
-              placeholder="000.000.000-00"
-              keyboardType="numeric"
-              value={taxId}
-              onChangeText={(v) => setTaxId(formatCPF(v))}
-              error={errors.taxId}
-              maxLength={14}
-            />
           </View>
 
           <View style={styles.footer}>
             <Button
               label="Continuar"
               onPress={handleNext}
-              disabled={!name || !birthDate || !taxId}
+              disabled={!name || !birthDate}
             />
           </View>
         </ScrollView>

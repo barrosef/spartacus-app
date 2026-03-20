@@ -10,14 +10,35 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDGQG2D1GNFANFjaTHU8_y3TBbRYzBeFgU",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "spartacus-artes-marciais.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "spartacus-artes-marciais",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "spartacus-artes-marciais.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "820921472402",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:820921472402:web:43848ccaf9d112def65d4b",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com",
+        "EXPO_PUBLIC_API_URL": "https://spartacus-backend-rvp6u6qeaa-ue.a.run.app"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDGQG2D1GNFANFjaTHU8_y3TBbRYzBeFgU",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "spartacus-artes-marciais.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "spartacus-artes-marciais",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "spartacus-artes-marciais.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "820921472402",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:820921472402:web:43848ccaf9d112def65d4b",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com",
+        "EXPO_PUBLIC_API_URL": "https://spartacus-backend-rvp6u6qeaa-ue.a.run.app"
+      },
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "app-bundle"
       }
     }
   },

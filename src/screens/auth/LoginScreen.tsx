@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -9,6 +10,9 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const logo = require("../../../assets/logo.png");
 import { StatusBar } from "expo-status-bar";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useAuthNavigation } from "../../navigation/AuthNavContext";
@@ -57,18 +61,14 @@ export function LoginScreen() {
           >
             {/* Logo */}
             <View style={styles.logoArea}>
-              <View style={styles.shieldWrapper}>
-                <ShieldIcon />
-              </View>
-              <Text style={styles.title}>Spartacus</Text>
-              <Text style={styles.subtitle}>Artes Marciais</Text>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
 
             {/* Form */}
             <View style={styles.form}>
               <Input
                 label="E-mail"
-                placeholder="seu@email.com"
+                placeholder="Informe seu e-mail"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -78,7 +78,7 @@ export function LoginScreen() {
 
               <Input
                 label="Senha"
-                placeholder="••••••••"
+                placeholder="Informe sua senha"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -134,12 +134,6 @@ export function LoginScreen() {
   );
 }
 
-function ShieldIcon() {
-  return (
-    <Text style={{ fontSize: 44 }}>🛡️</Text>
-  );
-}
-
 function GoogleLogo() {
   return (
     <View style={styles.googleLogoWrapper}>
@@ -172,36 +166,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl + 8,
     marginBottom: spacing.xl + 4,
   },
-  shieldWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: "rgba(198,163,78,0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  title: {
-    fontSize: 30,
-    fontFamily: typography.fontHeading,
-    color: colors.foreground,
-    textTransform: "uppercase",
-    letterSpacing: 3,
-  },
-  subtitle: {
-    fontSize: 13,
-    fontFamily: typography.fontBodySemiBold,
-    color: colors.primary,
-    letterSpacing: 4,
-    textTransform: "uppercase",
-    marginTop: 4,
+  logo: {
+    width: 160,
+    height: 160,
   },
   form: {
     gap: spacing.md + 4,

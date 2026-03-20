@@ -104,7 +104,7 @@ export function Step5DepData({ route }: { route?: { params?: AuthStackParamList[
           <View style={styles.fields}>
             <Input
               label="Nome completo"
-              placeholder="Maria da Silva"
+              placeholder="Informe o nome do dependente"
               autoCapitalize="words"
               value={name}
               onChangeText={setName}
@@ -119,7 +119,7 @@ export function Step5DepData({ route }: { route?: { params?: AuthStackParamList[
 
             <Input
               label="CPF (opcional)"
-              placeholder="000.000.000-00"
+              placeholder="Informe o CPF (opcional)"
               keyboardType="numeric"
               value={taxId}
               onChangeText={(v) => setTaxId(formatCPF(v))}

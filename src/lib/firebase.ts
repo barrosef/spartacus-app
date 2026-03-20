@@ -17,6 +17,12 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
+if (!firebaseConfig.apiKey) {
+  throw new Error(
+    "EXPO_PUBLIC_FIREBASE_API_KEY is missing. Check .env or eas.json env config.",
+  );
+}
+
 export const firebaseApp = initializeApp(firebaseConfig);
 
 // try/catch evita crash catastrófico no Hermes caso o native module do
@@ -27,7 +33,6 @@ try {
     persistence: getReactNativePersistence(AsyncStorage),
   });
 } catch {
-  // Firebase já inicializado (ex: hot reload) ou AsyncStorage indisponível
   _auth = getAuth(firebaseApp);
 }
 

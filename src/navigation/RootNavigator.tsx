@@ -37,19 +37,31 @@ function MainNavigator() {
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    const timeout = setTimeout(() => setTimedOut(true), 10_000);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      clearTimeout(timeout);
       setUser(u);
       setLoading(false);
     });
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   if (loading) {
     return (
       <View style={styles.loading}>
         <Text style={styles.loadingText}>Spartacus</Text>
+        {timedOut && (
+          <Text style={styles.errorDetail}>
+            Firebase Auth não respondeu. Verifique sua conexão.
+          </Text>
+        )}
       </View>
     );
   }
@@ -76,6 +88,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontHeading,
     letterSpacing: 4,
     textTransform: "uppercase",
+  },
+  errorDetail: {
+    color: colors.mutedForeground,
+    fontSize: 12,
+    fontFamily: typography.fontBody,
+    marginTop: 16,
+    textAlign: "center",
+    paddingHorizontal: 32,
   },
   placeholder: {
     flex: 1,

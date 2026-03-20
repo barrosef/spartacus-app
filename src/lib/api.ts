@@ -30,12 +30,13 @@ async function request<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const error = new ApiError(
-      body.detail ?? `Erro ${res.status}`,
-      res.status,
-      body,
-    );
-    throw error;
+    let message = `Erro ${res.status}`;
+    if (Array.isArray(body.detail)) {
+      message = body.detail.map((e: { msg?: string }) => e.msg ?? "").filter(Boolean).join("; ");
+    } else if (typeof body.detail === "string") {
+      message = body.detail;
+    }
+    throw new ApiError(message, res.status, body);
   }
 
   return res.json() as Promise<T>;
@@ -53,7 +54,8 @@ export class ApiError extends Error {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string, signal?: AbortSignal) =>
+    request<T>(path, { signal }),
 
   post: <T>(path: string, data: unknown) =>
     request<T>(path, {
@@ -61,3 +63,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
 };
+
+export async function checkEmail(
+  email: string,
+  signal?: AbortSignal,
+): Promise<{ available: boolean }> {
+  const url = `${BASE_URL}/auth/check-email?email=${encodeURIComponent(email)}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`check-email failed: ${res.status}`);
+  return res.json();
+}
