@@ -42,7 +42,7 @@ export function PendingScreen() {
           <View style={styles.footer}>
             <Button
               variant="outline"
-              label="Sair"
+              label="Voltar ao login"
               onPress={() => signOut(auth)}
             />
           </View>
