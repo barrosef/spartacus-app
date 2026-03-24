@@ -16,6 +16,7 @@ import { Step5DepList } from "../screens/auth/SignupWizard/Step5DepList";
 import { Step5OwnClasses } from "../screens/auth/SignupWizard/Step5OwnClasses";
 import { Step6Review } from "../screens/auth/SignupWizard/Step6Review";
 import { PendingScreen } from "../screens/auth/PendingScreen";
+import { EmailSentScreen } from "../screens/auth/EmailSentScreen";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
@@ -31,6 +32,7 @@ const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Step5DepList,
   Step5OwnClasses,
   Step6Review,
+  EmailSent: EmailSentScreen,
   Pending: PendingScreen,
 };
 

@@ -67,6 +67,9 @@ export function Step6Review() {
       };
 
       await api.post<SignupResponse>("/auth/signup", payload);
+      if (state.authMethod === "email") {
+        navigation.navigate("EmailSent", { email: state.email });
+      }
       setSignupInProgress(false);
     } catch (error: unknown) {
       let title = "Erro ao criar conta";

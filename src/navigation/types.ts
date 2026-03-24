@@ -12,6 +12,7 @@ export type AuthStackParamList = {
   Step5DepList: undefined;
   Step5OwnClasses: undefined;
   Step6Review: undefined;
+  EmailSent: { email: string };
   Pending: undefined;
 };
 
