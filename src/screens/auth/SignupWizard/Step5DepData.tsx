@@ -16,7 +16,6 @@ import { DateInput } from "../../../components/ui/DateInput";
 import { useWizard } from "../../../context/WizardContext";
 import { colors, typography, spacing } from "../../../theme/tokens";
 import type { AuthStackParamList } from "../../../navigation/types";
-import { formatCPF } from "../../../utils/cpf";
 
 function calcAge(birthDate: string): number | null {
   const parts = birthDate.split("/");
@@ -45,7 +44,6 @@ export function Step5DepData({ route }: { route?: { params?: AuthStackParamList[
 
   const [name, setName] = useState(editing?.name ?? "");
   const [birthDate, setBirthDate] = useState(editing?.birthDate ?? "");
-  const [taxId, setTaxId] = useState(editing?.taxId ?? "");
 
   const age = calcAge(birthDate);
   const nameFirst = name.trim().split(" ")[0] || "dependente";
@@ -54,14 +52,14 @@ export function Step5DepData({ route }: { route?: { params?: AuthStackParamList[
     if (isEdit && editing) {
       dispatch({
         type: "UPDATE_DEPENDENT",
-        payload: { ...editing, name, birthDate, taxId },
+        payload: { ...editing, name, birthDate },
       });
       navigation.navigate("Step5DepClasses", { dependentId: editing.id });
     } else {
       const newId = `dep-${Date.now()}`;
       dispatch({
         type: "ADD_DEPENDENT",
-        payload: { id: newId, name, birthDate, taxId: taxId || undefined, classIds: [] },
+        payload: { id: newId, name, birthDate, classIds: [] },
       });
       navigation.navigate("Step5DepClasses", { dependentId: newId });
     }
@@ -115,16 +113,6 @@ export function Step5DepData({ route }: { route?: { params?: AuthStackParamList[
               value={birthDate}
               onChange={setBirthDate}
               hint="Para menores de 18 anos"
-            />
-
-            <Input
-              label="CPF (opcional)"
-              placeholder="Informe o CPF (opcional)"
-              keyboardType="numeric"
-              value={taxId}
-              onChangeText={(v) => setTaxId(formatCPF(v))}
-              maxLength={14}
-              hint="Necessário apenas para maiores de 12 anos"
             />
           </View>
 
