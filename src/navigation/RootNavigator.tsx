@@ -4,8 +4,8 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import { AuthNavigator } from "./AuthNavigator";
-import { PendingScreen } from "../screens/auth/PendingScreen";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
+import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
@@ -33,26 +33,30 @@ function MainNavigator() {
   );
 }
 
-type AppState = "loading" | "auth" | "pending_email" | "pending_approval" | "approved";
+type AppState = "loading" | "auth" | "email_pending" | "blocked" | "approved";
 
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
+  const [accountStatus, setAccountStatus] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
   const checkApproval = useCallback(async () => {
     try {
       const res = await api.get<{ approvalStatus: string }>("/auth/me");
-      if (res.approvalStatus === "approved") {
+      const status = res.approvalStatus;
+      setAccountStatus(status);
+      if (status === "approved") {
         setAppState("approved");
-      } else if (res.approvalStatus === "pending_email") {
-        setAppState("pending_email");
+      } else if (status === "waiting_email_confirmation") {
+        setAppState("email_pending");
       } else {
-        setAppState("pending_approval");
+        setAppState("blocked");
       }
     } catch {
-      setAppState("pending_approval");
+      setAppState("blocked");
+      setAccountStatus("pending_approval");
     }
   }, []);
 
@@ -96,13 +100,16 @@ export function RootNavigator() {
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
       {showAuth ? (
         <AuthNavigator />
-      ) : appState === "pending_email" ? (
+      ) : appState === "email_pending" ? (
         <PendingEmailScreen
           email={user?.email ?? ""}
-          onVerified={() => setAppState("pending_approval")}
+          onVerified={() => {
+            setAccountStatus("pending_approval");
+            setAppState("blocked");
+          }}
         />
-      ) : appState === "pending_approval" ? (
-        <PendingScreen />
+      ) : appState === "blocked" ? (
+        <BlockedStatusScreen status={accountStatus} />
       ) : (
         <MainNavigator />
       )}
