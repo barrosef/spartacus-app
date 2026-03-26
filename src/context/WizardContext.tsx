@@ -15,6 +15,7 @@ export interface Dependent {
   id: string;        // temp client-side id
   name: string;
   birthDate: string;
+  gender: "male" | "female";
   taxId?: string;
   classIds: string[];
 }
@@ -25,9 +26,13 @@ export interface WizardState {
   email: string;
   password: string;
 
+  // Step 0c — project
+  projectId: string;
+
   // Step 1 — personal data
   name: string;
   birthDate: string;
+  gender: "male" | "female" | "";
   taxId: string;
 
   // Step 2 — contact
@@ -57,8 +62,10 @@ const initialState: WizardState = {
   authMethod: null,
   email: "",
   password: "",
+  projectId: "",
   name: "",
   birthDate: "",
+  gender: "",
   taxId: "",
   phone: "",
   whatsapp: "",
@@ -76,8 +83,9 @@ const initialState: WizardState = {
 
 type WizardAction =
   | { type: "SET_AUTH_METHOD"; payload: WizardState["authMethod"] }
+  | { type: "SET_PROJECT"; payload: string }
   | { type: "SET_CREDENTIALS"; payload: { email: string; password: string } }
-  | { type: "SET_PERSONAL_DATA"; payload: Pick<WizardState, "name" | "birthDate"> }
+  | { type: "SET_PERSONAL_DATA"; payload: Pick<WizardState, "name" | "birthDate" | "gender"> }
   | { type: "SET_CONTACT"; payload: Pick<WizardState, "phone" | "whatsapp"> }
   | { type: "SET_ADDRESS"; payload: Pick<WizardState, "postalCode" | "street" | "number" | "complement" | "neighborhood" | "city" | "state"> }
   | { type: "SET_ROLES"; payload: Role[] }
@@ -91,6 +99,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SET_AUTH_METHOD":
       return { ...state, authMethod: action.payload };
+    case "SET_PROJECT":
+      return { ...state, projectId: action.payload };
     case "SET_CREDENTIALS":
       return { ...state, ...action.payload };
     case "SET_PERSONAL_DATA":

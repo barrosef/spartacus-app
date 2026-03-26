@@ -77,7 +77,7 @@ export function Step0bCredentials() {
   function handleNext() {
     if (!validate()) return;
     dispatch({ type: "SET_CREDENTIALS", payload: { email: email.trim(), password } });
-    navigation.navigate("Step1Profile");
+    navigation.navigate("Step0cProject");
   }
 
   const canContinue =

@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import { useAuthNavigation } from "../../../navigation/AuthNavContext";
 import { SafeScreen } from "../../../components/ui/SafeScreen";
@@ -14,7 +15,7 @@ import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { DateInput } from "../../../components/ui/DateInput";
 import { useWizard } from "../../../context/WizardContext";
-import { colors, typography, spacing } from "../../../theme/tokens";
+import { colors, typography, spacing, radius } from "../../../theme/tokens";
 
 export function Step2PersonalData() {
   const navigation = useAuthNavigation();
@@ -22,19 +23,21 @@ export function Step2PersonalData() {
 
   const [name, setName] = useState(state.name);
   const [birthDate, setBirthDate] = useState(state.birthDate);
+  const [gender, setGender] = useState<"male" | "female" | "">(state.gender);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const e: Record<string, string> = {};
     if (name.trim().length < 3) e.name = "Nome deve ter pelo menos 3 caracteres";
     if (birthDate.length < 10) e.birthDate = "Data inválida";
+    if (!gender) e.gender = "Selecione o gênero";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
   function handleNext() {
     if (!validate()) return;
-    dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate } });
+    dispatch({ type: "SET_PERSONAL_DATA", payload: { name, birthDate, gender: gender as "male" | "female" } });
     navigation.navigate("Step3Contact");
   }
 
@@ -83,13 +86,34 @@ export function Step2PersonalData() {
               onChange={setBirthDate}
               error={errors.birthDate}
             />
+
+            <View>
+              <Text style={styles.genderLabel}>Gênero</Text>
+              <View style={styles.genderRow}>
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === "male" && styles.genderOptionActive]}
+                  onPress={() => setGender("male")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.genderText, gender === "male" && styles.genderTextActive]}>Masculino</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === "female" && styles.genderOptionActive]}
+                  onPress={() => setGender("female")}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.genderText, gender === "female" && styles.genderTextActive]}>Feminino</Text>
+                </TouchableOpacity>
+              </View>
+              {errors.gender && <Text style={styles.genderError}>{errors.gender}</Text>}
+            </View>
           </View>
 
           <View style={styles.footer}>
             <Button
               label="Continuar"
               onPress={handleNext}
-              disabled={!name || !birthDate}
+              disabled={!name || !birthDate || !gender}
             />
           </View>
         </ScrollView>
@@ -122,6 +146,45 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: spacing.md + 4,
+  },
+  genderLabel: {
+    fontSize: 13,
+    fontFamily: typography.fontBodySemiBold,
+    color: colors.mutedForeground,
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  genderRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  genderOption: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: "center",
+    backgroundColor: colors.card,
+  },
+  genderOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: "rgba(198,163,78,0.08)",
+  },
+  genderText: {
+    fontSize: 14,
+    fontFamily: typography.fontBodyMedium,
+    color: colors.mutedForeground,
+  },
+  genderTextActive: {
+    color: colors.primary,
+  },
+  genderError: {
+    fontSize: 12,
+    fontFamily: typography.fontBody,
+    color: colors.error,
+    marginTop: 4,
   },
   footer: {
     marginTop: spacing.xl,

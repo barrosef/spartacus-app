@@ -20,7 +20,7 @@ export function Step0AuthMethod() {
   const google = useGoogleSignIn(() => {
     const email = auth.currentUser?.email ?? "";
     dispatch({ type: "SET_CREDENTIALS", payload: { email, password: "" } });
-    navigation.navigate("Step1Profile");
+    navigation.navigate("Step0cProject");
   });
 
   function choose(method: "email" | "google") {
