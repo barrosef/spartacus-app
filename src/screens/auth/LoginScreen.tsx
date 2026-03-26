@@ -169,6 +169,9 @@ const styles = StyleSheet.create({
   logo: {
     width: 160,
     height: 160,
+    borderRadius: 80,
+    borderWidth: 2,
+    borderColor: "rgba(198,163,78,0.3)",
   },
   form: {
     gap: spacing.md + 4,

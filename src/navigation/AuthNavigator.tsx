@@ -6,6 +6,7 @@ import { WizardProvider } from "../context/WizardContext";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { Step0AuthMethod } from "../screens/auth/SignupWizard/Step0AuthMethod";
 import { Step0bCredentials } from "../screens/auth/SignupWizard/Step0bCredentials";
+import { Step0cProject } from "../screens/auth/SignupWizard/Step0cProject";
 import { Step1Profile } from "../screens/auth/SignupWizard/Step1Profile";
 import { Step2PersonalData } from "../screens/auth/SignupWizard/Step2PersonalData";
 import { Step3Contact } from "../screens/auth/SignupWizard/Step3Contact";
@@ -16,12 +17,14 @@ import { Step5DepList } from "../screens/auth/SignupWizard/Step5DepList";
 import { Step5OwnClasses } from "../screens/auth/SignupWizard/Step5OwnClasses";
 import { Step6Review } from "../screens/auth/SignupWizard/Step6Review";
 import { PendingScreen } from "../screens/auth/PendingScreen";
+import { EmailSentScreen } from "../screens/auth/EmailSentScreen";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Login: LoginScreen,
   Step0AuthMethod,
   Step0bCredentials,
+  Step0cProject,
   Step1Profile,
   Step2PersonalData,
   Step3Contact,
@@ -31,6 +34,7 @@ const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Step5DepList,
   Step5OwnClasses,
   Step6Review,
+  EmailSent: EmailSentScreen,
   Pending: PendingScreen,
 };
 

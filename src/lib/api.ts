@@ -1,7 +1,12 @@
 import { auth } from "./firebase";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
-const PROJECT_ID = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "spartacus-artes-marciais";
+
+// Default project ID — can be overridden at runtime via setProjectId()
+let _projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "spartacus-artes-marciais";
+
+export function setProjectId(id: string) { _projectId = id; }
+export function getProjectId() { return _projectId; }
 
 async function getAuthToken(): Promise<string | null> {
   const user = auth.currentUser;
@@ -16,7 +21,7 @@ async function request<T>(
   const token = await getAuthToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Project-Id": PROJECT_ID,
+    "X-Project-Id": _projectId,
     ...(options.headers as Record<string, string> ?? {}),
   };
   if (token) {

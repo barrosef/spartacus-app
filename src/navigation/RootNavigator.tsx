@@ -5,13 +5,10 @@ import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import { AuthNavigator } from "./AuthNavigator";
 import { PendingScreen } from "../screens/auth/PendingScreen";
+import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { colors, typography } from "../theme/tokens";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
-// Google Sign-In creates a Firebase user mid-wizard. Without this guard,
-// onAuthStateChanged fires immediately and swaps to MainNavigator before the
-// wizard can collect the remaining profile data.
-
 interface SignupGuard {
   signupInProgress: boolean;
   setSignupInProgress: (v: boolean) => void;
@@ -36,7 +33,7 @@ function MainNavigator() {
   );
 }
 
-type AppState = "loading" | "auth" | "pending" | "approved";
+type AppState = "loading" | "auth" | "pending_email" | "pending_approval" | "approved";
 
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
@@ -49,12 +46,13 @@ export function RootNavigator() {
       const res = await api.get<{ approvalStatus: string }>("/auth/me");
       if (res.approvalStatus === "approved") {
         setAppState("approved");
+      } else if (res.approvalStatus === "pending_email") {
+        setAppState("pending_email");
       } else {
-        setAppState("pending");
+        setAppState("pending_approval");
       }
     } catch {
-      // User not found in backend (no signup yet) or network error
-      setAppState("pending");
+      setAppState("pending_approval");
     }
   }, []);
 
@@ -73,7 +71,6 @@ export function RootNavigator() {
     };
   }, []);
 
-  // When user changes and signup is not in progress, check approval
   useEffect(() => {
     if (user && !signupInProgress) {
       checkApproval();
@@ -99,7 +96,12 @@ export function RootNavigator() {
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
       {showAuth ? (
         <AuthNavigator />
-      ) : appState === "pending" ? (
+      ) : appState === "pending_email" ? (
+        <PendingEmailScreen
+          email={user?.email ?? ""}
+          onVerified={() => setAppState("pending_approval")}
+        />
+      ) : appState === "pending_approval" ? (
         <PendingScreen />
       ) : (
         <MainNavigator />

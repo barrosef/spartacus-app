@@ -3,6 +3,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Step0AuthMethod: undefined;
   Step0bCredentials: undefined;
+  Step0cProject: undefined;
   Step1Profile: undefined;
   Step2PersonalData: undefined;
   Step3Contact: undefined;
@@ -12,6 +13,7 @@ export type AuthStackParamList = {
   Step5DepList: undefined;
   Step5OwnClasses: undefined;
   Step6Review: undefined;
+  EmailSent: { email: string };
   Pending: undefined;
 };
 

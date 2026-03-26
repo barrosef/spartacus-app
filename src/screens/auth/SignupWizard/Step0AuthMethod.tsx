@@ -20,7 +20,7 @@ export function Step0AuthMethod() {
   const google = useGoogleSignIn(() => {
     const email = auth.currentUser?.email ?? "";
     dispatch({ type: "SET_CREDENTIALS", payload: { email, password: "" } });
-    navigation.navigate("Step1Profile");
+    navigation.navigate("Step0cProject");
   });
 
   function choose(method: "email" | "google") {
@@ -130,6 +130,9 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "rgba(198,163,78,0.3)",
     marginBottom: spacing.sm,
   },
   title: {

@@ -45,6 +45,7 @@ export function Step6Review() {
         password: state.authMethod === "email" ? state.password : undefined,
         name: state.name,
         birthDate: state.birthDate,
+        gender: state.gender,
         taxId: state.taxId || undefined,
         phone: state.phone,
         whatsapp: state.whatsapp,
@@ -60,6 +61,7 @@ export function Step6Review() {
           id: dep.id,
           name: dep.name,
           birthDate: dep.birthDate,
+          gender: dep.gender,
           taxId: dep.taxId || undefined,
           classIds: dep.classIds,
         })),
@@ -67,6 +69,9 @@ export function Step6Review() {
       };
 
       await api.post<SignupResponse>("/auth/signup", payload);
+      if (state.authMethod === "email") {
+        navigation.navigate("EmailSent", { email: state.email });
+      }
       setSignupInProgress(false);
     } catch (error: unknown) {
       let title = "Erro ao criar conta";
