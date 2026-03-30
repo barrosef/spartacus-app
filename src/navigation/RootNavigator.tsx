@@ -4,6 +4,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import { AuthNavigator } from "./AuthNavigator";
+import { AnamneseNavigator } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
@@ -33,24 +34,31 @@ function MainNavigator() {
   );
 }
 
-type AppState = "loading" | "auth" | "email_pending" | "blocked" | "approved";
+type AppState = "loading" | "auth" | "email_pending" | "blocked" | "anamnese" | "approved";
 
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
   const [accountStatus, setAccountStatus] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
   const checkApproval = useCallback(async () => {
     try {
-      const res = await api.get<{ approvalStatus: string }>("/auth/me");
+      const res = await api.get<{
+        approvalStatus: string;
+        birthDate?: string;
+      }>("/auth/me");
       const status = res.approvalStatus;
       setAccountStatus(status);
+      if (res.birthDate) setBirthDate(res.birthDate);
       if (status === "approved") {
         setAppState("approved");
       } else if (status === "waiting_email_confirmation") {
         setAppState("email_pending");
+      } else if (status === "waiting_medical_history") {
+        setAppState("anamnese");
       } else {
         setAppState("blocked");
       }
@@ -105,6 +113,14 @@ export function RootNavigator() {
           email={user?.email ?? ""}
           onVerified={() => {
             setAccountStatus("pending_approval");
+            setAppState("blocked");
+          }}
+        />
+      ) : appState === "anamnese" ? (
+        <AnamneseNavigator
+          birthDate={birthDate}
+          onSubmitted={() => {
+            setAccountStatus("pending_medical_history_approval");
             setAppState("blocked");
           }}
         />
