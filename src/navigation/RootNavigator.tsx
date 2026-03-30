@@ -8,6 +8,7 @@ import { AnamneseNavigator } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
+import { MainNavigator } from "./MainNavigator";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
 interface SignupGuard {
@@ -22,16 +23,6 @@ const SignupGuardCtx = createContext<SignupGuard>({
 
 export function useSignupGuard() {
   return useContext(SignupGuardCtx);
-}
-
-// Placeholder for main app navigator (post-auth, approved)
-function MainNavigator() {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>App Principal</Text>
-      <Text style={styles.placeholderSub}>Em desenvolvimento</Text>
-    </View>
-  );
 }
 
 type AppState = "loading" | "auth" | "email_pending" | "blocked" | "anamnese" | "approved";
@@ -154,22 +145,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: "center",
     paddingHorizontal: 32,
-  },
-  placeholder: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    color: colors.foreground,
-    fontSize: 20,
-    fontFamily: typography.fontHeadingSemi,
-  },
-  placeholderSub: {
-    color: colors.mutedForeground,
-    fontSize: 14,
-    fontFamily: typography.fontBody,
-    marginTop: 8,
   },
 });

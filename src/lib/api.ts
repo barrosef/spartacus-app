@@ -67,6 +67,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  patch: <T>(path: string, data: unknown) =>
+    request<T>(path, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  delete: <T>(path: string) =>
+    request<T>(path, { method: "DELETE" }),
 };
 
 export async function checkEmail(
