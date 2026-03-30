@@ -19,6 +19,10 @@ import { ProxyBanner } from "../../components/main/ProxyBanner";
 import { PersonalDataScreen } from "./PersonalDataScreen";
 import { RolesScreen } from "./RolesScreen";
 import { AddressScreen } from "./AddressScreen";
+import { DependentsScreen } from "./DependentsScreen";
+import { ClassesScreen } from "./ClassesScreen";
+import { GraduationScreen } from "./GraduationScreen";
+import { CategoryScreen } from "./CategoryScreen";
 
 interface ProfileData {
   uid: string;
@@ -125,8 +129,26 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       <AddressScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
     );
   }
-  // Remaining sub-screens (dependents, classes, graduation, category)
-  // will be wired in Fase G
+  if (screen === "dependents") {
+    return (
+      <DependentsScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
+    );
+  }
+  if (screen === "classes") {
+    return (
+      <ClassesScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
+    );
+  }
+  if (screen === "graduation") {
+    return (
+      <GraduationScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
+    );
+  }
+  if (screen === "category") {
+    return (
+      <CategoryScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
