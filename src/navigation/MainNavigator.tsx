@@ -8,6 +8,7 @@ import { AppHeader } from "../components/main/AppHeader";
 import { BottomNav, type TabKey } from "../components/main/BottomNav";
 import { ProxyBanner } from "../components/main/ProxyBanner";
 import { ContextSwitcher } from "../components/main/ContextSwitcher";
+import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { FeedScreen } from "../screens/main/FeedScreen";
 import { CheckinScreen } from "../screens/main/CheckinScreen";
 import { CalendarScreen } from "../screens/main/CalendarScreen";
@@ -57,6 +58,7 @@ function calculateAge(birthDate: string): number | null {
 
 function MainContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("feed");
+  const [showProfile, setShowProfile] = useState(false);
   const [switcherVisible, setSwitcherVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
@@ -99,19 +101,25 @@ function MainContent() {
     if (isGuardian && dependents.length > 0) {
       setSwitcherVisible(true);
     } else {
-      // TODO: navigate to profile screen (Fase F)
+      setShowProfile(true);
     }
   };
 
   const handleSelectSelf = () => {
     clearProxy();
-    // TODO: navigate to profile screen (Fase F)
+    setShowProfile(true);
   };
 
   const handleSelectDependent = (dep: DependentData) => {
     switchTo(dep.uid, dep.name);
-    // TODO: navigate to profile screen in proxy mode (Fase F)
+    setShowProfile(true);
   };
+
+  if (showProfile) {
+    return (
+      <ProfileScreen onBack={() => { setShowProfile(false); fetchProfile(); }} />
+    );
+  }
 
   const renderTab = () => {
     switch (activeTab) {
