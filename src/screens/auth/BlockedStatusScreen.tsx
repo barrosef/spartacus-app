@@ -52,6 +52,18 @@ const STATUS_CONFIG: Record<string, { icon: string; title: string; message: stri
   },
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  pending_approval: "Aguardando aprovação",
+  waiting_medical_history: "Aguardando anamnese",
+  pending_medical_history_approval: "Anamnese em revisão",
+  waiting_registration_review: "Revisão solicitada",
+  revised_registration: "Revisão em análise",
+  rejected: "Não aprovado",
+  expelled: "Conta suspensa",
+  archived: "Conta arquivada",
+  approved: "Aprovado",
+};
+
 interface Props {
   status: string;
 }
@@ -70,7 +82,7 @@ export function BlockedStatusScreen({ status }: Props) {
 
         <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>Status atual</Text>
-          <Text style={styles.statusValue}>{status.replace(/_/g, " ")}</Text>
+          <Text style={styles.statusValue}>{STATUS_LABELS[status] ?? status}</Text>
         </View>
 
         <View style={styles.footer}>
