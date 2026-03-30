@@ -40,6 +40,7 @@ export function Input({
       <View
         style={[
           styles.inputWrapper,
+          rest.multiline && styles.inputWrapperMultiline,
           focused && styles.inputWrapperFocused,
           !!error && styles.inputWrapperError,
         ]}
@@ -98,6 +99,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
+  },
+  inputWrapperMultiline: {
+    height: undefined,
+    minHeight: inputHeight,
+    alignItems: "flex-start",
+    paddingVertical: spacing.sm,
   },
   inputWrapperFocused: {
     borderColor: colors.primary,

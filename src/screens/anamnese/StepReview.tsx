@@ -15,6 +15,42 @@ import { useAnamneseNavigation } from "../../navigation/AnamneseNavigator";
 import { api } from "../../lib/api";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
+const CONDITION_LABELS: Record<string, string> = {
+  alcoholism: "Alcoolismo",
+  kidney_disease: "Doença renal",
+  emphysema: "Enfisema",
+  anemia: "Anemia",
+  arthritis: "Artrite",
+  eye_problems: "Problemas oculares",
+  ulcer: "Úlcera",
+  asthma: "Asma",
+  diabetes: "Diabetes",
+  high_blood_pressure: "Pressão alta",
+  stroke: "AVC",
+  obesity: "Obesidade",
+  muscle_problems: "Problemas musculares",
+  other: "Outro",
+};
+
+const GOAL_LABELS: Record<string, string> = {
+  discipline: "Disciplina",
+  self_defense: "Defesa pessoal",
+  socialization: "Socialização",
+  health: "Saúde",
+  competition: "Competição",
+  physical_conditioning: "Condicionamento físico",
+  therapeutic: "Terapêutico",
+  leisure: "Lazer",
+  other: "Outro",
+};
+
+function translateList(
+  keys: string[],
+  map: Record<string, string>,
+): string {
+  return keys.map((k) => map[k] ?? k).join(", ");
+}
+
 interface StepReviewProps {
   onSubmitted?: () => void;
 }
@@ -128,7 +164,7 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
               <Row label="Último exame" value={state.lastMedicalExamDate} />
             )}
             {state.diagnosedConditions.length > 0 && (
-              <Row label="Condições" value={state.diagnosedConditions.join(", ")} />
+              <Row label="Condições" value={translateList(state.diagnosedConditions, CONDITION_LABELS)} />
             )}
             {state.currentMedications && (
               <Row label="Medicamentos" value={state.currentMedications} />
@@ -162,7 +198,7 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
           </SummarySection>
 
           <SummarySection title="Objetivos">
-            <Row label="Selecionados" value={state.goals.join(", ")} />
+            <Row label="Selecionados" value={translateList(state.goals, GOAL_LABELS)} />
             {state.goalsOther && <Row label="Outro" value={state.goalsOther} />}
           </SummarySection>
         </View>
