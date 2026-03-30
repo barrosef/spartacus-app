@@ -29,7 +29,7 @@ interface ProfileData {
 
 interface ClassOut {
   id: string;
-  modality: string;
+  modality_name: string;
 }
 
 const BELT_OPTIONS: Record<string, { label: string; color: string }[]> = {
@@ -91,7 +91,7 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
       const mods = [...new Set(
         classesRes.classes
           .filter((c) => enrolled.has(c.id))
-          .map((c) => c.modality),
+          .map((c) => c.modality_name),
       )];
       setModalities(mods);
 

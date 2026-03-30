@@ -5,9 +5,12 @@ import type { ClassOption } from "../context/WizardContext";
 interface ClassOut {
   id: string;
   name: string;
-  modality: string;
+  modality_id: string;
+  modality_name: string;
   schedule: string;
+  schedule_items: { day: string; start_time: string; end_time: string }[];
   teacher?: string;
+  location?: string;
   age_range?: { min: number; max?: number };
 }
 
@@ -19,9 +22,12 @@ function mapClass(c: ClassOut): ClassOption {
   return {
     id: c.id,
     name: c.name,
-    modality: c.modality,
+    modalityId: c.modality_id,
+    modality: c.modality_name,
     schedule: c.schedule,
+    scheduleItems: c.schedule_items,
     teacher: c.teacher,
+    location: c.location,
     ageRange: c.age_range ? { min: c.age_range.min, max: c.age_range.max ?? 99 } : undefined,
   };
 }
