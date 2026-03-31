@@ -126,7 +126,7 @@ function MainContent() {
       case "feed":
         return <FeedScreen />;
       case "checkin":
-        return <CheckinScreen />;
+        return <CheckinScreen onDone={() => setActiveTab("feed")} />;
       case "calendar":
         return <CalendarScreen />;
       case "donations":
