@@ -130,7 +130,7 @@ function MainContent() {
       case "calendar":
         return <CalendarScreen />;
       case "donations":
-        return <DonationsScreen />;
+        return <DonationsScreen onDone={() => setActiveTab("feed")} />;
     }
   };
 
