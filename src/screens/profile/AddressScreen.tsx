@@ -7,6 +7,7 @@ import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 interface AddressData {
   postalCode?: string | null;
@@ -39,6 +40,7 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
   const [state, setState] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const fetchAddress = useCallback(async () => {
     try {
@@ -103,8 +105,7 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
         city,
         state: state.toUpperCase(),
       });
-      Alert.alert("Endereço atualizado");
-      onBack();
+      setShowSuccess(true);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Erro ao salvar";
@@ -113,6 +114,15 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
       setSaving(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <SuccessScreen
+        title="Endereço atualizado!"
+        onDismiss={onBack}
+      />
+    );
+  }
 
   const readOnly = isDependent && !!actingAs;
 

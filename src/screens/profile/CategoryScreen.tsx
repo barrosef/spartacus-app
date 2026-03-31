@@ -13,6 +13,7 @@ import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 interface CompetitionData {
   weightKg: number | null;
@@ -42,6 +43,7 @@ export function CategoryScreen({ onBack }: CategoryScreenProps) {
   const [weightCategory, setWeightCategory] = useState<string | null>(null);
   const [weightOptions, setWeightOptions] = useState<{ name: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -90,14 +92,22 @@ export function CategoryScreen({ onBack }: CategoryScreenProps) {
         weightKg: w || null,
         targetCategories: Array.from(targets),
       });
-      Alert.alert("Categoria atualizada");
-      onBack();
+      setShowSuccess(true);
     } catch (err: unknown) {
       Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
       setSaving(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <SuccessScreen
+        title="Categoria atualizada!"
+        onDismiss={onBack}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

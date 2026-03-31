@@ -6,6 +6,7 @@ import { colors, typography, spacing } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 interface ProfileData {
   name: string;
@@ -23,6 +24,7 @@ interface PersonalDataScreenProps {
 
 export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
   const [data, setData] = useState<ProfileData | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("");
@@ -80,8 +82,7 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
         whatsapp: whatsapp.replace(/\D/g, "") || undefined,
         taxId: taxId.replace(/\D/g, "") || undefined,
       });
-      Alert.alert("Dados atualizados");
-      onBack();
+      setShowSuccess(true);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Erro ao salvar";
@@ -90,6 +91,15 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
       setSaving(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <SuccessScreen
+        title="Dados atualizados!"
+        onDismiss={onBack}
+      />
+    );
+  }
 
   if (!data) {
     return (

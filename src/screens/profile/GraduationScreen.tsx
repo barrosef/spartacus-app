@@ -15,6 +15,7 @@ import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 interface GraduationEntry {
   belt: string;
@@ -76,6 +77,7 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const [modalities, setModalities] = useState<string[]>([]);
   const [graduation, setGraduation] = useState<Record<string, GraduationEntry>>({});
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [pickerModal, setPickerModal] = useState<{ modality: string } | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -114,8 +116,7 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
     setSaving(true);
     try {
       await api.patch("/users/me/graduation", { graduation });
-      Alert.alert("Graduação atualizada");
-      onBack();
+      setShowSuccess(true);
     } catch (err: unknown) {
       Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -127,6 +128,15 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const belts = modalModality
     ? (BELT_OPTIONS[modalModality] ?? getDefaultBelts())
     : [];
+
+  if (showSuccess) {
+    return (
+      <SuccessScreen
+        title="Graduação atualizada!"
+        onDismiss={onBack}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

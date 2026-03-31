@@ -13,6 +13,7 @@ import { api } from "../../lib/api";
 import { useClasses } from "../../hooks/useClasses";
 import { SelecaoTurmasScreen } from "../../components/wizard/SelecaoTurmasScreen";
 import { Button } from "../../components/ui/Button";
+import { SuccessScreen } from "../../components/ui/SuccessScreen";
 import type { ClassOption } from "../../context/WizardContext";
 
 interface ProfileData {
@@ -22,7 +23,7 @@ interface ProfileData {
   roles: string[];
 }
 
-type SubScreen = "view" | "edit" | "confirm";
+type SubScreen = "view" | "edit" | "confirm" | "success";
 
 interface ClassesScreenProps {
   onBack: () => void;
@@ -46,6 +47,15 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
 
   if (!profile) {
     return <SafeAreaView style={styles.safe}><View style={styles.safe} /></SafeAreaView>;
+  }
+
+  if (sub === "success") {
+    return (
+      <SuccessScreen
+        title="Turmas atualizadas!"
+        onDismiss={onBack}
+      />
+    );
   }
 
   // ── Edit: reuse SelecaoTurmasScreen ──
@@ -86,9 +96,7 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
       setSaving(true);
       try {
         await api.patch("/users/me/classes", { classIds: newSelection });
-        Alert.alert("Turmas atualizadas");
-        fetchProfile();
-        setSub("view");
+        setSub("success");
       } catch (err: unknown) {
         Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
       } finally {
