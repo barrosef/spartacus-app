@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Platform } from "react-native";
+import { GoogleAuthProvider, signInWithCredential, signInWithPopup } from "firebase/auth";
 import { auth } from "./firebase";
 
 // IDs de cliente OAuth — configure em .env:
@@ -8,8 +9,28 @@ import { auth } from "./firebase";
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? "";
 
-// Lazy-load expo-auth-session and expo-web-browser to avoid crash
-// when native modules are not available (Expo Go without dev build)
+// ── Web: uses Firebase signInWithPopup directly ──────────────────────────────
+function useGoogleSignInWeb(onSuccess?: () => void) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+
+  const signIn = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+      .then(() => onSuccessRef.current?.())
+      .catch(() => setError("Falha ao autenticar com Google."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { signIn, loading, error, ready: true };
+}
+
+// ── Native: uses expo-auth-session + expo-web-browser ────────────────────────
+// Lazy-load to avoid crash when native modules are not available
 let useAuthRequestFn: ((config: { webClientId: string; androidClientId: string }) =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [any, any, () => Promise<any>]) | null = null;
@@ -25,12 +46,11 @@ try {
   // Native modules not available — Google Sign-In disabled
 }
 
-// Stub hook used when native modules are unavailable
 function useAuthRequestStub(_config: { webClientId: string; androidClientId: string }): [null, null, () => Promise<never>] {
   return [null, null, () => Promise.reject(new Error("unavailable"))] as const;
 }
 
-export function useGoogleSignIn(onSuccess?: () => void) {
+function useGoogleSignInNative(onSuccess?: () => void) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const onSuccessRef = useRef(onSuccess);
@@ -84,4 +104,14 @@ export function useGoogleSignIn(onSuccess?: () => void) {
   }
 
   return { signIn, loading, error, ready: !!request };
+}
+
+// ── Public hook — delegates to web or native implementation ──────────────────
+export function useGoogleSignIn(onSuccess?: () => void) {
+  if (Platform.OS === "web") {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useGoogleSignInWeb(onSuccess);
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useGoogleSignInNative(onSuccess);
 }

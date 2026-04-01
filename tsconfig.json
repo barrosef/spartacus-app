@@ -9,7 +9,8 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "lib": [
-      "ES2020"
+      "ES2020",
+      "DOM"
     ],
     "jsx": "react-native",
     "noEmit": true

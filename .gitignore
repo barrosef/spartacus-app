@@ -32,3 +32,4 @@ Thumbs.db
 *.mobileprovision
 *.orig.*
 web-build/
+dist/

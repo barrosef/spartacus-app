@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   ScrollView,
   StyleSheet,
   Alert,
-  ActionSheetIOS,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { colors, spacing } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
@@ -16,6 +16,7 @@ import { AvatarHeader } from "../../components/profile/AvatarHeader";
 import { CompletionBar } from "../../components/profile/CompletionBar";
 import { MenuCard, MenuDivider } from "../../components/profile/MenuCard";
 import { ProxyBanner } from "../../components/main/ProxyBanner";
+import { PhotoPickerSheet } from "../../components/profile/PhotoPickerSheet";
 import { PersonalDataScreen } from "./PersonalDataScreen";
 import { RolesScreen } from "./RolesScreen";
 import { AddressScreen } from "./AddressScreen";
@@ -52,6 +53,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const { actingAs } = useProxy();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [screen, setScreen] = useState<Screen>("profile");
+  const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -71,34 +73,97 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   }, [fetchProfile]);
 
   const handleAvatarPress = () => {
-    const hasPhoto = !!profile?.photoUrl;
-    const options = hasPhoto
-      ? ["Câmera", "Escolher arquivo", "Excluir foto", "Cancelar"]
-      : ["Câmera", "Escolher arquivo", "Cancelar"];
-    const cancelIndex = options.length - 1;
-    const destructiveIndex = hasPhoto ? 2 : -1;
+    setPhotoSheetVisible(true);
+  };
 
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: destructiveIndex },
-        (idx) => handleAvatarOption(idx, hasPhoto),
-      );
-    } else {
-      // Android: use Alert as simple action sheet
-      Alert.alert("Foto do perfil", undefined, [
-        { text: "Câmera", onPress: () => handleAvatarOption(0, hasPhoto) },
-        { text: "Escolher arquivo", onPress: () => handleAvatarOption(1, hasPhoto) },
-        ...(hasPhoto
-          ? [{ text: "Excluir foto", style: "destructive" as const, onPress: () => handleAvatarOption(2, hasPhoto) }]
-          : []),
-        { text: "Cancelar", style: "cancel" as const },
-      ]);
+  const webFileInputRef = useRef<HTMLInputElement | null>(null);
+  const webFileInputCaptureRef = useRef<HTMLInputElement | null>(null);
+
+  const pickFromCamera = async () => {
+    if (Platform.OS === "web") {
+      webFileInputCaptureRef.current?.click();
+      return;
+    }
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permissão necessária", "Habilite o acesso à câmera nas configurações.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadPhoto(result.assets[0].uri);
     }
   };
 
-  const handleAvatarOption = (_idx: number, _hasPhoto: boolean) => {
-    // TODO Fase B app: implement camera/gallery via expo-image-picker
-    // and DELETE /users/me/photo
+  const pickFromGallery = async () => {
+    if (Platform.OS === "web") {
+      webFileInputRef.current?.click();
+      return;
+    }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permissão necessária", "Habilite o acesso à galeria nas configurações.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await uploadPhoto(result.assets[0].uri);
+    }
+  };
+
+  const handleWebFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadPhotoWeb(file);
+    e.target.value = "";
+  };
+
+  const uploadPhoto = async (uri: string) => {
+    try {
+      const formData = new FormData();
+      const filename = uri.split("/").pop() ?? "photo.jpg";
+      const match = /\.(\w+)$/.exec(filename);
+      const ext = match ? match[1] : "jpg";
+      formData.append("file", {
+        uri,
+        name: filename,
+        type: `image/${ext}`,
+      } as unknown as Blob);
+
+      await api.upload("/users/me/photo", formData);
+      fetchProfile();
+    } catch {
+      Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
+    }
+  };
+
+  const uploadPhotoWeb = async (file: File) => {
+    try {
+      const formData = new FormData();
+      (formData as unknown as globalThis.FormData).append("file", file, file.name);
+      await api.upload("/users/me/photo", formData);
+      fetchProfile();
+    } catch {
+      Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
+    }
+  };
+
+  const deletePhoto = async () => {
+    try {
+      await api.delete("/users/me/photo");
+      fetchProfile();
+    } catch {
+      Alert.alert("Erro", "Não foi possível remover a foto.");
+    }
   };
 
   if (!profile) {
@@ -252,6 +317,35 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
           )}
         </View>
       </ScrollView>
+
+      <PhotoPickerSheet
+        visible={photoSheetVisible}
+        hasPhoto={!!profile.photoUrl}
+        onClose={() => setPhotoSheetVisible(false)}
+        onCamera={pickFromCamera}
+        onGallery={pickFromGallery}
+        onDelete={deletePhoto}
+      />
+
+      {Platform.OS === "web" && (
+        <>
+          <input
+            ref={webFileInputRef as React.RefObject<HTMLInputElement>}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleWebFileChange}
+          />
+          <input
+            ref={webFileInputCaptureRef as React.RefObject<HTMLInputElement>}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: "none" }}
+            onChange={handleWebFileChange}
+          />
+        </>
+      )}
     </SafeAreaView>
   );
 }
