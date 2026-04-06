@@ -5,6 +5,7 @@ import { colors } from "../theme/tokens";
 import { api } from "../lib/api";
 import { useProxy, ProxyProvider } from "../context/ProxyContext";
 import { AppHeader } from "../components/main/AppHeader";
+import { AppDrawer } from "../components/main/AppDrawer";
 import { BottomNav, type TabKey } from "../components/main/BottomNav";
 import { ProxyBanner } from "../components/main/ProxyBanner";
 import { ContextSwitcher } from "../components/main/ContextSwitcher";
@@ -13,6 +14,9 @@ import { FeedScreen } from "../screens/main/FeedScreen";
 import { CheckinScreen } from "../screens/main/CheckinScreen";
 import { CalendarScreen } from "../screens/main/CalendarScreen";
 import { DonationsScreen } from "../screens/main/DonationsScreen";
+import { FrequencyHistoryScreen } from "../screens/main/FrequencyHistoryScreen";
+import { MyDonationsScreen } from "../screens/main/MyDonationsScreen";
+import { PostWizardScreen } from "../screens/main/PostWizardScreen";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
@@ -24,6 +28,7 @@ const TAB_SUBTITLES: Record<TabKey, string> = {
 interface ProfileData {
   name: string;
   roles: string[];
+  photoUrl?: string | null;
 }
 
 interface DependentData {
@@ -59,12 +64,17 @@ function calculateAge(birthDate: string): number | null {
 function MainContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("feed");
   const [showProfile, setShowProfile] = useState(false);
+  const [showFrequency, setShowFrequency] = useState(false);
+  const [showMyDonations, setShowMyDonations] = useState(false);
+  const [showPostWizard, setShowPostWizard] = useState(false);
   const [switcherVisible, setSwitcherVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
   const { switchTo, clearProxy } = useProxy();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
+  const hasSocialRole = profile?.roles.includes("social") ?? false;
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -115,16 +125,50 @@ function MainContent() {
     setShowProfile(true);
   };
 
+  const handleDrawerNavigate = (key: string) => {
+    if (key === "donations") setShowMyDonations(true);
+    if (key === "frequency") setShowFrequency(true);
+  };
+
   if (showProfile) {
     return (
       <ProfileScreen onBack={() => { setShowProfile(false); fetchProfile(); }} />
     );
   }
 
+  if (showFrequency) {
+    return (
+      <FrequencyHistoryScreen onBack={() => setShowFrequency(false)} />
+    );
+  }
+
+  if (showPostWizard) {
+    return (
+      <PostWizardScreen
+        onClose={() => {
+          setShowPostWizard(false);
+          setActiveTab("feed");
+        }}
+      />
+    );
+  }
+
+  if (showMyDonations) {
+    return (
+      <MyDonationsScreen
+        onBack={() => setShowMyDonations(false)}
+        onNewDonation={() => {
+          setShowMyDonations(false);
+          setActiveTab("donations");
+        }}
+      />
+    );
+  }
+
   const renderTab = () => {
     switch (activeTab) {
       case "feed":
-        return <FeedScreen />;
+        return <FeedScreen userRoles={profile?.roles ?? []} />;
       case "checkin":
         return <CheckinScreen onDone={() => setActiveTab("feed")} />;
       case "calendar":
@@ -139,11 +183,26 @@ function MainContent() {
       <AppHeader
         subtitle={TAB_SUBTITLES[activeTab]}
         userInitials={userInitials}
+        photoUrl={profile?.photoUrl}
         onProfilePress={handleProfilePress}
+        onMenuPress={() => setDrawerVisible(true)}
       />
       <ProxyBanner />
       <View style={styles.content}>{renderTab()}</View>
-      <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />
+      <BottomNav
+        activeTab={activeTab}
+        onTabPress={setActiveTab}
+        showPostButton={hasSocialRole}
+        onPostPress={() => setShowPostWizard(true)}
+      />
+
+      <AppDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+        userName={userName}
+        userInitials={userInitials}
+        onNavigate={handleDrawerNavigate}
+      />
 
       <ContextSwitcher
         visible={switcherVisible}
