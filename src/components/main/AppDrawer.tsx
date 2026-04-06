@@ -7,10 +7,9 @@ import {
   Pressable,
   Animated,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { colors, typography, spacing, radius } from "../../theme/tokens";
+import { colors, typography, spacing } from "../../theme/tokens";
 
 const DRAWER_WIDTH = 280;
 

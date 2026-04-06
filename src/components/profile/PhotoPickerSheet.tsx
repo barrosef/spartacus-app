@@ -7,12 +7,10 @@ import {
   Pressable,
   Animated,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 const SHEET_HEIGHT = 180;
 
 interface PhotoPickerSheetProps {
