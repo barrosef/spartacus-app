@@ -15,6 +15,7 @@ import { auth } from "../../lib/firebase";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
 import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
+import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import type { TimelineEntry } from "../../components/timeline/types";
 
 interface FeedResponse {
@@ -42,6 +43,23 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);
   const [likesEntryId, setLikesEntryId] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    action: "confirm" | "absent";
+    entryId: string;
+    entityType: string;
+    entityId: string;
+    targetName: string;
+    entityLabel: string;
+  }>({
+    visible: false,
+    action: "confirm",
+    entryId: "",
+    entityType: "",
+    entityId: "",
+    targetName: "",
+    entityLabel: "",
+  });
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
@@ -293,14 +311,34 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
               const entityId = ref.slice(1).join("_");
               const entityType =
                 entry.type === "attendance" ? "presencas" : "doacoes";
-              handleValidate(entry.id, entityType, entityId, "confirmed");
+              const entityLabel =
+                entry.type === "attendance" ? "presença" : "doação";
+              setConfirmModal({
+                visible: true,
+                action: "confirm",
+                entryId: entry.id,
+                entityType,
+                entityId,
+                targetName: entry.targetName ?? entry.authorName,
+                entityLabel,
+              });
             }}
             onAbsent={() => {
               const ref = entry.id.split("_");
               const entityId = ref.slice(1).join("_");
               const entityType =
                 entry.type === "attendance" ? "presencas" : "doacoes";
-              handleValidate(entry.id, entityType, entityId, "absent");
+              const entityLabel =
+                entry.type === "attendance" ? "presença" : "doação";
+              setConfirmModal({
+                visible: true,
+                action: "absent",
+                entryId: entry.id,
+                entityType,
+                entityId,
+                targetName: entry.targetName ?? entry.authorName,
+                entityLabel,
+              });
             }}
             onRequestReview={() => {
               const ref = entry.id.split("_");
@@ -335,6 +373,25 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
         visible={!!likesEntryId}
         onClose={() => setLikesEntryId(null)}
         entryId={likesEntryId ?? ""}
+      />
+
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        action={confirmModal.action}
+        entityLabel={confirmModal.entityLabel}
+        targetName={confirmModal.targetName}
+        onConfirm={() => {
+          handleValidate(
+            confirmModal.entryId,
+            confirmModal.entityType,
+            confirmModal.entityId,
+            confirmModal.action === "confirm" ? "confirmed" : "absent",
+          );
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+        }}
+        onCancel={() =>
+          setConfirmModal((prev) => ({ ...prev, visible: false }))
+        }
       />
     </View>
   );

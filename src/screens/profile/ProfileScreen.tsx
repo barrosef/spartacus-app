@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { colors, spacing } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
 import { AvatarHeader } from "../../components/profile/AvatarHeader";
 import { CompletionBar } from "../../components/profile/CompletionBar";
@@ -315,6 +316,28 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               />
             </>
           )}
+
+          {/* Logout */}
+          <MenuDivider />
+          <MenuCard
+            icon="log-out"
+            title="Sair"
+            subtitle="Encerrar sessão e voltar à tela de login"
+            onPress={() => {
+              Alert.alert(
+                "Sair do Spartacus",
+                "Deseja realmente encerrar sua sessão?",
+                [
+                  { text: "Cancelar", style: "cancel" },
+                  {
+                    text: "Sair",
+                    style: "destructive",
+                    onPress: () => auth.signOut(),
+                  },
+                ],
+              );
+            }}
+          />
         </View>
       </ScrollView>
 
