@@ -1,5 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  PanResponder,
+  Dimensions,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
 import { api, getProjectId } from "../../lib/api";
@@ -24,6 +31,8 @@ const DAY_MAP: Record<string, number> = {
   sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
 };
 
+const SWIPE_THRESHOLD = 60;
+
 interface ClassOut {
   id: string;
   name: string;
@@ -46,9 +55,13 @@ interface EventOut {
   location?: string;
 }
 
+interface MyClassOut {
+  class_id: string;
+}
+
 export function CalendarScreen() {
   const now = new Date();
-  const [year] = useState(now.getFullYear());
+  const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDate, setSelectedDate] = useState(now);
   const [view, setView] = useState<CalendarView>("month");
@@ -58,8 +71,23 @@ export function CalendarScreen() {
     new Set(["classes", "events", "championships"]),
   );
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [myClassIds, setMyClassIds] = useState<Set<string>>(new Set());
 
   const projectId = getProjectId();
+
+  // Fetch user's enrolled classes
+  const fetchMyClasses = useCallback(async () => {
+    try {
+      const data = await api.get<{ enrollments: MyClassOut[] }>(
+        `/projects/${projectId}/my-classes`,
+      );
+      setMyClassIds(new Set(data.enrollments.map((e) => e.class_id)));
+    } catch {
+      // graceful — user may not be enrolled in any class
+    }
+  }, [projectId]);
+
+  useEffect(() => { fetchMyClasses(); }, [fetchMyClasses]);
 
   const fetchEvents = useCallback(async () => {
     const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
@@ -75,13 +103,10 @@ export function CalendarScreen() {
 
       const result: CalendarEvent[] = [];
 
-      // Generate recurring class events for the month
-      if (
-        classesRes.status === "fulfilled"
-        && filters.has("classes")
-      ) {
+      if (classesRes.status === "fulfilled") {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         for (const cls of classesRes.value.classes) {
+          const isMine = myClassIds.has(cls.id);
           for (const item of cls.schedule_items) {
             const targetDay = DAY_MAP[item.day];
             if (targetDay === undefined) continue;
@@ -97,6 +122,7 @@ export function CalendarScreen() {
                   endTime: item.end_time,
                   teacher: cls.teacher,
                   location: cls.location,
+                  isMine,
                 });
               }
             }
@@ -104,16 +130,10 @@ export function CalendarScreen() {
         }
       }
 
-      // Add one-time events
       if (eventsRes.status === "fulfilled") {
         for (const ev of eventsRes.value.events) {
           const type = ev.type === "championship"
             ? "championship" : "event";
-          if (
-            (type === "event" && !filters.has("events"))
-            || (type === "championship" && !filters.has("championships"))
-          ) continue;
-
           const d = new Date(ev.start_date);
           result.push({
             id: ev.id,
@@ -133,7 +153,7 @@ export function CalendarScreen() {
     } catch {
       // graceful
     }
-  }, [year, month, projectId, filters]);
+  }, [year, month, projectId, myClassIds]);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
@@ -156,8 +176,102 @@ export function CalendarScreen() {
     setView("day");
   };
 
-  // Filter events for the selected month
-  const monthEvents = events.filter(
+  // Navigation helpers for swipe
+  const goNext = useCallback(() => {
+    if (view === "month" || view === "agenda") {
+      if (month === 11) {
+        setMonth(0);
+        setYear((y) => y + 1);
+      } else {
+        setMonth((m) => m + 1);
+      }
+    } else if (view === "day") {
+      setSelectedDate((prev) => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() + 1);
+        if (next.getMonth() !== month) {
+          setMonth(next.getMonth());
+          setYear(next.getFullYear());
+        }
+        return next;
+      });
+    } else if (view === "week") {
+      setSelectedDate((prev) => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() + 7);
+        if (next.getMonth() !== month) {
+          setMonth(next.getMonth());
+          setYear(next.getFullYear());
+        }
+        return next;
+      });
+    }
+  }, [view, month]);
+
+  const goPrev = useCallback(() => {
+    if (view === "month" || view === "agenda") {
+      if (month === 0) {
+        setMonth(11);
+        setYear((y) => y - 1);
+      } else {
+        setMonth((m) => m - 1);
+      }
+    } else if (view === "day") {
+      setSelectedDate((prev) => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() - 1);
+        if (next.getMonth() !== month) {
+          setMonth(next.getMonth());
+          setYear(next.getFullYear());
+        }
+        return next;
+      });
+    } else if (view === "week") {
+      setSelectedDate((prev) => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() - 7);
+        if (next.getMonth() !== month) {
+          setMonth(next.getMonth());
+          setYear(next.getFullYear());
+        }
+        return next;
+      });
+    }
+  }, [view, month]);
+
+  // Keep latest nav callbacks in refs so PanResponder always calls current version
+  const goNextRef = useRef(goNext);
+  const goPrevRef = useRef(goPrev);
+  useEffect(() => { goNextRef.current = goNext; }, [goNext]);
+  useEffect(() => { goPrevRef.current = goPrev; }, [goPrev]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 15 && Math.abs(gs.dy) < 30,
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -SWIPE_THRESHOLD) goNextRef.current();
+        else if (gs.dx > SWIPE_THRESHOLD) goPrevRef.current();
+      },
+    }),
+  ).current;
+
+  // Apply filters to events
+  const filteredEvents = events.filter((e) => {
+    if (e.type === "class") {
+      const showAll = filters.has("classes");
+      const showMine = filters.has("my_classes");
+      if (showMine && e.isMine) return true;
+      if (showAll && !showMine) return true;
+      if (showAll && showMine) return !e.isMine; // show non-mine when both active
+      return false;
+    }
+    if (e.type === "event" && !filters.has("events")) return false;
+    if (e.type === "championship" && !filters.has("championships")) return false;
+    return true;
+  });
+
+  const monthEvents = filteredEvents.filter(
     (e) =>
       e.date.getFullYear() === year && e.date.getMonth() === month,
   );
@@ -177,11 +291,11 @@ export function CalendarScreen() {
         return <AgendaView events={monthEvents} />;
       case "day":
         return (
-          <DayView date={selectedDate} events={events} />
+          <DayView date={selectedDate} events={filteredEvents} />
         );
       case "week":
         return (
-          <WeekView date={selectedDate} events={events} />
+          <WeekView date={selectedDate} events={filteredEvents} />
         );
     }
   };
@@ -196,7 +310,7 @@ export function CalendarScreen() {
           onPress={() => setShowMonthPicker((v) => !v)}
         >
           <Text style={styles.monthText}>
-            {MONTH_NAMES[month]}
+            {MONTH_NAMES[month]} {year !== now.getFullYear() ? year : ""}
           </Text>
           <Feather
             name={showMonthPicker ? "chevron-up" : "chevron-down"}
@@ -224,8 +338,10 @@ export function CalendarScreen() {
         />
       )}
 
-      {/* Active view */}
-      <View style={styles.content}>{renderView()}</View>
+      {/* Active view with swipe */}
+      <View style={styles.content} {...panResponder.panHandlers}>
+        {renderView()}
+      </View>
 
       {/* Sidebar */}
       <CalendarSidebar

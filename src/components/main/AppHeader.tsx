@@ -1,36 +1,61 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
 
 interface AppHeaderProps {
   subtitle: string;
   userInitials: string;
+  photoUrl?: string | null;
   onProfilePress: () => void;
+  onMenuPress: () => void;
 }
 
-export function AppHeader({ subtitle, userInitials, onProfilePress }: AppHeaderProps) {
+export function AppHeader({
+  subtitle,
+  userInitials,
+  photoUrl,
+  onProfilePress,
+  onMenuPress,
+}: AppHeaderProps) {
   return (
     <View style={styles.header}>
-      <View style={styles.left}>
+      {/* Left: hamburger */}
+      <TouchableOpacity
+        style={styles.iconBtn}
+        activeOpacity={0.7}
+        onPress={onMenuPress}
+      >
+        <Feather name="menu" size={24} color={colors.foreground} />
+      </TouchableOpacity>
+
+      {/* Center: title */}
+      <View style={styles.titleBlock}>
+        <Text style={styles.title}>SPARTACUS</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
+      </View>
+
+      {/* Right: bell + profile */}
+      <View style={styles.right}>
+        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+          <Feather name="bell" size={24} color={colors.foreground} />
+          <View style={styles.badge} />
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.avatarBtn}
           activeOpacity={0.8}
           onPress={onProfilePress}
         >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userInitials}</Text>
-          </View>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.avatarImg} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userInitials}</Text>
+            </View>
+          )}
         </TouchableOpacity>
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>SPARTACUS</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
       </View>
-      <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
-        <Feather name="bell" size={24} color={colors.foreground} />
-        <View style={styles.badge} />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -47,31 +72,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
   },
-  left: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm + 4,
-  },
-  avatarBtn: {
+  iconBtn: {
     position: "relative",
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(198,163,78,0.1)",
-    borderWidth: 2,
-    borderColor: "rgba(198,163,78,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: colors.primary,
-    fontFamily: typography.fontHeadingSemi,
-    fontSize: 14,
+    padding: spacing.sm,
   },
   titleBlock: {
-    flexDirection: "column",
+    flex: 1,
+    alignItems: "center",
   },
   title: {
     color: colors.primary,
@@ -84,9 +91,35 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBodyMedium,
     fontSize: 12,
   },
-  bellBtn: {
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  avatarBtn: {
     position: "relative",
-    padding: spacing.sm,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(198,163,78,0.1)",
+    borderWidth: 2,
+    borderColor: "rgba(198,163,78,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "rgba(198,163,78,0.5)",
+  },
+  avatarText: {
+    color: colors.primary,
+    fontFamily: typography.fontHeadingSemi,
+    fontSize: 13,
   },
   badge: {
     position: "absolute",

@@ -11,6 +11,7 @@ export interface CalendarEvent {
   endTime: string;   // "20:30"
   teacher?: string;
   location?: string;
+  isMine?: boolean;  // true if student is enrolled in this class
 }
 
 export const EVENT_COLORS: Record<EventType, string> = {
@@ -21,8 +22,9 @@ export const EVENT_COLORS: Record<EventType, string> = {
 
 export const FILTER_COLORS: Record<string, string> = {
   classes: "#2563EB",
+  my_classes: "#8B5CF6",
   events: "#0D9488",
   championships: "#EA580C",
 };
 
-export type FilterKey = "classes" | "events" | "championships";
+export type FilterKey = "classes" | "my_classes" | "events" | "championships";

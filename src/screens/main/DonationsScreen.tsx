@@ -7,12 +7,15 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+
+/* ── Types ─────────────────────────────────────────────────────── */
 
 interface DonationConfigItem {
   code: string;
@@ -33,7 +36,32 @@ interface CurrentDonation {
   status: string;
 }
 
-type Screen = "loading" | "select" | "confirm" | "success" | "already";
+type Screen =
+  | "loading"
+  | "select"
+  | "month"
+  | "confirm"
+  | "success"
+  | "already";
+
+/* ── Month helpers ─────────────────────────────────────────────── */
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function currentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthKeyToLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]}/${y}`;
+}
+
+/* ── Component ─────────────────────────────────────────────────── */
 
 interface DonationsScreenProps {
   onDone: () => void;
@@ -46,6 +74,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const [existing, setExisting] = useState<CurrentDonation | null>(null);
   const [selectedItem, setSelectedItem] = useState("");
   const [otherText, setOtherText] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
   const [submitting, setSubmitting] = useState(false);
 
   const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID
@@ -82,6 +111,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         item: selectedItem,
         itemDescription: selectedItem === "other"
           ? otherText : undefined,
+        month: selectedMonth,
       });
       setScreen("success");
     } catch {
@@ -101,7 +131,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     month: "long", year: "numeric",
   });
 
-  // ── Success ──
+  /* ── Success ── */
   if (screen === "success") {
     return (
       <SuccessScreen
@@ -115,7 +145,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     );
   }
 
-  // ── Already donated this month ──
+  /* ── Already donated ── */
   if (screen === "already" && existing) {
     return (
       <SuccessScreen
@@ -126,7 +156,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     );
   }
 
-  // ── Loading ──
+  /* ── Loading ── */
   if (screen === "loading") {
     return (
       <View style={styles.center}>
@@ -135,10 +165,11 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     );
   }
 
-  // ── Confirm ──
+  /* ── Step 3: Confirm ── */
   if (screen === "confirm") {
     return (
       <View style={styles.container}>
+        <WizardHeader onBack={() => setScreen("month")} />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.heading}>Confirmação</Text>
           <Text style={styles.sub}>
@@ -150,9 +181,12 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
             <Text style={styles.confirmLabel}>
               Item selecionado
             </Text>
-            <Text style={styles.confirmValue}>
-              {selectedLabel}
-            </Text>
+            <View style={styles.confirmItemRow}>
+              <Text style={styles.confirmValue}>
+                {selectedLabel}
+              </Text>
+              <Feather name="gift" size={32} color="rgba(198,163,78,0.4)" />
+            </View>
             {selectedItem === "other" && otherText && (
               <Text style={styles.confirmOther}>
                 {otherText}
@@ -163,7 +197,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
                 Mês de Referência
               </Text>
               <Text style={styles.confirmMetaValue}>
-                {monthLabel}
+                {monthKeyToLabel(selectedMonth)}
               </Text>
             </View>
             <View style={styles.confirmRow}>
@@ -192,18 +226,67 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     );
   }
 
-  // ── Select item ──
+  /* ── Step 2: Month selector ── */
+  if (screen === "month") {
+    const currentYear = now.getFullYear();
+    return (
+      <View style={styles.container}>
+        <WizardHeader onBack={() => setScreen("select")} />
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.heading}>Mês de Referência</Text>
+          <Text style={styles.sub}>
+            A qual mês essa doação se refere? Você pode registrar
+            doações de meses passados se esqueceu.
+          </Text>
+
+          <View style={styles.monthGrid}>
+            {MONTH_NAMES.map((name, idx) => {
+              const key = `${currentYear}-${String(idx + 1).padStart(2, "0")}`;
+              const active = selectedMonth === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.monthPill, active && styles.monthPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedMonth(key)}
+                >
+                  <Text
+                    style={[
+                      styles.monthPillText,
+                      active && styles.monthPillTextActive,
+                    ]}
+                  >
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button
+            label="Revisar Doação →"
+            onPress={() => setScreen("confirm")}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  /* ── Step 1: Select item ── */
   const canContinue = selectedItem !== ""
     && (selectedItem !== "other" || otherText.trim().length > 0);
 
   return (
     <View style={styles.container}>
+      <WizardHeader />
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.heading}>Apoie o Projeto</Text>
         <Text style={styles.sub}>
-          Sua contribuição mensal ajuda a manter o projeto
-          Spartacus Artes Marciais de Brasnorte vivo.
-          Escolha sua doação deste mês:
+          Sua contribuição ajuda a manter o projeto
+          Spartacus Artes Marciais vivo. O que você
+          gostaria de doar?
         </Text>
 
         <View style={styles.itemList}>
@@ -245,12 +328,35 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         <Button
           label="Continuar →"
           disabled={!canContinue}
-          onPress={() => setScreen("confirm")}
+          onPress={() => setScreen("month")}
         />
       </View>
     </View>
   );
 }
+
+/* ── Wizard Header ─────────────────────────────────────────────── */
+
+function WizardHeader({ onBack }: { onBack?: () => void } = {}) {
+  return (
+    <View style={styles.wizardHeader}>
+      {onBack ? (
+        <TouchableOpacity onPress={onBack} hitSlop={8}>
+          <Feather name="chevron-left" size={24} color={colors.foreground} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.wizardHeaderSpacer} />
+      )}
+      <View style={styles.wizardTitleRow}>
+        <Feather name="heart" size={18} color={colors.primary} />
+        <Text style={styles.wizardTitle}>Doação Mensal</Text>
+      </View>
+      <View style={styles.wizardHeaderSpacer} />
+    </View>
+  );
+}
+
+/* ── Styles ────────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   container: {
@@ -289,7 +395,31 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  // Item list
+  // Wizard header
+  wizardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  wizardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+  },
+  wizardTitle: {
+    color: colors.foreground,
+    fontFamily: typography.fontHeadingSemi,
+    fontSize: 18,
+  },
+  wizardHeaderSpacer: {
+    width: 24,
+  },
+
+  // Item list (step 1)
   itemList: {
     gap: spacing.sm,
   },
@@ -335,7 +465,35 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 
-  // Confirm
+  // Month grid (step 2)
+  monthGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm + 4,
+  },
+  monthPill: {
+    width: "30%",
+    alignItems: "center",
+    paddingVertical: spacing.sm + 4,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  monthPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: "rgba(198,163,78,0.08)",
+  },
+  monthPillText: {
+    color: colors.foreground,
+    fontFamily: typography.fontBodyMedium,
+    fontSize: 14,
+  },
+  monthPillTextActive: {
+    color: colors.primary,
+    fontFamily: typography.fontBodySemiBold,
+  },
+
+  // Confirm (step 3)
   confirmCard: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,
@@ -351,11 +509,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  confirmItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   confirmValue: {
     color: colors.foreground,
     fontFamily: typography.fontHeadingSemi,
     fontSize: 18,
-    marginBottom: spacing.sm,
+    flex: 1,
   },
   confirmOther: {
     color: colors.mutedForeground,

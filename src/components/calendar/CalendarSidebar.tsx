@@ -21,6 +21,7 @@ const VIEWS: { key: CalendarView; icon: keyof typeof Feather.glyphMap; label: st
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "classes", label: "Aulas" },
+  { key: "my_classes", label: "Minhas aulas" },
   { key: "events", label: "Eventos" },
   { key: "championships", label: "Campeonatos" },
 ];
@@ -56,18 +57,19 @@ export function CalendarSidebar({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.sidebar}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{userInitials}</Text>
-            </View>
-            <View style={styles.headerInfo}>
-              <Text style={styles.headerName}>{userName}</Text>
-            </View>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Feather name="x" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerName}>{userName}</Text>
+            </View>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userInitials}</Text>
+            </View>
           </View>
 
           {/* Views */}
@@ -125,8 +127,6 @@ export function CalendarSidebar({
             );
           })}
         </View>
-
-        <Pressable style={styles.backdrop} onPress={onClose} />
       </View>
     </Modal>
   );
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 260,
     backgroundColor: colors.card,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
     paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },

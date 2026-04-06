@@ -16,8 +16,7 @@ export function MonthSelector({ selectedMonth, onSelect }: MonthSelectorProps) {
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    // Scroll to center the selected month
-    const offset = Math.max(0, selectedMonth * 72 - 120);
+    const offset = Math.max(0, selectedMonth * 64 - 120);
     scrollRef.current?.scrollTo({ x: offset, animated: false });
   }, [selectedMonth]);
 
@@ -26,6 +25,7 @@ export function MonthSelector({ selectedMonth, onSelect }: MonthSelectorProps) {
       ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={styles.container}
     >
       {MONTHS.map((label, idx) => {
@@ -48,14 +48,18 @@ export function MonthSelector({ selectedMonth, onSelect }: MonthSelectorProps) {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,
+  },
   container: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     gap: spacing.xs,
+    alignItems: "center",
   },
   pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
   pillActive: {
@@ -65,6 +69,7 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontFamily: typography.fontBodyMedium,
     fontSize: 13,
+    lineHeight: 18,
   },
   textActive: {
     color: colors.foreground,
