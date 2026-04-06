@@ -34,8 +34,13 @@ jobs:
     needs: test
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -44,6 +49,22 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Auto-increment versionCode
+        run: |
+          CURRENT=$(grep -o '"versionCode": *[0-9]*' app.json | grep -o '[0-9]*')
+          NEW=$((CURRENT + 1))
+          sed -i "s/\"versionCode\": *$CURRENT/\"versionCode\": $NEW/" app.json
+          echo "versionCode: $CURRENT → $NEW"
+          echo "VERSION_CODE=$NEW" >> "$GITHUB_ENV"
+
+      - name: Commit versionCode bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.json
+          git commit -m "chore: bump versionCode to ${{ env.VERSION_CODE }} [skip ci]"
+          git push
 
       - name: Setup Expo e EAS CLI
         uses: expo/expo-github-action@v8
