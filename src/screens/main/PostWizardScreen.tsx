@@ -105,7 +105,6 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   }, [postType, title, description, linkPreview, eventDate, eventEndDate]);
 
   const canAdvanceFromContent = title.trim().length > 0;
-  const canAdvanceFromMedia = true;
   const isEventType = postType === "event" || postType === "championship";
 
   if (step === "success") {
