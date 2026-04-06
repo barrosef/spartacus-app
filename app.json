@@ -6,15 +6,25 @@
     "orientation": "portrait",
     "scheme": "spartacus",
     "platforms": [
-      "android"
+      "android",
+      "web"
     ],
     "icon": "./assets/logo.png",
     "splash": {
       "backgroundColor": "#0B0D12"
     },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "name": "Spartacus",
+      "shortName": "Spartacus",
+      "description": "Plataforma do Projeto Spartacus Artes Marciais",
+      "backgroundColor": "#0B0D12",
+      "themeColor": "#0B0D12"
+    },
     "android": {
       "package": "br.com.spartacus.app",
-      "versionCode": 23,
+      "versionCode": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0B0D12"

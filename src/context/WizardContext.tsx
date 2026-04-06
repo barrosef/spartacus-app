@@ -5,9 +5,12 @@ export type Role = "student" | "teacher" | "instructor" | "guardian" | "supporte
 export interface ClassOption {
   id: string;
   name: string;
-  modality: string;
-  schedule: string;
+  modalityId?: string;
+  modality: string;          // modality display name
+  schedule: string;          // human-readable
+  scheduleItems?: { day: string; start_time: string; end_time: string }[];
   teacher?: string;
+  location?: string;
   ageRange?: { min: number; max: number };
 }
 

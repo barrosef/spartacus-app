@@ -8,6 +8,7 @@ import { SafeScreen } from "../../../components/ui/SafeScreen";
 import { WizardHeader } from "../../../components/wizard/WizardHeader";
 import { useWizard } from "../../../context/WizardContext";
 import { auth } from "../../../lib/firebase";
+import { checkEmail } from "../../../lib/api";
 import { useGoogleSignIn } from "../../../lib/googleAuth";
 import { useSignupGuard } from "../../../navigation/RootNavigator";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
@@ -16,9 +17,28 @@ export function Step0AuthMethod() {
   const navigation = useAuthNavigation();
   const { dispatch } = useWizard();
   const { setSignupInProgress } = useSignupGuard();
+  const [duplicateError, setDuplicateError] = React.useState<string | null>(null);
 
-  const google = useGoogleSignIn(() => {
+  const google = useGoogleSignIn(async () => {
     const email = auth.currentUser?.email ?? "";
+
+    // Check if email already has an account before proceeding
+    try {
+      const { available } = await checkEmail(email);
+      if (!available) {
+        setDuplicateError(
+          `O e-mail ${email} já possui uma conta cadastrada. Use "Entrar" em vez de "Criar Conta".`,
+        );
+        // Sign out the Google session to avoid stale state
+        await auth.signOut();
+        setSignupInProgress(false);
+        return;
+      }
+    } catch {
+      // If check fails, let the user proceed — backend will catch it later
+    }
+
+    setDuplicateError(null);
     dispatch({ type: "SET_CREDENTIALS", payload: { email, password: "" } });
     navigation.navigate("Step0cProject");
   });
@@ -68,6 +88,14 @@ export function Step0AuthMethod() {
           />
           {!!google.error && (
             <Text style={styles.googleError}>{google.error}</Text>
+          )}
+          {!!duplicateError && (
+            <View style={styles.duplicateBox}>
+              <Text style={styles.duplicateText}>{duplicateError}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.duplicateLink}>Ir para Login</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -219,5 +247,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontFamily: typography.fontBody,
     marginTop: -4,
+  },
+  duplicateBox: {
+    backgroundColor: "rgba(239,68,68,0.1)",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.3)",
+    padding: spacing.md,
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  duplicateText: {
+    fontSize: 13,
+    color: colors.error,
+    textAlign: "center",
+    fontFamily: typography.fontBody,
+    lineHeight: 19,
+  },
+  duplicateLink: {
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: typography.fontBodySemiBold,
   },
 });

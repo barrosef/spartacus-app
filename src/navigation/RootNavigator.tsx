@@ -4,9 +4,11 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import { AuthNavigator } from "./AuthNavigator";
-import { PendingScreen } from "../screens/auth/PendingScreen";
+import { AnamneseNavigator } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
+import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
+import { MainNavigator } from "./MainNavigator";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
 interface SignupGuard {
@@ -23,36 +25,37 @@ export function useSignupGuard() {
   return useContext(SignupGuardCtx);
 }
 
-// Placeholder for main app navigator (post-auth, approved)
-function MainNavigator() {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderText}>App Principal</Text>
-      <Text style={styles.placeholderSub}>Em desenvolvimento</Text>
-    </View>
-  );
-}
-
-type AppState = "loading" | "auth" | "pending_email" | "pending_approval" | "approved";
+type AppState = "loading" | "auth" | "email_pending" | "blocked" | "anamnese" | "approved";
 
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
+  const [accountStatus, setAccountStatus] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
   const checkApproval = useCallback(async () => {
     try {
-      const res = await api.get<{ approvalStatus: string }>("/auth/me");
-      if (res.approvalStatus === "approved") {
+      const res = await api.get<{
+        approvalStatus: string;
+        birthDate?: string;
+      }>("/auth/me");
+      const status = res.approvalStatus;
+      setAccountStatus(status);
+      if (res.birthDate) setBirthDate(res.birthDate);
+      if (status === "approved") {
         setAppState("approved");
-      } else if (res.approvalStatus === "pending_email") {
-        setAppState("pending_email");
+      } else if (status === "waiting_email_confirmation") {
+        setAppState("email_pending");
+      } else if (status === "waiting_medical_history") {
+        setAppState("anamnese");
       } else {
-        setAppState("pending_approval");
+        setAppState("blocked");
       }
     } catch {
-      setAppState("pending_approval");
+      setAppState("blocked");
+      setAccountStatus("pending_approval");
     }
   }, []);
 
@@ -96,13 +99,24 @@ export function RootNavigator() {
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
       {showAuth ? (
         <AuthNavigator />
-      ) : appState === "pending_email" ? (
+      ) : appState === "email_pending" ? (
         <PendingEmailScreen
           email={user?.email ?? ""}
-          onVerified={() => setAppState("pending_approval")}
+          onVerified={() => {
+            setAccountStatus("pending_approval");
+            setAppState("blocked");
+          }}
         />
-      ) : appState === "pending_approval" ? (
-        <PendingScreen />
+      ) : appState === "anamnese" ? (
+        <AnamneseNavigator
+          birthDate={birthDate}
+          onSubmitted={() => {
+            setAccountStatus("pending_medical_history_approval");
+            setAppState("blocked");
+          }}
+        />
+      ) : appState === "blocked" ? (
+        <BlockedStatusScreen status={accountStatus} />
       ) : (
         <MainNavigator />
       )}
@@ -131,22 +145,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: "center",
     paddingHorizontal: 32,
-  },
-  placeholder: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    color: colors.foreground,
-    fontSize: 20,
-    fontFamily: typography.fontHeadingSemi,
-  },
-  placeholderSub: {
-    color: colors.mutedForeground,
-    fontSize: 14,
-    fontFamily: typography.fontBody,
-    marginTop: 8,
   },
 });

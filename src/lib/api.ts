@@ -67,6 +67,37 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  patch: <T>(path: string, data: unknown) =>
+    request<T>(path, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  delete: <T>(path: string) =>
+    request<T>(path, { method: "DELETE" }),
+
+  upload: async <T>(path: string, formData: FormData): Promise<T> => {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {
+      "X-Project-Id": _projectId,
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      let message = `Erro ${res.status}`;
+      if (typeof body.detail === "string") message = body.detail;
+      throw new ApiError(message, res.status, body);
+    }
+    return res.json() as Promise<T>;
+  },
 };
 
 export async function checkEmail(

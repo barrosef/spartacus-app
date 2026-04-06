@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "spartacus-artes-marciais"
+  },
+  "targets": {
+    "spartacus-artes-marciais": {
+      "hosting": {
+        "app": ["spartacus-artes-marciais-app"]
+      }
+    }
+  }
+}
