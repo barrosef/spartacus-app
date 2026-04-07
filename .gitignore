@@ -33,3 +33,6 @@ Thumbs.db
 *.orig.*
 web-build/
 dist/
+
+# Firebase CLI cache
+.firebase/
