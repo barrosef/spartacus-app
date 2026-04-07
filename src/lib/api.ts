@@ -60,11 +60,22 @@ export class ApiError extends Error {
 
 interface RequestOptions {
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }
 
 export const api = {
-  get: <T>(path: string, signal?: AbortSignal) =>
-    request<T>(path, { signal }),
+  get: <T>(
+    path: string,
+    signalOrOptions?: AbortSignal | RequestOptions,
+  ) => {
+    if (signalOrOptions instanceof AbortSignal) {
+      return request<T>(path, { signal: signalOrOptions });
+    }
+    return request<T>(path, {
+      signal: signalOrOptions?.signal,
+      headers: signalOrOptions?.headers,
+    });
+  },
 
   post: <T>(path: string, data: unknown, options?: RequestOptions) =>
     request<T>(path, {
@@ -73,14 +84,18 @@ export const api = {
       headers: options?.headers,
     }),
 
-  patch: <T>(path: string, data: unknown) =>
+  patch: <T>(path: string, data: unknown, options?: RequestOptions) =>
     request<T>(path, {
       method: "PATCH",
       body: JSON.stringify(data),
+      headers: options?.headers,
     }),
 
-  delete: <T>(path: string) =>
-    request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, {
+      method: "DELETE",
+      headers: options?.headers,
+    }),
 
   upload: async <T>(path: string, formData: FormData): Promise<T> => {
     const token = await getAuthToken();

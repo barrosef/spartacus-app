@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 import { useClasses } from "../../hooks/useClasses";
 import { SelecaoTurmasScreen } from "../../components/wizard/SelecaoTurmasScreen";
 import { Button } from "../../components/ui/Button";
@@ -30,6 +31,7 @@ interface ClassesScreenProps {
 }
 
 export function ClassesScreen({ onBack }: ClassesScreenProps) {
+  const { actingAs } = useProxy();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [sub, setSub] = useState<SubScreen>("view");
   const [newSelection, setNewSelection] = useState<string[]>([]);
@@ -38,10 +40,15 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const data = await api.get<ProfileData>("/users/me/profile");
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      const data = await api.get<ProfileData>(
+        "/users/me/profile",
+        { headers },
+      );
       setProfile(data);
     } catch { /* graceful */ }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
@@ -95,7 +102,13 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
     const handleConfirm = async () => {
       setSaving(true);
       try {
-        await api.patch("/users/me/classes", { classIds: newSelection });
+        const headers: Record<string, string> = {};
+        if (actingAs) headers["X-Acting-As"] = actingAs;
+        await api.patch(
+          "/users/me/classes",
+          { classIds: newSelection },
+          { headers },
+        );
         setSub("success");
       } catch (err: unknown) {
         Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");

@@ -26,6 +26,7 @@ import { ClassesScreen } from "./ClassesScreen";
 import { GraduationScreen } from "./GraduationScreen";
 import { CategoryScreen } from "./CategoryScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
+import { DependentsListScreen } from "./DependentsListScreen";
 
 interface ProfileData {
   uid: string;
@@ -43,6 +44,7 @@ type Screen =
   | "roles"
   | "address"
   | "dependents"
+  | "dependents-list"
   | "classes"
   | "graduation"
   | "category"
@@ -64,6 +66,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       if (actingAs) headers["X-Acting-As"] = actingAs;
       const data = await api.get<ProfileData>(
         "/users/me/profile",
+        { headers },
       );
       setProfile(data);
     } catch {
@@ -202,6 +205,13 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       <DependentsScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
     );
   }
+  if (screen === "dependents-list") {
+    return (
+      <DependentsListScreen
+        onBack={() => setScreen("profile")}
+      />
+    );
+  }
   if (screen === "classes") {
     return (
       <ClassesScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
@@ -284,7 +294,14 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               <MenuCard
                 icon="users"
                 title="Dependentes"
-                subtitle="Dados de cadastro dos seus dependentes"
+                subtitle="Veja os cards dos seus dependentes"
+                onPress={() => setScreen("dependents-list")}
+              />
+              <MenuDivider />
+              <MenuCard
+                icon="user-plus"
+                title="Gerenciar dependentes"
+                subtitle="Adicionar e editar cadastro dos dependentes"
                 onPress={() => setScreen("dependents")}
               />
               <MenuDivider />

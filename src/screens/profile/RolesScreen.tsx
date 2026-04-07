@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 
 const ROLE_LABELS: Record<string, string> = {
   student: "Aluno",
@@ -21,18 +22,22 @@ interface RolesScreenProps {
 }
 
 export function RolesScreen({ onBack }: RolesScreenProps) {
+  const { actingAs } = useProxy();
   const [roles, setRoles] = useState<string[]>([]);
 
   const fetchRoles = useCallback(async () => {
     try {
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
       const data = await api.get<{ roles: string[] }>(
         "/users/me/profile",
+        { headers },
       );
       setRoles(data.roles);
     } catch {
       // graceful
     }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => {
     fetchRoles();

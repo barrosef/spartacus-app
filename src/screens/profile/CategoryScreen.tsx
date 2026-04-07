@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
@@ -37,6 +38,7 @@ interface CategoryScreenProps {
 }
 
 export function CategoryScreen({ onBack }: CategoryScreenProps) {
+  const { actingAs } = useProxy();
   const [weight, setWeight] = useState("");
   const [targets, setTargets] = useState<Set<string>>(new Set());
   const [ageCategory, setAgeCategory] = useState<string | null>(null);
@@ -48,8 +50,10 @@ export function CategoryScreen({ onBack }: CategoryScreenProps) {
   const fetchData = useCallback(async () => {
     try {
       const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "spartacus-artes-marciais";
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
       const [profile, configRes] = await Promise.all([
-        api.get<ProfileData>("/users/me/profile"),
+        api.get<ProfileData>("/users/me/profile", { headers }),
         api.get<{ categoryConfig?: CategoryConfig }>(
           `/projects/${projectId}`,
         ).catch(() => ({ categoryConfig: undefined })),
@@ -66,7 +70,7 @@ export function CategoryScreen({ onBack }: CategoryScreenProps) {
         setWeightOptions(configRes.categoryConfig.weightCategories);
       }
     } catch { /* graceful */ }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -88,10 +92,16 @@ export function CategoryScreen({ onBack }: CategoryScreenProps) {
 
     setSaving(true);
     try {
-      await api.patch("/users/me/competition", {
-        weightKg: w || null,
-        targetCategories: Array.from(targets),
-      });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.patch(
+        "/users/me/competition",
+        {
+          weightKg: w || null,
+          targetCategories: Array.from(targets),
+        },
+        { headers },
+      );
       setShowSuccess(true);
     } catch (err: unknown) {
       Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");

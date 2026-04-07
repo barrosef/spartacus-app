@@ -44,7 +44,12 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
 
   const fetchAddress = useCallback(async () => {
     try {
-      const data = await api.get<ProfileData>("/users/me/profile");
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      const data = await api.get<ProfileData>(
+        "/users/me/profile",
+        { headers },
+      );
       setIsDependent(data.isDependent);
       const addr = data.address;
       if (addr) {
@@ -59,7 +64,7 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
     } catch {
       // graceful
     }
-  }, []); // actingAs used for read-only check, not in fetch
+  }, [actingAs]);
 
   useEffect(() => {
     fetchAddress();
