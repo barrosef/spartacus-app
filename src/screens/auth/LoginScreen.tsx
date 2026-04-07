@@ -92,6 +92,16 @@ export function LoginScreen() {
                 style={styles.submitBtn}
               />
 
+              {/* Forgot password link */}
+              <TouchableOpacity
+                style={styles.forgotPasswordRow}
+                onPress={() => navigation.navigate("ForgotPassword")}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  Esqueceu a senha?
+                </Text>
+              </TouchableOpacity>
+
               {/* Divider */}
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
@@ -248,5 +258,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     fontFamily: typography.fontBodySemiBold,
+  },
+  forgotPasswordRow: {
+    alignItems: "center",
+    marginTop: -spacing.xs,
+  },
+  forgotPasswordText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontFamily: typography.fontBodyMedium,
   },
 });

@@ -25,6 +25,7 @@ import { DependentsScreen } from "./DependentsScreen";
 import { ClassesScreen } from "./ClassesScreen";
 import { GraduationScreen } from "./GraduationScreen";
 import { CategoryScreen } from "./CategoryScreen";
+import { ChangePasswordScreen } from "./ChangePasswordScreen";
 
 interface ProfileData {
   uid: string;
@@ -44,7 +45,8 @@ type Screen =
   | "dependents"
   | "classes"
   | "graduation"
-  | "category";
+  | "category"
+  | "change-password";
 
 interface ProfileScreenProps {
   onBack: () => void;
@@ -215,6 +217,11 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       <CategoryScreen onBack={() => { setScreen("profile"); fetchProfile(); }} />
     );
   }
+  if (screen === "change-password") {
+    return (
+      <ChangePasswordScreen onBack={() => setScreen("profile")} />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -316,6 +323,15 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               />
             </>
           )}
+
+          {/* Change password */}
+          <MenuDivider />
+          <MenuCard
+            icon="lock"
+            title="Alterar senha"
+            subtitle="Modifique sua senha de acesso"
+            onPress={() => setScreen("change-password")}
+          />
 
           {/* Logout */}
           <MenuDivider />

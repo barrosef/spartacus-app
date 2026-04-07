@@ -4,6 +4,7 @@ import { AuthNavContext } from "./AuthNavContext";
 import { WizardProvider } from "../context/WizardContext";
 
 import { LoginScreen } from "../screens/auth/LoginScreen";
+import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
 import { Step0AuthMethod } from "../screens/auth/SignupWizard/Step0AuthMethod";
 import { Step0bCredentials } from "../screens/auth/SignupWizard/Step0bCredentials";
 import { Step0cProject } from "../screens/auth/SignupWizard/Step0cProject";
@@ -22,6 +23,7 @@ import { EmailSentScreen } from "../screens/auth/EmailSentScreen";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Login: LoginScreen,
+  ForgotPassword: ForgotPasswordScreen,
   Step0AuthMethod,
   Step0bCredentials,
   Step0cProject,
