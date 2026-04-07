@@ -25,6 +25,10 @@ interface FeedResponse {
 
 interface FeedScreenProps {
   userRoles?: string[];
+  typeFilter?: string | null;
+  filterVisible?: boolean;
+  onFilterClose?: () => void;
+  onFilterChange?: (type: string | null) => void;
 }
 
 const POLL_INTERVAL = 30_000;
@@ -32,7 +36,13 @@ const STAFF_ROLES = new Set([
   "owner", "assistant", "teacher", "instructor",
 ]);
 
-export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
+export function FeedScreen({
+  userRoles = [],
+  typeFilter = null,
+  filterVisible = false,
+  onFilterClose,
+  onFilterChange,
+}: FeedScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [screen, setScreen] = useState<
     "loading" | "content" | "empty" | "error"
@@ -40,8 +50,6 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [filterVisible, setFilterVisible] = useState(false);
   const [likesEntryId, setLikesEntryId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
@@ -262,28 +270,6 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
   // ─── Content ───
   return (
     <View style={styles.container}>
-      {/* Filter bar */}
-      <View style={styles.filterBar}>
-        <TouchableOpacity
-          style={styles.filterBtn}
-          onPress={() => setFilterVisible(true)}
-        >
-          <Feather name="sliders" size={16} color={colors.foreground} />
-          <Text style={styles.filterBtnText}>
-            {typeFilter ? "Filtrado" : "Filtros"}
-          </Text>
-        </TouchableOpacity>
-        {typeFilter && (
-          <TouchableOpacity
-            style={styles.clearFilter}
-            onPress={() => setTypeFilter(null)}
-          >
-            <Feather name="x" size={14} color={colors.mutedForeground} />
-            <Text style={styles.clearFilterText}>Limpar</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -361,11 +347,11 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
 
       <FilterModal
         visible={filterVisible}
-        onClose={() => setFilterVisible(false)}
+        onClose={() => onFilterClose?.()}
         selectedType={typeFilter}
         onApply={(type) => {
-          setTypeFilter(type);
-          setFilterVisible(false);
+          onFilterChange?.(type);
+          onFilterClose?.();
         }}
       />
 

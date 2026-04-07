@@ -3,6 +3,10 @@ import { View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
+import {
+  registerForPushNotifications,
+  setupNotificationListeners,
+} from "../lib/pushNotifications";
 import { AuthNavigator } from "./AuthNavigator";
 import { AnamneseNavigator } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
@@ -79,6 +83,18 @@ export function RootNavigator() {
       checkApproval();
     }
   }, [user, signupInProgress, checkApproval]);
+
+  // Push notifications: register token + listen when user is approved
+  useEffect(() => {
+    if (appState !== "approved") return;
+
+    registerForPushNotifications().catch((e) => {
+      console.error("[Push] Registration failed:", e);
+    });
+
+    const cleanup = setupNotificationListeners();
+    return cleanup;
+  }, [appState]);
 
   if (appState === "loading") {
     return (

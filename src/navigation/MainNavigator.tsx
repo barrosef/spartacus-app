@@ -69,6 +69,8 @@ function MainContent() {
   const [showPostWizard, setShowPostWizard] = useState(false);
   const [switcherVisible, setSwitcherVisible] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [feedFilterVisible, setFeedFilterVisible] = useState(false);
+  const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
   const { switchTo, clearProxy } = useProxy();
@@ -168,7 +170,15 @@ function MainContent() {
   const renderTab = () => {
     switch (activeTab) {
       case "feed":
-        return <FeedScreen userRoles={profile?.roles ?? []} />;
+        return (
+          <FeedScreen
+            userRoles={profile?.roles ?? []}
+            typeFilter={feedTypeFilter}
+            filterVisible={feedFilterVisible}
+            onFilterClose={() => setFeedFilterVisible(false)}
+            onFilterChange={(t) => setFeedTypeFilter(t)}
+          />
+        );
       case "checkin":
         return <CheckinScreen onDone={() => setActiveTab("feed")} />;
       case "calendar":
@@ -186,6 +196,12 @@ function MainContent() {
         photoUrl={profile?.photoUrl}
         onProfilePress={handleProfilePress}
         onMenuPress={() => setDrawerVisible(true)}
+        onFilterPress={
+          activeTab === "feed"
+            ? () => setFeedFilterVisible(true)
+            : undefined
+        }
+        filterActive={activeTab === "feed" && !!feedTypeFilter}
       />
       <ProxyBanner />
       <View style={styles.content}>{renderTab()}</View>
