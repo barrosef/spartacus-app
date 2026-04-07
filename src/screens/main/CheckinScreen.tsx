@@ -51,6 +51,7 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
       if (actingAs) headers["X-Acting-As"] = actingAs;
       const res = await api.get<AvailableCheckin & NoCheckin>(
         "/checkin/available",
+        { headers },
       );
       if (res.aulaId) {
         setCheckin(res);
@@ -75,7 +76,13 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
     if (!checkin) return;
     setConfirming(true);
     try {
-      await api.post("/checkin", { aulaId: checkin.aulaId });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.post(
+        "/checkin",
+        { aulaId: checkin.aulaId },
+        { headers },
+      );
       setScreen("success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro";

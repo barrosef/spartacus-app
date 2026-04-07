@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 
 // Enable LayoutAnimation on Android
 if (
@@ -74,6 +75,7 @@ interface FrequencyHistoryScreenProps {
 }
 
 export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) {
+  const { actingAs } = useProxy();
   const [screen, setScreen] = useState<Screen>("loading");
   const [data, setData] = useState<AttendanceHistory | null>(null);
   const [filter, setFilter] = useState<FilterTab>("all");
@@ -82,13 +84,18 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   const fetchHistory = useCallback(async () => {
     setScreen("loading");
     try {
-      const res = await api.get<AttendanceHistory>("/attendance/history");
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      const res = await api.get<AttendanceHistory>(
+        "/attendance/history",
+        { headers },
+      );
       setData(res);
       setScreen(res.months.length > 0 ? "loaded" : "empty");
     } catch {
       setScreen("empty");
     }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
