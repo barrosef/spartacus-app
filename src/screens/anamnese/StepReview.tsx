@@ -11,7 +11,10 @@ import { WizardHeader } from "../../components/wizard/WizardHeader";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { useAnamnese } from "../../context/AnamneseContext";
-import { useAnamneseNavigation } from "../../navigation/AnamneseNavigator";
+import {
+  useAnamneseNavigation,
+  useAnamneseTarget,
+} from "../../navigation/AnamneseNavigator";
 import { api } from "../../lib/api";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
@@ -58,6 +61,7 @@ interface StepReviewProps {
 export function StepReview({ onSubmitted }: StepReviewProps) {
   const { state, dispatch, userAge } = useAnamnese();
   const navigation = useAnamneseNavigation();
+  const target = useAnamneseTarget();
 
   const totalSteps = userAge >= 16 ? 5 : 4;
   const currentStep = totalSteps;
@@ -111,7 +115,11 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
     dispatch({ type: "SET_COMMENTS", payload: { generalComments: comments } });
     setLoading(true);
     try {
-      await api.post("/medical-history", buildPayload());
+      const headers: Record<string, string> = {};
+      if (!target.current.isSelf) {
+        headers["X-Acting-As"] = target.current.uid;
+      }
+      await api.post("/medical-history", buildPayload(), { headers });
       onSubmitted?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro inesperado";

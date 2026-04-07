@@ -58,14 +58,19 @@ export class ApiError extends Error {
   }
 }
 
+interface RequestOptions {
+  headers?: Record<string, string>;
+}
+
 export const api = {
   get: <T>(path: string, signal?: AbortSignal) =>
     request<T>(path, { signal }),
 
-  post: <T>(path: string, data: unknown) =>
+  post: <T>(path: string, data: unknown, options?: RequestOptions) =>
     request<T>(path, {
       method: "POST",
       body: JSON.stringify(data),
+      headers: options?.headers,
     }),
 
   patch: <T>(path: string, data: unknown) =>
