@@ -4,11 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
 import { api } from "../lib/api";
 import { useProxy, ProxyProvider } from "../context/ProxyContext";
+import { useNotifications, NotificationsProvider } from "../context/NotificationsContext";
 import { AppHeader } from "../components/main/AppHeader";
 import { AppDrawer } from "../components/main/AppDrawer";
 import { BottomNav, type TabKey } from "../components/main/BottomNav";
 import { ProxyBanner } from "../components/main/ProxyBanner";
 import { ContextSwitcher } from "../components/main/ContextSwitcher";
+import { NotificationsPanel } from "../components/main/NotificationsPanel";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { FeedScreen } from "../screens/main/FeedScreen";
 import { CheckinScreen } from "../screens/main/CheckinScreen";
@@ -71,9 +73,11 @@ function MainContent() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [feedFilterVisible, setFeedFilterVisible] = useState(false);
   const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
   const { switchTo, clearProxy } = useProxy();
+  const notifs = useNotifications();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
   const hasSocialRole = profile?.roles.includes("social") ?? false;
@@ -202,6 +206,8 @@ function MainContent() {
             : undefined
         }
         filterActive={activeTab === "feed" && !!feedTypeFilter}
+        onBellPress={() => setNotificationsVisible(true)}
+        unreadCount={notifs.unreadCount}
       />
       <ProxyBanner />
       <View style={styles.content}>{renderTab()}</View>
@@ -233,15 +239,24 @@ function MainContent() {
         onSelectSelf={handleSelectSelf}
         onSelectDependent={handleSelectDependent}
       />
+
+      <NotificationsPanel
+        visible={notificationsVisible}
+        onClose={() => setNotificationsVisible(false)}
+        notifications={notifs.notifications}
+        onMarkAllRead={notifs.markAllRead}
+      />
     </SafeAreaView>
   );
 }
 
 export function MainNavigator() {
   return (
-    <ProxyProvider>
-      <MainContent />
-    </ProxyProvider>
+    <NotificationsProvider>
+      <ProxyProvider>
+        <MainContent />
+      </ProxyProvider>
+    </NotificationsProvider>
   );
 }
 

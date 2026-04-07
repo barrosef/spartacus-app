@@ -111,9 +111,11 @@ export function RootNavigator() {
     }
   }, [user, signupInProgress, checkApproval]);
 
-  // Push notifications: register token + listen when user is approved
+  // Push notifications: register token + listen as soon as user is logged in
+  // (don't wait for approval — this triggers the OS permission prompt early
+  // so the user grants permission right after install/login)
   useEffect(() => {
-    if (appState !== "approved") return;
+    if (!user || signupInProgress) return;
 
     registerForPushNotifications().catch((e) => {
       console.error("[Push] Registration failed:", e);
@@ -121,7 +123,7 @@ export function RootNavigator() {
 
     const cleanup = setupNotificationListeners();
     return cleanup;
-  }, [appState]);
+  }, [user, signupInProgress]);
 
   if (appState === "loading") {
     return (

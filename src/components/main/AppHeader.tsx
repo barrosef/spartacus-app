@@ -11,6 +11,8 @@ interface AppHeaderProps {
   onMenuPress: () => void;
   onFilterPress?: () => void;
   filterActive?: boolean;
+  onBellPress?: () => void;
+  unreadCount?: number;
 }
 
 export function AppHeader({
@@ -21,6 +23,8 @@ export function AppHeader({
   onMenuPress,
   onFilterPress,
   filterActive = false,
+  onBellPress,
+  unreadCount = 0,
 }: AppHeaderProps) {
   return (
     <View style={styles.header}>
@@ -56,9 +60,13 @@ export function AppHeader({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+          onPress={onBellPress}
+        >
           <Feather name="bell" size={24} color={colors.foreground} />
-          <View style={styles.badge} />
+          {unreadCount > 0 && <View style={styles.badge} />}
         </TouchableOpacity>
 
         <TouchableOpacity
