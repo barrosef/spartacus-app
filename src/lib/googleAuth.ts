@@ -22,7 +22,10 @@ function useGoogleSignInWeb(onSuccess?: () => void) {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
       .then(() => onSuccessRef.current?.())
-      .catch(() => setError("Falha ao autenticar com Google."))
+      .catch((err) => {
+        console.error("[GoogleAuth] signInWithPopup failed:", err?.code, err?.message, err);
+        setError("Falha ao autenticar com Google.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
