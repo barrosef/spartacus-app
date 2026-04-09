@@ -31,7 +31,7 @@ interface AttendanceRecord {
   date: string;
   dateSort: string;
   modalityName: string;
-  status: "present" | "absent" | "justified";
+  status: "registered" | "confirmed" | "absent" | "absent_justified";
   statusLabel: string;
   justification?: string | null;
 }
@@ -51,21 +51,23 @@ interface AttendanceHistory {
   months: MonthSummary[];
 }
 
-type FilterTab = "all" | "present" | "absent";
+type FilterTab = "all" | "confirmed" | "absent";
 type Screen = "loading" | "loaded" | "empty";
 
 /* ── Status config ─────────────────────────────────────────────── */
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  present: { bg: "rgba(76,175,80,0.15)", text: colors.success },
-  justified: { bg: "rgba(245,158,11,0.15)", text: colors.warning },
+  registered: { bg: "rgba(245,158,11,0.15)", text: colors.warning },
+  confirmed: { bg: "rgba(76,175,80,0.15)", text: colors.success },
   absent: { bg: "rgba(239,68,68,0.15)", text: colors.error },
+  absent_justified: { bg: "rgba(100,149,237,0.15)", text: "#6495ED" },
 };
 
 const STATUS_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
-  present: "check-circle",
-  justified: "alert-circle",
+  registered: "clock",
+  confirmed: "check-circle",
   absent: "x-circle",
+  absent_justified: "alert-circle",
 };
 
 /* ── Component ─────────────────────────────────────────────────── */
@@ -106,8 +108,10 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
 
   const filterRecords = (records: AttendanceRecord[]): AttendanceRecord[] => {
     if (filter === "all") return records;
-    if (filter === "present") return records.filter((r) => r.status === "present");
-    return records.filter((r) => r.status === "absent" || r.status === "justified");
+    if (filter === "confirmed") {
+      return records.filter((r) => r.status === "confirmed" || r.status === "registered");
+    }
+    return records.filter((r) => r.status === "absent" || r.status === "absent_justified");
   };
 
   /* ── Loading ── */
@@ -164,11 +168,11 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
 
         {/* Filter tabs */}
         <View style={styles.tabRow}>
-          {(["all", "present", "absent"] as FilterTab[]).map((tab) => {
+          {(["all", "confirmed", "absent"] as FilterTab[]).map((tab) => {
             const active = filter === tab;
             const label = tab === "all"
               ? "Todos"
-              : tab === "present"
+              : tab === "confirmed"
                 ? "Presenças"
                 : "Faltas";
             return (
