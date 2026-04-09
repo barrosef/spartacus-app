@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import {
   initializeAuth,
   getAuth,
+  connectAuthEmulator,
   GoogleAuthProvider,
 } from "firebase/auth";
 
@@ -40,6 +41,18 @@ if (Platform.OS === "web") {
     });
   } catch {
     _auth = getAuth(firebaseApp);
+  }
+}
+
+// Connect to Firebase Auth Emulator when running locally.
+// EXPO_PUBLIC_USE_EMULATORS=true must be set in .env for local dev.
+if (process.env.EXPO_PUBLIC_USE_EMULATORS === "true") {
+  try {
+    connectAuthEmulator(_auth, "http://localhost:9099", {
+      disableWarnings: true,
+    });
+  } catch {
+    // Already connected or not available — ignore
   }
 }
 
