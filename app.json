@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "br.com.spartacus.app",
-      "versionCode": 25,
+      "versionCode": 27,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0B0D12"

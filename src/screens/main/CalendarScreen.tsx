@@ -346,8 +346,6 @@ export function CalendarScreen() {
       <CalendarSidebar
         visible={showSidebar}
         onClose={() => setShowSidebar(false)}
-        userName="Usuário"
-        userInitials="US"
         activeView={view}
         onViewChange={setView}
         filters={filters}

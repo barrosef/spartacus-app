@@ -356,20 +356,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             icon="log-out"
             title="Sair"
             subtitle="Encerrar sessão e voltar à tela de login"
-            onPress={() => {
-              Alert.alert(
-                "Sair do Spartacus",
-                "Deseja realmente encerrar sua sessão?",
-                [
-                  { text: "Cancelar", style: "cancel" },
-                  {
-                    text: "Sair",
-                    style: "destructive",
-                    onPress: () => auth.signOut(),
-                  },
-                ],
-              );
-            }}
+            onPress={() => auth.signOut()}
           />
         </View>
       </ScrollView>

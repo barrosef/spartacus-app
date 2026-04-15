@@ -133,12 +133,19 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
     const nc = noCheckin;
     return (
       <View style={styles.center}>
-        <View style={styles.warningIcon}>
-          <Feather
-            name="alert-triangle"
-            size={28}
-            color={colors.warning}
-          />
+        <View
+          style={[
+            styles.iconOuter,
+            { shadowColor: colors.warning, backgroundColor: "rgba(245,158,11,0.15)" },
+          ]}
+        >
+          <View style={[styles.iconInner, { borderColor: colors.warning }]}>
+            <Feather
+              name="alert-triangle"
+              size={28}
+              color={colors.warning}
+            />
+          </View>
         </View>
         <Text style={styles.noTitle}>Nenhuma aula agora</Text>
         <Text style={styles.noMessage}>
@@ -312,19 +319,31 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   // No class
-  warningIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(245,158,11,0.15)",
+  iconOuter: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  iconInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noTitle: {
     color: colors.foreground,
     fontFamily: typography.fontHeadingSemi,
-    fontSize: 20,
+    fontSize: 22,
+    textAlign: "center",
     marginBottom: spacing.sm,
   },
   noMessage: {
@@ -334,6 +353,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   nextCard: {
     backgroundColor: colors.card,
@@ -341,6 +361,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: "center",
     gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   nextLabel: {
     color: colors.mutedForeground,

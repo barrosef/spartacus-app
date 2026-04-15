@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   logoArea: {
     alignItems: "center",
     marginTop: spacing.xxl + 8,
-    marginBottom: spacing.xl + 4,
+    marginBottom: spacing.xxl + spacing.md,
   },
   logo: {
     width: 160,

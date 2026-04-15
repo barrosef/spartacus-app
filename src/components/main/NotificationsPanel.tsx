@@ -84,7 +84,6 @@ export function NotificationsPanel({
       transparent
       animationType="none"
       onRequestClose={handleClose}
-      statusBarTranslucent
     >
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={handleClose}>
@@ -220,7 +219,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + 8,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
