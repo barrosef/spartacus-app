@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   PanResponder,
+  Animated,
+  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
@@ -31,6 +33,7 @@ const DAY_MAP: Record<string, number> = {
 };
 
 const SWIPE_THRESHOLD = 60;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 interface ClassOut {
   id: string;
@@ -67,7 +70,7 @@ export function CalendarScreen() {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [filters, setFilters] = useState<Set<FilterKey>>(
-    new Set(["classes", "events", "championships"]),
+    new Set(["my_classes"]),
   );
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [myClassIds, setMyClassIds] = useState<Set<string>>(new Set());
@@ -244,13 +247,56 @@ export function CalendarScreen() {
   useEffect(() => { goNextRef.current = goNext; }, [goNext]);
   useEffect(() => { goPrevRef.current = goPrev; }, [goPrev]);
 
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isAnimatingRef = useRef(false);
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
+        !isAnimatingRef.current &&
         Math.abs(gs.dx) > 15 && Math.abs(gs.dy) < 30,
+      onPanResponderMove: (_, gs) => {
+        translateX.setValue(gs.dx);
+      },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx < -SWIPE_THRESHOLD) goNextRef.current();
-        else if (gs.dx > SWIPE_THRESHOLD) goPrevRef.current();
+        const goNext = gs.dx < -SWIPE_THRESHOLD;
+        const goPrev = gs.dx > SWIPE_THRESHOLD;
+
+        if (goNext || goPrev) {
+          isAnimatingRef.current = true;
+          const exitTo = goNext ? -SCREEN_WIDTH : SCREEN_WIDTH;
+          Animated.timing(translateX, {
+            toValue: exitTo,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            if (goNext) goNextRef.current();
+            else goPrevRef.current();
+            translateX.setValue(-exitTo);
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }).start(() => {
+              isAnimatingRef.current = false;
+            });
+          });
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            damping: 18,
+            stiffness: 220,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, {
+          toValue: 0,
+          damping: 18,
+          stiffness: 220,
+          useNativeDriver: true,
+        }).start();
       },
     }),
   ).current;
@@ -339,7 +385,11 @@ export function CalendarScreen() {
 
       {/* Active view with swipe */}
       <View style={styles.content} {...panResponder.panHandlers}>
-        {renderView()}
+        <Animated.View
+          style={[styles.animated, { transform: [{ translateX }] }]}
+        >
+          {renderView()}
+        </Animated.View>
       </View>
 
       {/* Sidebar */}
@@ -379,6 +429,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   content: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  animated: {
     flex: 1,
   },
 });

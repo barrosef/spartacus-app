@@ -169,13 +169,14 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
             const beltOptions = BELT_OPTIONS[mod] ?? getDefaultBelts();
             const selectedBelt = beltOptions.find((b) => b.label === entry.belt);
             const showPrajied = mod === "Muay Thai";
+            const showDegree = mod === "Jiu-Jitsu";
 
             return (
               <View key={mod} style={styles.section}>
                 <Text style={styles.modalityTitle}>{mod.toUpperCase()}</Text>
 
                 <View style={styles.fieldRow}>
-                  <View style={styles.fieldFlex}>
+                  <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
                     <Text style={styles.fieldLabel}>Faixa</Text>
                     <TouchableOpacity style={styles.select}
                       onPress={() => setPickerModal({ modality: mod })}>
@@ -189,11 +190,13 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.fieldSmall}>
-                    <Input label="Grau" value={String(entry.degree || "")}
-                      onChangeText={(v) => updateField(mod, "degree", parseInt(v) || 0)}
-                      keyboardType="numeric" maxLength={1} />
-                  </View>
+                  {showDegree && (
+                    <View style={styles.fieldSmall}>
+                      <Input label="Grau" value={String(entry.degree || "")}
+                        onChangeText={(v) => updateField(mod, "degree", parseInt(v) || 0)}
+                        keyboardType="numeric" maxLength={1} />
+                    </View>
+                  )}
                 </View>
 
                 {showPrajied && (
@@ -260,6 +263,7 @@ const styles = StyleSheet.create({
   },
   fieldRow: { flexDirection: "row", gap: spacing.sm },
   fieldFlex: { flex: 2 },
+  fieldFull: { flex: 1 },
   fieldSmall: { flex: 1 },
   fieldLabel: {
     fontSize: 14, fontFamily: typography.fontBodyMedium,

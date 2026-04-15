@@ -9,7 +9,6 @@ import { AppHeader } from "../components/main/AppHeader";
 import { AppDrawer } from "../components/main/AppDrawer";
 import { BottomNav, type TabKey } from "../components/main/BottomNav";
 import { ProxyBanner } from "../components/main/ProxyBanner";
-import { ContextSwitcher } from "../components/main/ContextSwitcher";
 import { NotificationsPanel } from "../components/main/NotificationsPanel";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { FeedScreen } from "../screens/main/FeedScreen";
@@ -37,6 +36,7 @@ interface DependentData {
   uid: string;
   name: string;
   birthDate?: string | null;
+  photoUrl?: string | null;
 }
 
 function getInitials(name: string): string {
@@ -69,14 +69,13 @@ function MainContent() {
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
-  const [switcherVisible, setSwitcherVisible] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [feedFilterVisible, setFeedFilterVisible] = useState(false);
   const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
-  const { switchTo, clearProxy } = useProxy();
+  useProxy();
   const notifs = useNotifications();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
@@ -114,20 +113,6 @@ function MainContent() {
   const userInitials = getInitials(userName);
 
   const handleProfilePress = () => {
-    if (isGuardian && dependents.length > 0) {
-      setSwitcherVisible(true);
-    } else {
-      setShowProfile(true);
-    }
-  };
-
-  const handleSelectSelf = () => {
-    clearProxy();
-    setShowProfile(true);
-  };
-
-  const handleSelectDependent = (dep: DependentData) => {
-    switchTo(dep.uid, dep.name);
     setShowProfile(true);
   };
 
@@ -137,8 +122,20 @@ function MainContent() {
   };
 
   if (showProfile) {
+    const depInfos = dependents.map((d) => ({
+      uid: d.uid,
+      name: d.name,
+      age: d.birthDate ? calculateAge(d.birthDate) : null,
+      photoUrl: d.photoUrl,
+    }));
     return (
-      <ProfileScreen onBack={() => { setShowProfile(false); fetchProfile(); }} />
+      <ProfileScreen
+        onBack={() => { setShowProfile(false); fetchProfile(); }}
+        dependents={depInfos}
+        realUserName={userName}
+        realUserPhotoUrl={profile?.photoUrl}
+        realUserIsGuardian={isGuardian}
+      />
     );
   }
 
@@ -224,20 +221,6 @@ function MainContent() {
         userName={userName}
         userInitials={userInitials}
         onNavigate={handleDrawerNavigate}
-      />
-
-      <ContextSwitcher
-        visible={switcherVisible}
-        onClose={() => setSwitcherVisible(false)}
-        userName={userName}
-        userInitials={userInitials}
-        dependents={dependents.map((d) => ({
-          uid: d.uid,
-          name: d.name,
-          age: d.birthDate ? calculateAge(d.birthDate) : null,
-        }))}
-        onSelectSelf={handleSelectSelf}
-        onSelectDependent={handleSelectDependent}
       />
 
       <NotificationsPanel
