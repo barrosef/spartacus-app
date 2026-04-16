@@ -44,9 +44,13 @@ if (Platform.OS === "web") {
   }
 }
 
-// Connect to Firebase Auth Emulator when running locally.
-// EXPO_PUBLIC_USE_EMULATORS=true must be set in .env for local dev.
-if (process.env.EXPO_PUBLIC_USE_EMULATORS === "true") {
+// Connect to Firebase Auth Emulator only in __DEV__ (Metro) builds.
+// Standalone release APKs must never hit localhost — the phone's localhost
+// is the device itself, not the dev machine, causing auth/network-request-failed.
+if (
+  __DEV__ &&
+  process.env.EXPO_PUBLIC_USE_EMULATORS === "true"
+) {
   try {
     connectAuthEmulator(_auth, "http://localhost:9099", {
       disableWarnings: true,

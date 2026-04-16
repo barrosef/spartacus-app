@@ -129,15 +129,10 @@ export function ProfileScreen({
       quality: 0.9,
     });
     if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setPendingPhoto({
-        uri: asset.uri,
-        source: "camera",
-        width: asset.width,
-        height: asset.height,
-      });
-      setPendingPreviewUri(asset.uri);
-      setPendingDims({ w: asset.width, h: asset.height });
+      const a = result.assets[0];
+      setPendingPhoto({ uri: a.uri, source: "camera", width: a.width, height: a.height });
+      setPendingPreviewUri(a.uri);
+      setPendingDims({ w: a.width, h: a.height });
     }
   };
 
@@ -157,15 +152,10 @@ export function ProfileScreen({
       quality: 0.9,
     });
     if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setPendingPhoto({
-        uri: asset.uri,
-        source: "gallery",
-        width: asset.width,
-        height: asset.height,
-      });
-      setPendingPreviewUri(asset.uri);
-      setPendingDims({ w: asset.width, h: asset.height });
+      const a = result.assets[0];
+      setPendingPhoto({ uri: a.uri, source: "gallery", width: a.width, height: a.height });
+      setPendingPreviewUri(a.uri);
+      setPendingDims({ w: a.width, h: a.height });
     }
   };
 
@@ -183,6 +173,9 @@ export function ProfileScreen({
     e.target.value = "";
   };
 
+  const proxyHeaders = (): Record<string, string> =>
+    actingAs ? { "X-Acting-As": actingAs } : {};
+
   const uploadPhoto = async (uri: string) => {
     try {
       const formData = new FormData();
@@ -195,7 +188,7 @@ export function ProfileScreen({
         type: `image/${ext}`,
       } as unknown as Blob);
 
-      await api.upload("/users/me/photo", formData);
+      await api.upload("/users/me/photo", formData, { headers: proxyHeaders() });
       fetchProfile();
     } catch {
       Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
@@ -206,7 +199,7 @@ export function ProfileScreen({
     try {
       const formData = new FormData();
       (formData as unknown as globalThis.FormData).append("file", file, file.name);
-      await api.upload("/users/me/photo", formData);
+      await api.upload("/users/me/photo", formData, { headers: proxyHeaders() });
       fetchProfile();
     } catch {
       Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
@@ -262,7 +255,7 @@ export function ProfileScreen({
 
   const deletePhoto = async () => {
     try {
-      await api.delete("/users/me/photo");
+      await api.delete("/users/me/photo", { headers: proxyHeaders() });
       fetchProfile();
     } catch {
       Alert.alert("Erro", "Não foi possível remover a foto.");
@@ -492,7 +485,7 @@ export function ProfileScreen({
         uri={pendingPreviewUri}
         imageWidth={pendingDims?.w ?? null}
         imageHeight={pendingDims?.h ?? null}
-        supportsPan={pendingPhoto?.source !== "web"}
+        supportsPan={pendingPhoto?.source !== "web" || Platform.OS === "web"}
         onConfirm={confirmPendingPhoto}
         onRetry={retryPendingPhoto}
         onClose={cleanupPending}

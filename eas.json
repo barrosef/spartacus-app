@@ -20,7 +20,8 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com",
         "EXPO_PUBLIC_API_URL": "https://api.spartacus.app.br",
-        "EXPO_PUBLIC_EAS_PROJECT_ID": "9c2a3ad1-2083-45e1-bb03-3d127b554099"
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "9c2a3ad1-2083-45e1-bb03-3d127b554099",
+        "EXPO_PUBLIC_USE_EMULATORS": "false"
       },
       "android": {
         "buildType": "apk"
@@ -37,7 +38,8 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com",
         "EXPO_PUBLIC_API_URL": "https://api.spartacus.app.br",
-        "EXPO_PUBLIC_EAS_PROJECT_ID": "9c2a3ad1-2083-45e1-bb03-3d127b554099"
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "9c2a3ad1-2083-45e1-bb03-3d127b554099",
+        "EXPO_PUBLIC_USE_EMULATORS": "false"
       },
       "android": {
         "buildType": "app-bundle"

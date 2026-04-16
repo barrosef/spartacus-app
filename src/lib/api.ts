@@ -97,10 +97,11 @@ export const api = {
       headers: options?.headers,
     }),
 
-  upload: async <T>(path: string, formData: FormData): Promise<T> => {
+  upload: async <T>(path: string, formData: FormData, options?: RequestOptions): Promise<T> => {
     const token = await getAuthToken();
     const headers: Record<string, string> = {
       "X-Project-Id": _projectId,
+      ...(options?.headers ?? {}),
     };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -109,6 +110,7 @@ export const api = {
       method: "POST",
       headers,
       body: formData,
+      signal: options?.signal,
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

@@ -17,6 +17,7 @@ import { colors, typography, spacing, radius } from "../../theme/tokens";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const PREVIEW_SIZE = Math.min(SCREEN_WIDTH - spacing.xl * 2, 280);
+const PAN_ZOOM = 1.25;
 
 export interface CropRegion {
   originX: number;
@@ -48,63 +49,132 @@ export function PhotoConfirmModal({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
-  // Scale image so that min dimension COVERS the preview circle
-  const coverScale =
-    imageWidth && imageHeight
-      ? PREVIEW_SIZE / Math.min(imageWidth, imageHeight)
-      : 1;
-  const displayedW = (imageWidth ?? PREVIEW_SIZE) * coverScale;
-  const displayedH = (imageHeight ?? PREVIEW_SIZE) * coverScale;
+  // Image dimensions (with fallback fetch)
+  const [fallbackDims, setFallbackDims] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (uri && (!imageWidth || !imageHeight)) {
+      Image.getSize(
+        uri,
+        (w, h) => setFallbackDims({ w, h }),
+        () => setFallbackDims(null),
+      );
+    } else {
+      setFallbackDims(null);
+    }
+  }, [uri, imageWidth, imageHeight]);
 
-  // Pan constraints: image can move within [-(displayed - preview)/2, +same]
+  const finalW = imageWidth ?? fallbackDims?.w ?? 0;
+  const finalH = imageHeight ?? fallbackDims?.h ?? 0;
+
+  const rawCoverScale =
+    finalW > 0 && finalH > 0 ? PREVIEW_SIZE / Math.min(finalW, finalH) : 1;
+  const coverScale = Math.max(rawCoverScale * PAN_ZOOM, 0.0001);
+  const displayedW = finalW > 0 ? finalW * coverScale : PREVIEW_SIZE * PAN_ZOOM;
+  const displayedH = finalH > 0 ? finalH * coverScale : PREVIEW_SIZE * PAN_ZOOM;
   const maxPanX = Math.max(0, (displayedW - PREVIEW_SIZE) / 2);
   const maxPanY = Math.max(0, (displayedH - PREVIEW_SIZE) / 2);
 
-  const panOffset = useRef({ x: 0, y: 0 }).current;
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  // Pan position as useState so transform re-renders
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const posRef = useRef({ x: 0, y: 0 });
+  posRef.current = pos;
 
-  // Keep latest limits/enabled in refs so PanResponder closure always reads fresh values
+  const canPan = supportsPan && (maxPanX > 0 || maxPanY > 0);
+  const canPanRef = useRef(canPan);
+  canPanRef.current = canPan;
   const limitsRef = useRef({ x: 0, y: 0 });
-  const supportsPanRef = useRef(false);
   limitsRef.current = { x: maxPanX, y: maxPanY };
-  supportsPanRef.current = supportsPan;
 
+  const clamp = (x: number, y: number) => ({
+    x: Math.max(-limitsRef.current.x, Math.min(limitsRef.current.x, x)),
+    y: Math.max(-limitsRef.current.y, Math.min(limitsRef.current.y, y)),
+  });
+
+  // ───────────────────────── WEB: native DOM drag ──────────────────────────
+  const webStartRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const start = webStartRef.current;
+      if (!start || !canPanRef.current) return;
+      const point = "touches" in e ? e.touches[0] : (e as MouseEvent);
+      if (!point) return;
+      const dx = point.clientX - start.mx;
+      const dy = point.clientY - start.my;
+      setPos({ x: start.px + dx, y: start.py + dy });
+      if ("preventDefault" in e) e.preventDefault();
+    };
+    const onUp = (e: MouseEvent | TouchEvent) => {
+      const start = webStartRef.current;
+      if (!start) return;
+      const point = "changedTouches" in e ? e.changedTouches[0] : (e as MouseEvent);
+      if (point) {
+        const dx = point.clientX - start.mx;
+        const dy = point.clientY - start.my;
+        setPos(clamp(start.px + dx, start.py + dy));
+      }
+      webStartRef.current = null;
+    };
+
+    window.addEventListener("mousemove", onMove as EventListener);
+    window.addEventListener("mouseup", onUp as EventListener);
+    window.addEventListener("touchmove", onMove as EventListener, { passive: false });
+    window.addEventListener("touchend", onUp as EventListener);
+    return () => {
+      window.removeEventListener("mousemove", onMove as EventListener);
+      window.removeEventListener("mouseup", onUp as EventListener);
+      window.removeEventListener("touchmove", onMove as EventListener);
+      window.removeEventListener("touchend", onUp as EventListener);
+    };
+  }, []);
+
+  const handleWebPointerDown = (e: { clientX: number; clientY: number } | React.MouseEvent | React.TouchEvent) => {
+    if (!canPanRef.current) return;
+    let cx = 0, cy = 0;
+    if ("touches" in e && e.touches.length > 0) {
+      cx = e.touches[0].clientX;
+      cy = e.touches[0].clientY;
+    } else if ("clientX" in e) {
+      cx = e.clientX;
+      cy = e.clientY;
+    }
+    webStartRef.current = {
+      mx: cx,
+      my: cy,
+      px: posRef.current.x,
+      py: posRef.current.y,
+    };
+  };
+
+  // ───────────────────── NATIVE: PanResponder (mobile) ─────────────────────
+  const panStartRef = useRef({ x: 0, y: 0 });
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => supportsPanRef.current,
-      onMoveShouldSetPanResponder: (_, gs) =>
-        supportsPanRef.current && (Math.abs(gs.dx) > 2 || Math.abs(gs.dy) > 2),
+      onStartShouldSetPanResponder: () => canPanRef.current,
+      onMoveShouldSetPanResponder: () => canPanRef.current,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
-        pan.setOffset({ x: panOffset.x, y: panOffset.y });
-        pan.setValue({ x: 0, y: 0 });
+        panStartRef.current = { ...posRef.current };
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false },
-      ),
+      onPanResponderMove: (_, gs) => {
+        if (!canPanRef.current) return;
+        setPos({
+          x: panStartRef.current.x + gs.dx,
+          y: panStartRef.current.y + gs.dy,
+        });
+      },
       onPanResponderRelease: (_, gs) => {
-        const mx = limitsRef.current.x;
-        const my = limitsRef.current.y;
-        const nextX = Math.max(-mx, Math.min(mx, panOffset.x + gs.dx));
-        const nextY = Math.max(-my, Math.min(my, panOffset.y + gs.dy));
-        panOffset.x = nextX;
-        panOffset.y = nextY;
-        pan.flattenOffset();
-        Animated.spring(pan, {
-          toValue: { x: nextX, y: nextY },
-          damping: 20,
-          stiffness: 260,
-          useNativeDriver: false,
-        }).start();
+        setPos(clamp(panStartRef.current.x + gs.dx, panStartRef.current.y + gs.dy));
       },
     }),
   ).current;
 
+  // Modal open/close animations + pos reset
   useEffect(() => {
     if (visible) {
-      panOffset.x = 0;
-      panOffset.y = 0;
-      pan.setValue({ x: 0, y: 0 });
+      setPos({ x: 0, y: 0 });
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -123,23 +193,31 @@ export function PhotoConfirmModal({
       scaleAnim.setValue(0.9);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, uri]);
+  }, [visible]);
 
   const buildCropRegion = (): CropRegion | null => {
-    if (!imageWidth || !imageHeight || !supportsPan) return null;
-    // Preview center in image coords = image center - panOffset (in display px)
-    // Translate display px to image px via coverScale
-    const cropSize = Math.min(imageWidth, imageHeight);
-    const centerXImg = imageWidth / 2 - panOffset.x / coverScale;
-    const centerYImg = imageHeight / 2 - panOffset.y / coverScale;
-    const originX = Math.max(0, Math.min(imageWidth - cropSize, centerXImg - cropSize / 2));
-    const originY = Math.max(0, Math.min(imageHeight - cropSize, centerYImg - cropSize / 2));
+    if (!finalW || !finalH || !supportsPan) return null;
+    const cropSize = PREVIEW_SIZE / coverScale;
+    const centerXImg = finalW / 2 - pos.x / coverScale;
+    const centerYImg = finalH / 2 - pos.y / coverScale;
+    const originX = Math.max(0, Math.min(finalW - cropSize, centerXImg - cropSize / 2));
+    const originY = Math.max(0, Math.min(finalH - cropSize, centerYImg - cropSize / 2));
     return { originX, originY, size: cropSize };
   };
 
-  const handleConfirm = () => {
-    onConfirm(buildCropRegion());
-  };
+  const handleConfirm = () => onConfirm(buildCropRegion());
+
+  // Compose handlers: web uses DOM events, native uses PanResponder
+  const wrapHandlers = Platform.OS === "web"
+    ? {
+        onMouseDown: handleWebPointerDown as unknown as (e: unknown) => void,
+        onTouchStart: handleWebPointerDown as unknown as (e: unknown) => void,
+      }
+    : panResponder.panHandlers;
+
+  const cursorStyle = Platform.OS === "web" && canPan
+    ? ({ cursor: webStartRef.current ? "grabbing" : "grab" } as unknown as Record<string, unknown>)
+    : {};
 
   return (
     <Modal
@@ -162,29 +240,35 @@ export function PhotoConfirmModal({
           <View style={styles.header}>
             <Text style={styles.title}>Ajuste sua foto</Text>
             <Text style={styles.subtitle}>
-              {supportsPan
-                ? "Arraste para enquadrar"
-                : "Assim ficará sua foto de perfil"}
+              {canPan ? "Arraste para enquadrar" : "Pré-visualização"}
             </Text>
           </View>
 
-          <View style={styles.previewWrap} {...panResponder.panHandlers}>
-            {uri && (
-              <Animated.Image
-                source={{ uri }}
-                style={[
-                  {
-                    width: displayedW || PREVIEW_SIZE,
-                    height: displayedH || PREVIEW_SIZE,
+          <View
+            style={[styles.previewWrap, cursorStyle]}
+            {...wrapHandlers}
+          >
+            <View style={styles.previewClip} pointerEvents="none">
+              {uri && (
+                <View
+                  style={{
+                    width: displayedW,
+                    height: displayedH,
                     transform: [
-                      { translateX: pan.x },
-                      { translateY: pan.y },
+                      { translateX: pos.x },
+                      { translateY: pos.y },
                     ],
-                  },
-                ]}
-                resizeMode="cover"
-              />
-            )}
+                  }}
+                  pointerEvents="none"
+                >
+                  <Image
+                    source={{ uri }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+            </View>
             <View pointerEvents="none" style={styles.previewRing} />
           </View>
 
@@ -236,7 +320,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
-    elevation: 12,
+    elevation: 24,
+    zIndex: 10,
   },
   header: {
     alignItems: "center",
@@ -256,13 +341,17 @@ const styles = StyleSheet.create({
   previewWrap: {
     width: PREVIEW_SIZE,
     height: PREVIEW_SIZE,
+    marginBottom: spacing.lg,
+    position: "relative",
+    userSelect: "none" as unknown as undefined,
+  },
+  previewClip: {
+    ...StyleSheet.absoluteFillObject,
     borderRadius: PREVIEW_SIZE / 2,
     overflow: "hidden",
     backgroundColor: colors.background,
-    marginBottom: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "web" ? { cursor: "grab" as unknown as undefined } : {}),
   },
   previewRing: {
     ...StyleSheet.absoluteFillObject,
