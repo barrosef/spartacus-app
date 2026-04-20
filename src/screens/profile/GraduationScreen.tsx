@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
@@ -74,6 +75,7 @@ interface GraduationScreenProps {
 }
 
 export function GraduationScreen({ onBack }: GraduationScreenProps) {
+  const { actingAs } = useProxy();
   const [modalities, setModalities] = useState<string[]>([]);
   const [graduation, setGraduation] = useState<Record<string, GraduationEntry>>({});
   const [saving, setSaving] = useState(false);
@@ -83,8 +85,10 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const fetchData = useCallback(async () => {
     try {
       const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "spartacus-artes-marciais";
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
       const [profile, classesRes] = await Promise.all([
-        api.get<ProfileData>("/users/me/profile"),
+        api.get<ProfileData>("/users/me/profile", { headers }),
         api.get<{ classes: ClassOut[] }>(`/projects/${projectId}/classes`),
       ]);
 
@@ -101,7 +105,7 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
         setGraduation(profile.graduation);
       }
     } catch { /* graceful */ }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -115,7 +119,13 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.patch("/users/me/graduation", { graduation });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.patch(
+        "/users/me/graduation",
+        { graduation },
+        { headers },
+      );
       setShowSuccess(true);
     } catch (err: unknown) {
       Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
@@ -159,13 +169,14 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
             const beltOptions = BELT_OPTIONS[mod] ?? getDefaultBelts();
             const selectedBelt = beltOptions.find((b) => b.label === entry.belt);
             const showPrajied = mod === "Muay Thai";
+            const showDegree = mod === "Jiu-Jitsu";
 
             return (
               <View key={mod} style={styles.section}>
                 <Text style={styles.modalityTitle}>{mod.toUpperCase()}</Text>
 
                 <View style={styles.fieldRow}>
-                  <View style={styles.fieldFlex}>
+                  <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
                     <Text style={styles.fieldLabel}>Faixa</Text>
                     <TouchableOpacity style={styles.select}
                       onPress={() => setPickerModal({ modality: mod })}>
@@ -179,11 +190,13 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.fieldSmall}>
-                    <Input label="Grau" value={String(entry.degree || "")}
-                      onChangeText={(v) => updateField(mod, "degree", parseInt(v) || 0)}
-                      keyboardType="numeric" maxLength={1} />
-                  </View>
+                  {showDegree && (
+                    <View style={styles.fieldSmall}>
+                      <Input label="Grau" value={String(entry.degree || "")}
+                        onChangeText={(v) => updateField(mod, "degree", parseInt(v) || 0)}
+                        keyboardType="numeric" maxLength={1} />
+                    </View>
+                  )}
                 </View>
 
                 {showPrajied && (
@@ -250,6 +263,7 @@ const styles = StyleSheet.create({
   },
   fieldRow: { flexDirection: "row", gap: spacing.sm },
   fieldFlex: { flex: 2 },
+  fieldFull: { flex: 1 },
   fieldSmall: { flex: 1 },
   fieldLabel: {
     fontSize: 14, fontFamily: typography.fontBodyMedium,

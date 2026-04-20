@@ -22,7 +22,10 @@ function useGoogleSignInWeb(onSuccess?: () => void) {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
       .then(() => onSuccessRef.current?.())
-      .catch(() => setError("Falha ao autenticar com Google."))
+      .catch((err) => {
+        console.error("[GoogleAuth] signInWithPopup failed:", err?.code, err?.message, err);
+        setError("Falha ao autenticar com Google.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -69,6 +72,7 @@ function useGoogleSignInNative(onSuccess?: () => void) {
     if (response?.type === "success") {
       const idToken = response.params?.id_token ?? response.authentication?.idToken;
       if (!idToken) {
+        console.error("[GoogleAuth] No id_token in success response", response);
         setError("Nao foi possivel obter o token do Google.");
         setLoading(false);
         return;
@@ -77,10 +81,26 @@ function useGoogleSignInNative(onSuccess?: () => void) {
       setLoading(true);
       signInWithCredential(auth, credential)
         .then(() => onSuccessRef.current?.())
-        .catch(() => setError("Falha ao autenticar com Google."))
+        .catch((err) => {
+          const code = err?.code ?? "unknown";
+          const message = err?.message ?? String(err);
+          console.error(
+            "[GoogleAuth] signInWithCredential failed:",
+            code,
+            message,
+            err,
+          );
+          setError(`Falha ao autenticar: ${code}`);
+        })
         .finally(() => setLoading(false));
     } else if (response?.type === "error") {
-      setError("Login com Google cancelado ou falhou.");
+      console.error("[GoogleAuth] Auth request error:", response);
+      setError(
+        `Login Google falhou: ${response.error?.message ?? response.error?.code ?? "erro desconhecido"}`,
+      );
+      setLoading(false);
+    } else if (response?.type === "dismiss" || response?.type === "cancel") {
+      console.warn("[GoogleAuth] User cancelled login:", response.type);
       setLoading(false);
     }
   }, [response, available]);
@@ -97,7 +117,19 @@ function useGoogleSignInNative(onSuccess?: () => void) {
   function signIn() {
     setError(null);
     setLoading(true);
-    promptAsync().catch(() => {
+    if (!WEB_CLIENT_ID || !ANDROID_CLIENT_ID) {
+      console.error(
+        "[GoogleAuth] Missing client IDs. WEB:",
+        !!WEB_CLIENT_ID,
+        "ANDROID:",
+        !!ANDROID_CLIENT_ID,
+      );
+      setError("Configuracao do Google incompleta no app.");
+      setLoading(false);
+      return;
+    }
+    promptAsync().catch((err) => {
+      console.error("[GoogleAuth] promptAsync failed:", err);
       setError("Nao foi possivel abrir o login do Google.");
       setLoading(false);
     });

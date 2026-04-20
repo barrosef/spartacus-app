@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { colors } from "./theme/tokens";
 
@@ -56,9 +57,11 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <RootNavigator />
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <RootNavigator />
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 

@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 import { Button } from "../../components/ui/Button";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -51,6 +52,7 @@ export function MyDonationsScreen({
   onBack,
   onNewDonation,
 }: MyDonationsScreenProps) {
+  const { actingAs } = useProxy();
   const [screen, setScreen] = useState<Screen>("loading");
   const [donations, setDonations] = useState<DonationHistoryItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>("all");
@@ -58,13 +60,18 @@ export function MyDonationsScreen({
   const fetchHistory = useCallback(async () => {
     setScreen("loading");
     try {
-      const res = await api.get<DonationHistory>("/donations/history");
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      const res = await api.get<DonationHistory>(
+        "/donations/history",
+        { headers },
+      );
       setDonations(res.donations);
       setScreen(res.donations.length > 0 ? "loaded" : "empty");
     } catch {
       setScreen("empty");
     }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 

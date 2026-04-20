@@ -25,6 +25,10 @@ interface FeedResponse {
 
 interface FeedScreenProps {
   userRoles?: string[];
+  typeFilter?: string | null;
+  filterVisible?: boolean;
+  onFilterClose?: () => void;
+  onFilterChange?: (type: string | null) => void;
 }
 
 const POLL_INTERVAL = 30_000;
@@ -32,7 +36,13 @@ const STAFF_ROLES = new Set([
   "owner", "assistant", "teacher", "instructor",
 ]);
 
-export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
+export function FeedScreen({
+  userRoles = [],
+  typeFilter = null,
+  filterVisible = false,
+  onFilterClose,
+  onFilterChange,
+}: FeedScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [screen, setScreen] = useState<
     "loading" | "content" | "empty" | "error"
@@ -40,8 +50,6 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [filterVisible, setFilterVisible] = useState(false);
   const [likesEntryId, setLikesEntryId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
@@ -221,70 +229,52 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
     [loadMore]
   );
 
-  // ─── Loading ───
-  if (screen === "loading") {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  // ─── Error ───
-  if (screen === "error") {
-    return (
-      <View style={styles.center}>
-        <Feather name="wifi-off" size={48} color={colors.mutedForeground} />
-        <Text style={styles.emptyTitle}>Erro ao carregar</Text>
-        <Text style={styles.emptySub}>
-          Verifique sua conexão e tente novamente.
-        </Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={loadFeed}>
-          <Text style={styles.retryText}>Tentar novamente</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // ─── Empty ───
-  if (screen === "empty") {
-    return (
-      <View style={styles.center}>
-        <Feather name="inbox" size={48} color={colors.primaryMuted} />
-        <Text style={styles.emptyTitle}>Nenhuma publicação</Text>
-        <Text style={styles.emptySub}>
-          Novas publicações e registros aparecerão aqui.
-        </Text>
-      </View>
-    );
-  }
-
-  // ─── Content ───
+  // ─── Render ───
+  // Modals must always be mounted so the filter button in the header
+  // works even when the feed is loading/empty/error.
   return (
     <View style={styles.container}>
-      {/* Filter bar */}
-      <View style={styles.filterBar}>
-        <TouchableOpacity
-          style={styles.filterBtn}
-          onPress={() => setFilterVisible(true)}
-        >
-          <Feather name="sliders" size={16} color={colors.foreground} />
-          <Text style={styles.filterBtnText}>
-            {typeFilter ? "Filtrado" : "Filtros"}
-          </Text>
-        </TouchableOpacity>
-        {typeFilter && (
-          <TouchableOpacity
-            style={styles.clearFilter}
-            onPress={() => setTypeFilter(null)}
-          >
-            <Feather name="x" size={14} color={colors.mutedForeground} />
-            <Text style={styles.clearFilterText}>Limpar</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {screen === "loading" && (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
 
-      <ScrollView
+      {screen === "error" && (
+        <View style={styles.center}>
+          <Feather name="wifi-off" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyTitle}>Erro ao carregar</Text>
+          <Text style={styles.emptySub}>
+            Verifique sua conexão e tente novamente.
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadFeed}>
+            <Text style={styles.retryText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {screen === "empty" && (
+        <View style={styles.center}>
+          <Feather name="inbox" size={48} color={colors.primaryMuted} />
+          <Text style={styles.emptyTitle}>Nenhuma publicação</Text>
+          <Text style={styles.emptySub}>
+            {typeFilter
+              ? "Nenhum item encontrado para o filtro atual."
+              : "Novas publicações e registros aparecerão aqui."}
+          </Text>
+          {typeFilter && (
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => onFilterChange?.(null)}
+            >
+              <Text style={styles.retryText}>Limpar filtro</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {screen === "content" && (
+        <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -350,22 +340,23 @@ export function FeedScreen({ userRoles = [] }: FeedScreenProps) {
           />
         ))}
 
-        {loadingMore && (
-          <ActivityIndicator
-            size="small"
-            color={colors.primary}
-            style={styles.loadingMore}
-          />
-        )}
-      </ScrollView>
+          {loadingMore && (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.loadingMore}
+            />
+          )}
+        </ScrollView>
+      )}
 
       <FilterModal
         visible={filterVisible}
-        onClose={() => setFilterVisible(false)}
+        onClose={() => onFilterClose?.()}
         selectedType={typeFilter}
         onApply={(type) => {
-          setTypeFilter(type);
-          setFilterVisible(false);
+          onFilterChange?.(type);
+          onFilterClose?.();
         }}
       />
 

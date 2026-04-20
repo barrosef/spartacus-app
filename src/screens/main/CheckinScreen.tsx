@@ -51,6 +51,7 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
       if (actingAs) headers["X-Acting-As"] = actingAs;
       const res = await api.get<AvailableCheckin & NoCheckin>(
         "/checkin/available",
+        { headers },
       );
       if (res.aulaId) {
         setCheckin(res);
@@ -75,7 +76,13 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
     if (!checkin) return;
     setConfirming(true);
     try {
-      await api.post("/checkin", { aulaId: checkin.aulaId });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.post(
+        "/checkin",
+        { aulaId: checkin.aulaId },
+        { headers },
+      );
       setScreen("success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro";
@@ -126,12 +133,19 @@ export function CheckinScreen({ onDone }: CheckinScreenProps) {
     const nc = noCheckin;
     return (
       <View style={styles.center}>
-        <View style={styles.warningIcon}>
-          <Feather
-            name="alert-triangle"
-            size={28}
-            color={colors.warning}
-          />
+        <View
+          style={[
+            styles.iconOuter,
+            { shadowColor: colors.warning, backgroundColor: "rgba(245,158,11,0.15)" },
+          ]}
+        >
+          <View style={[styles.iconInner, { borderColor: colors.warning }]}>
+            <Feather
+              name="alert-triangle"
+              size={28}
+              color={colors.warning}
+            />
+          </View>
         </View>
         <Text style={styles.noTitle}>Nenhuma aula agora</Text>
         <Text style={styles.noMessage}>
@@ -305,19 +319,31 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   // No class
-  warningIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(245,158,11,0.15)",
+  iconOuter: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  iconInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noTitle: {
     color: colors.foreground,
     fontFamily: typography.fontHeadingSemi,
-    fontSize: 20,
+    fontSize: 22,
+    textAlign: "center",
     marginBottom: spacing.sm,
   },
   noMessage: {
@@ -327,6 +353,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   nextCard: {
     backgroundColor: colors.card,
@@ -334,6 +361,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: "center",
     gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   nextLabel: {
     color: colors.mutedForeground,

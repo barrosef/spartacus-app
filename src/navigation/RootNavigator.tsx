@@ -3,8 +3,12 @@ import { View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
+import {
+  registerForPushNotifications,
+  setupNotificationListeners,
+} from "../lib/pushNotifications";
 import { AuthNavigator } from "./AuthNavigator";
-import { AnamneseNavigator } from "./AnamneseNavigator";
+import { AnamneseNavigator, type AnamneseTarget } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
@@ -31,7 +35,7 @@ export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
   const [accountStatus, setAccountStatus] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [anamneseTargets, setAnamneseTargets] = useState<AnamneseTarget[]>([]);
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
@@ -43,12 +47,39 @@ export function RootNavigator() {
       }>("/auth/me");
       const status = res.approvalStatus;
       setAccountStatus(status);
-      if (res.birthDate) setBirthDate(res.birthDate);
+
+      if (status === "waiting_email_confirmation") {
+        setAppState("email_pending");
+        return;
+      }
+
+      // Check pending anamneses (self + dependents)
+      // Even if self is "approved", may have dependents waiting
+      try {
+        const pending = await api.get<{
+          pending: AnamneseTarget[];
+        }>("/medical-history/pending");
+        if (pending.pending.length > 0) {
+          setAnamneseTargets(pending.pending);
+          setAppState("anamnese");
+          return;
+        }
+      } catch {
+        // Endpoint might not be available — fall through
+      }
+
       if (status === "approved") {
         setAppState("approved");
-      } else if (status === "waiting_email_confirmation") {
-        setAppState("email_pending");
       } else if (status === "waiting_medical_history") {
+        // Fallback: should have been caught by pending endpoint above
+        setAnamneseTargets([
+          {
+            uid: user?.uid ?? "",
+            name: user?.displayName ?? "Você",
+            birthDate: res.birthDate ?? "",
+            isSelf: true,
+          },
+        ]);
         setAppState("anamnese");
       } else {
         setAppState("blocked");
@@ -57,7 +88,7 @@ export function RootNavigator() {
       setAppState("blocked");
       setAccountStatus("pending_approval");
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const timeout = setTimeout(() => setTimedOut(true), 10_000);
@@ -79,6 +110,20 @@ export function RootNavigator() {
       checkApproval();
     }
   }, [user, signupInProgress, checkApproval]);
+
+  // Push notifications: register token + listen as soon as user is logged in
+  // (don't wait for approval — this triggers the OS permission prompt early
+  // so the user grants permission right after install/login)
+  useEffect(() => {
+    if (!user || signupInProgress) return;
+
+    registerForPushNotifications().catch((e) => {
+      console.error("[Push] Registration failed:", e);
+    });
+
+    const cleanup = setupNotificationListeners();
+    return cleanup;
+  }, [user, signupInProgress]);
 
   if (appState === "loading") {
     return (
@@ -109,10 +154,11 @@ export function RootNavigator() {
         />
       ) : appState === "anamnese" ? (
         <AnamneseNavigator
-          birthDate={birthDate}
-          onSubmitted={() => {
-            setAccountStatus("pending_medical_history_approval");
-            setAppState("blocked");
+          targets={anamneseTargets}
+          onAllSubmitted={() => {
+            // After all anamneses (self + dependents) are submitted,
+            // re-check approval status to determine next screen
+            checkApproval();
           }}
         />
       ) : appState === "blocked" ? (

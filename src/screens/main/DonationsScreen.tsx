@@ -83,11 +83,13 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const fetchData = useCallback(async () => {
     setScreen("loading");
     try {
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
       const [cfg, cur] = await Promise.allSettled([
         api.get<DonationConfig>(
           `/projects/${projectId}/donation-config`,
         ),
-        api.get<CurrentDonation>("/donations/current"),
+        api.get<CurrentDonation>("/donations/current", { headers }),
       ]);
 
       if (cfg.status === "fulfilled") setConfig(cfg.value);
@@ -107,12 +109,18 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await api.post("/donations", {
-        item: selectedItem,
-        itemDescription: selectedItem === "other"
-          ? otherText : undefined,
-        month: selectedMonth,
-      });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.post(
+        "/donations",
+        {
+          item: selectedItem,
+          itemDescription: selectedItem === "other"
+            ? otherText : undefined,
+          month: selectedMonth,
+        },
+        { headers },
+      );
       setScreen("success");
     } catch {
       // handled by API error

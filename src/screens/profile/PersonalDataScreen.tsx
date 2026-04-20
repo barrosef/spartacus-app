@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
@@ -23,6 +24,7 @@ interface PersonalDataScreenProps {
 }
 
 export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
+  const { actingAs } = useProxy();
   const [data, setData] = useState<ProfileData | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [name, setName] = useState("");
@@ -36,7 +38,12 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await api.get<ProfileData>("/users/me/profile");
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      const res = await api.get<ProfileData>(
+        "/users/me/profile",
+        { headers },
+      );
       setData(res);
       setName(res.name ?? "");
       setBirthDate(res.birthDate ?? "");
@@ -47,7 +54,7 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
     } catch {
       // graceful
     }
-  }, []);
+  }, [actingAs]);
 
   useEffect(() => {
     fetchData();
@@ -74,14 +81,20 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
 
     setSaving(true);
     try {
-      await api.patch("/users/me/profile", {
-        name: name.trim(),
-        birthDate,
-        gender: gender || undefined,
-        phone: phone.replace(/\D/g, "") || undefined,
-        whatsapp: whatsapp.replace(/\D/g, "") || undefined,
-        taxId: taxId.replace(/\D/g, "") || undefined,
-      });
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      await api.patch(
+        "/users/me/profile",
+        {
+          name: name.trim(),
+          birthDate,
+          gender: gender || undefined,
+          phone: phone.replace(/\D/g, "") || undefined,
+          whatsapp: whatsapp.replace(/\D/g, "") || undefined,
+          taxId: taxId.replace(/\D/g, "") || undefined,
+        },
+        { headers },
+      );
       setShowSuccess(true);
     } catch (err: unknown) {
       const msg =

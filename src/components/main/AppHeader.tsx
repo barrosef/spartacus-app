@@ -9,6 +9,10 @@ interface AppHeaderProps {
   photoUrl?: string | null;
   onProfilePress: () => void;
   onMenuPress: () => void;
+  onFilterPress?: () => void;
+  filterActive?: boolean;
+  onBellPress?: () => void;
+  unreadCount?: number;
 }
 
 export function AppHeader({
@@ -17,6 +21,10 @@ export function AppHeader({
   photoUrl,
   onProfilePress,
   onMenuPress,
+  onFilterPress,
+  filterActive = false,
+  onBellPress,
+  unreadCount = 0,
 }: AppHeaderProps) {
   return (
     <View style={styles.header}>
@@ -35,11 +43,30 @@ export function AppHeader({
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      {/* Right: bell + profile */}
+      {/* Right: filter (optional) + bell + profile */}
       <View style={styles.right}>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+        {onFilterPress && (
+          <TouchableOpacity
+            style={styles.iconBtn}
+            activeOpacity={0.7}
+            onPress={onFilterPress}
+          >
+            <Feather
+              name="sliders"
+              size={22}
+              color={filterActive ? colors.primary : colors.foreground}
+            />
+            {filterActive && <View style={styles.filterDot} />}
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+          onPress={onBellPress}
+        >
           <Feather name="bell" size={24} color={colors.foreground} />
-          <View style={styles.badge} />
+          {unreadCount > 0 && <View style={styles.badge} />}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -129,6 +156,17 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: colors.error,
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  filterDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
     borderWidth: 2,
     borderColor: colors.background,
   },

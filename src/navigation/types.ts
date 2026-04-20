@@ -1,6 +1,7 @@
 // Auth screen names and params
 export type AuthStackParamList = {
   Login: undefined;
+  ForgotPassword: undefined;
   Step0AuthMethod: undefined;
   Step0bCredentials: undefined;
   Step0cProject: undefined;

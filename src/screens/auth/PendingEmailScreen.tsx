@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { SafeScreen } from "../../components/ui/SafeScreen";
 import { Button } from "../../components/ui/Button";
 import { auth } from "../../lib/firebase";
-import { api } from "../../lib/api";
+import { api, getProjectId } from "../../lib/api";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -26,7 +26,10 @@ export function PendingEmailScreen({ email, onVerified }: Props) {
     try {
       const res = await fetch(`${BASE_URL}/auth/resend-verification`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Project-Id": getProjectId(),
+        },
         body: JSON.stringify({ email }),
       });
       if (res.ok) {

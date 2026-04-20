@@ -1,12 +1,11 @@
 import { initializeApp } from "firebase/app";
+import { Platform } from "react-native";
 import {
   initializeAuth,
   getAuth,
+  connectAuthEmulator,
   GoogleAuthProvider,
 } from "firebase/auth";
-// @ts-expect-error — exportado via campo "react-native" do @firebase/auth, invisível ao tsc
-import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -25,15 +24,40 @@ if (!firebaseConfig.apiKey) {
 
 export const firebaseApp = initializeApp(firebaseConfig);
 
-// try/catch evita crash catastrófico no Hermes caso o native module do
-// AsyncStorage não esteja disponível no momento da avaliação do módulo
+// Web: getAuth() usa indexedDB + browserPopupRedirectResolver (signInWithPopup)
+// Native: initializeAuth() com AsyncStorage persistence (React Native)
 let _auth: ReturnType<typeof getAuth>;
-try {
-  _auth = initializeAuth(firebaseApp, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-} catch {
+if (Platform.OS === "web") {
   _auth = getAuth(firebaseApp);
+} else {
+  try {
+    // Lazy imports — só carrega no native (evita crash no web bundler)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getReactNativePersistence } = require("@firebase/auth/dist/rn/index.js");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+    _auth = initializeAuth(firebaseApp, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    _auth = getAuth(firebaseApp);
+  }
+}
+
+// Connect to Firebase Auth Emulator only in __DEV__ (Metro) builds.
+// Standalone release APKs must never hit localhost — the phone's localhost
+// is the device itself, not the dev machine, causing auth/network-request-failed.
+if (
+  __DEV__ &&
+  process.env.EXPO_PUBLIC_USE_EMULATORS === "true"
+) {
+  try {
+    connectAuthEmulator(_auth, "http://localhost:9099", {
+      disableWarnings: true,
+    });
+  } catch {
+    // Already connected or not available — ignore
+  }
 }
 
 export const auth = _auth;

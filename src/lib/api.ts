@@ -58,29 +58,50 @@ export class ApiError extends Error {
   }
 }
 
-export const api = {
-  get: <T>(path: string, signal?: AbortSignal) =>
-    request<T>(path, { signal }),
+interface RequestOptions {
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+}
 
-  post: <T>(path: string, data: unknown) =>
+export const api = {
+  get: <T>(
+    path: string,
+    signalOrOptions?: AbortSignal | RequestOptions,
+  ) => {
+    if (signalOrOptions instanceof AbortSignal) {
+      return request<T>(path, { signal: signalOrOptions });
+    }
+    return request<T>(path, {
+      signal: signalOrOptions?.signal,
+      headers: signalOrOptions?.headers,
+    });
+  },
+
+  post: <T>(path: string, data: unknown, options?: RequestOptions) =>
     request<T>(path, {
       method: "POST",
       body: JSON.stringify(data),
+      headers: options?.headers,
     }),
 
-  patch: <T>(path: string, data: unknown) =>
+  patch: <T>(path: string, data: unknown, options?: RequestOptions) =>
     request<T>(path, {
       method: "PATCH",
       body: JSON.stringify(data),
+      headers: options?.headers,
     }),
 
-  delete: <T>(path: string) =>
-    request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, {
+      method: "DELETE",
+      headers: options?.headers,
+    }),
 
-  upload: async <T>(path: string, formData: FormData): Promise<T> => {
+  upload: async <T>(path: string, formData: FormData, options?: RequestOptions): Promise<T> => {
     const token = await getAuthToken();
     const headers: Record<string, string> = {
       "X-Project-Id": _projectId,
+      ...(options?.headers ?? {}),
     };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -89,6 +110,7 @@ export const api = {
       method: "POST",
       headers,
       body: formData,
+      signal: options?.signal,
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

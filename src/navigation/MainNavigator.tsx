@@ -4,11 +4,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
 import { api } from "../lib/api";
 import { useProxy, ProxyProvider } from "../context/ProxyContext";
+import { useNotifications, NotificationsProvider } from "../context/NotificationsContext";
 import { AppHeader } from "../components/main/AppHeader";
 import { AppDrawer } from "../components/main/AppDrawer";
 import { BottomNav, type TabKey } from "../components/main/BottomNav";
 import { ProxyBanner } from "../components/main/ProxyBanner";
-import { ContextSwitcher } from "../components/main/ContextSwitcher";
+import { NotificationsPanel } from "../components/main/NotificationsPanel";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
 import { FeedScreen } from "../screens/main/FeedScreen";
 import { CheckinScreen } from "../screens/main/CheckinScreen";
@@ -35,6 +36,7 @@ interface DependentData {
   uid: string;
   name: string;
   birthDate?: string | null;
+  photoUrl?: string | null;
 }
 
 function getInitials(name: string): string {
@@ -67,11 +69,14 @@ function MainContent() {
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
-  const [switcherVisible, setSwitcherVisible] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [feedFilterVisible, setFeedFilterVisible] = useState(false);
+  const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
-  const { switchTo, clearProxy } = useProxy();
+  useProxy();
+  const notifs = useNotifications();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
   const hasSocialRole = profile?.roles.includes("social") ?? false;
@@ -108,20 +113,6 @@ function MainContent() {
   const userInitials = getInitials(userName);
 
   const handleProfilePress = () => {
-    if (isGuardian && dependents.length > 0) {
-      setSwitcherVisible(true);
-    } else {
-      setShowProfile(true);
-    }
-  };
-
-  const handleSelectSelf = () => {
-    clearProxy();
-    setShowProfile(true);
-  };
-
-  const handleSelectDependent = (dep: DependentData) => {
-    switchTo(dep.uid, dep.name);
     setShowProfile(true);
   };
 
@@ -131,8 +122,20 @@ function MainContent() {
   };
 
   if (showProfile) {
+    const depInfos = dependents.map((d) => ({
+      uid: d.uid,
+      name: d.name,
+      age: d.birthDate ? calculateAge(d.birthDate) : null,
+      photoUrl: d.photoUrl,
+    }));
     return (
-      <ProfileScreen onBack={() => { setShowProfile(false); fetchProfile(); }} />
+      <ProfileScreen
+        onBack={() => { setShowProfile(false); fetchProfile(); }}
+        dependents={depInfos}
+        realUserName={userName}
+        realUserPhotoUrl={profile?.photoUrl}
+        realUserIsGuardian={isGuardian}
+      />
     );
   }
 
@@ -168,7 +171,15 @@ function MainContent() {
   const renderTab = () => {
     switch (activeTab) {
       case "feed":
-        return <FeedScreen userRoles={profile?.roles ?? []} />;
+        return (
+          <FeedScreen
+            userRoles={profile?.roles ?? []}
+            typeFilter={feedTypeFilter}
+            filterVisible={feedFilterVisible}
+            onFilterClose={() => setFeedFilterVisible(false)}
+            onFilterChange={(t) => setFeedTypeFilter(t)}
+          />
+        );
       case "checkin":
         return <CheckinScreen onDone={() => setActiveTab("feed")} />;
       case "calendar":
@@ -186,6 +197,14 @@ function MainContent() {
         photoUrl={profile?.photoUrl}
         onProfilePress={handleProfilePress}
         onMenuPress={() => setDrawerVisible(true)}
+        onFilterPress={
+          activeTab === "feed"
+            ? () => setFeedFilterVisible(true)
+            : undefined
+        }
+        filterActive={activeTab === "feed" && !!feedTypeFilter}
+        onBellPress={() => setNotificationsVisible(true)}
+        unreadCount={notifs.unreadCount}
       />
       <ProxyBanner />
       <View style={styles.content}>{renderTab()}</View>
@@ -204,18 +223,11 @@ function MainContent() {
         onNavigate={handleDrawerNavigate}
       />
 
-      <ContextSwitcher
-        visible={switcherVisible}
-        onClose={() => setSwitcherVisible(false)}
-        userName={userName}
-        userInitials={userInitials}
-        dependents={dependents.map((d) => ({
-          uid: d.uid,
-          name: d.name,
-          age: d.birthDate ? calculateAge(d.birthDate) : null,
-        }))}
-        onSelectSelf={handleSelectSelf}
-        onSelectDependent={handleSelectDependent}
+      <NotificationsPanel
+        visible={notificationsVisible}
+        onClose={() => setNotificationsVisible(false)}
+        notifications={notifs.notifications}
+        onMarkAllRead={notifs.markAllRead}
       />
     </SafeAreaView>
   );
@@ -223,9 +235,11 @@ function MainContent() {
 
 export function MainNavigator() {
   return (
-    <ProxyProvider>
-      <MainContent />
-    </ProxyProvider>
+    <NotificationsProvider>
+      <ProxyProvider>
+        <MainContent />
+      </ProxyProvider>
+    </NotificationsProvider>
   );
 }
 

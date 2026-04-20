@@ -29,8 +29,6 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 interface CalendarSidebarProps {
   visible: boolean;
   onClose: () => void;
-  userName: string;
-  userInitials: string;
   activeView: CalendarView;
   onViewChange: (v: CalendarView) => void;
   filters: Set<FilterKey>;
@@ -41,8 +39,6 @@ interface CalendarSidebarProps {
 export function CalendarSidebar({
   visible,
   onClose,
-  userName,
-  userInitials,
   activeView,
   onViewChange,
   filters,
@@ -65,10 +61,7 @@ export function CalendarSidebar({
               <Feather name="x" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={styles.headerInfo}>
-              <Text style={styles.headerName}>{userName}</Text>
-            </View>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{userInitials}</Text>
+              <Text style={styles.headerTitle}>Filtros</Text>
             </View>
           </View>
 
@@ -156,26 +149,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(198,163,78,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: colors.primary,
-    fontFamily: typography.fontHeadingSemi,
-    fontSize: 13,
-  },
   headerInfo: {
     flex: 1,
   },
-  headerName: {
+  headerTitle: {
     color: colors.foreground,
-    fontFamily: typography.fontBodySemiBold,
-    fontSize: 14,
+    fontFamily: typography.fontHeadingSemi,
+    fontSize: 16,
   },
   row: {
     flexDirection: "row",

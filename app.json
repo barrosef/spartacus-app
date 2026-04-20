@@ -24,11 +24,17 @@
     },
     "android": {
       "package": "br.com.spartacus.app",
-      "versionCode": 24,
+      "versionCode": 27,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0B0D12"
-      }
+      },
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "extra": {
       "eas": {
@@ -49,7 +55,15 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.png",
+          "color": "#C6A34E",
+          "defaultChannel": "default"
+        }
+      ]
     ]
   }
 }
