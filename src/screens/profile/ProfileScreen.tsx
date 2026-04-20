@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { signOut } from "firebase/auth";
 import { colors, spacing } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
@@ -466,7 +467,11 @@ export function ProfileScreen({
             icon="log-out"
             title="Sair"
             subtitle="Encerrar sessão e voltar à tela de login"
-            onPress={() => auth.signOut()}
+            onPress={() => {
+              signOut(auth).catch((err) => {
+                console.error("[ProfileScreen] signOut failed:", err);
+              });
+            }}
           />
         </View>
       </ScrollView>

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeScreen } from "../../components/ui/SafeScreen";
 import { Button } from "../../components/ui/Button";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
+import { getProjectId } from "../../lib/api";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -17,7 +18,10 @@ export function EmailSentScreen({ email }: { email: string }) {
     try {
       const res = await fetch(`${BASE_URL}/auth/resend-verification`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Project-Id": getProjectId(),
+        },
         body: JSON.stringify({ email }),
       });
       if (res.ok) {

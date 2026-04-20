@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# pre-commit hook — runs typecheck + lint on staged changes
+set -e
+
+echo "🔍 [app] typecheck..."
+pnpm typecheck
+
+# Only lint if JS/TS files are staged
+STAGED_JS=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx' '*.js' '*.jsx' | head -1)
+if [ -n "$STAGED_JS" ]; then
+  echo "🔍 [app] lint..."
+  pnpm lint
+fi
+
+echo "✅ [app] pre-commit passed"
