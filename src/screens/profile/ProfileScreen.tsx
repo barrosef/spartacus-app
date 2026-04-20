@@ -182,11 +182,12 @@ export function ProfileScreen({
       const formData = new FormData();
       const filename = uri.split("/").pop() ?? "photo.jpg";
       const match = /\.(\w+)$/.exec(filename);
-      const ext = match ? match[1] : "jpg";
+      const ext = (match ? match[1] : "jpg").toLowerCase();
+      const mimeType = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
       formData.append("file", {
         uri,
         name: filename,
-        type: `image/${ext}`,
+        type: mimeType,
       } as unknown as Blob);
 
       await api.upload("/users/me/photo", formData, { headers: proxyHeaders() });

@@ -94,9 +94,9 @@ export function FeedScreen({
       setNextCursor(data.nextCursor);
       setScreen(data.entries.length > 0 ? "content" : "empty");
     } catch {
-      if (entries.length === 0) setScreen("error");
+      setScreen("error");
     }
-  }, [fetchFeed, entries.length]);
+  }, [fetchFeed]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -117,8 +117,10 @@ export function FeedScreen({
     setLoadingMore(false);
   }, [nextCursor, loadingMore, fetchFeed]);
 
-  // Initial load
+  // Reload when filter changes — clear stale entries so error state works
   useEffect(() => {
+    setEntries([]);
+    setNextCursor(null);
     setScreen("loading");
     loadFeed();
   }, [typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps

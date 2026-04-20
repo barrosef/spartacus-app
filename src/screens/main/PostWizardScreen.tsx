@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { Audio } from "expo-av";
 import {
   colors,
   typography,
@@ -24,12 +29,25 @@ import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 type PostType = "post" | "event" | "championship";
 type Step = "content" | "media" | "schedule" | "success";
+type AttType = "image" | "file" | "voice";
+
+interface Attachment {
+  type: AttType;
+  url: string;
+  name: string;
+  size: number;
+  localUri?: string;
+}
 
 interface PostWizardScreenProps {
   onClose: () => void;
 }
 
-const TYPE_OPTIONS: { key: PostType; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+const TYPE_OPTIONS: {
+  key: PostType;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+}[] = [
   { key: "post", label: "Post", icon: "edit-3" },
   { key: "event", label: "Evento", icon: "calendar" },
   { key: "championship", label: "Camp.", icon: "award" },
@@ -50,14 +68,19 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   const [eventEndDate, setEventEndDate] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
 
-  // Detect URLs in description and fetch preview
+  // Audio recording
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Detect URLs in description
   const handleDescriptionChange = useCallback(
     async (text: string) => {
       setDescription(text);
-      const urlMatch = text.match(
-        /https?:\/\/[^\s]+/
-      );
+      const urlMatch = text.match(/https?:\/\/[^\s]+/);
       if (urlMatch && !linkPreview) {
         try {
           const preview = await api.get<{
@@ -65,15 +88,193 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
             title: string;
             image: string;
             description: string;
-          }>(`/timeline/link-preview?url=${encodeURIComponent(urlMatch[0])}`);
+          }>(
+            `/timeline/link-preview?url=${encodeURIComponent(urlMatch[0])}`,
+          );
           if (preview.title) setLinkPreview(preview);
         } catch {
           // Silent fail
         }
       }
     },
-    [linkPreview]
+    [linkPreview],
   );
+
+  // ── Upload helper ───────────────────────────────────────────────
+
+  const uploadFile = useCallback(
+    async (
+      uri: string,
+      fileName: string,
+      mimeType: string,
+    ): Promise<Attachment | null> => {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        if (Platform.OS === "web") {
+          const resp = await fetch(uri);
+          const blob = await resp.blob();
+          (formData as unknown as globalThis.FormData).append(
+            "file",
+            blob,
+            fileName,
+          );
+        } else {
+          formData.append("file", {
+            uri,
+            name: fileName,
+            type: mimeType,
+          } as unknown as Blob);
+        }
+        const result = await api.upload<Attachment>(
+          "/posts/upload",
+          formData,
+        );
+        return result;
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Erro ao enviar arquivo";
+        Alert.alert("Erro", msg);
+        return null;
+      } finally {
+        setUploading(false);
+      }
+    },
+    [],
+  );
+
+  // ── Pickers ─────────────────────────────────────────────────────
+
+  const pickMedia = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permissão necessária",
+        "Habilite o acesso à galeria nas configurações.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+
+    for (const asset of result.assets) {
+      const ext = (asset.uri.split(".").pop() ?? "jpg").toLowerCase();
+      const mime =
+        asset.type === "video"
+          ? `video/${ext === "mov" ? "quicktime" : ext}`
+          : ext === "jpg"
+            ? "image/jpeg"
+            : `image/${ext}`;
+      const name =
+        asset.fileName ?? `media_${Date.now()}.${ext}`;
+      const att = await uploadFile(asset.uri, name, mime);
+      if (att)
+        setAttachments((prev) => [
+          ...prev,
+          { ...att, localUri: asset.uri },
+        ]);
+    }
+  }, [uploadFile]);
+
+  const pickDocument = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+
+      for (const asset of result.assets) {
+        const att = await uploadFile(
+          asset.uri,
+          asset.name,
+          asset.mimeType ?? "application/octet-stream",
+        );
+        if (att) setAttachments((prev) => [...prev, att]);
+      }
+    } catch {
+      Alert.alert("Erro", "Não foi possível selecionar o arquivo.");
+    }
+  }, [uploadFile]);
+
+  // ── Audio recording ─────────────────────────────────────────────
+
+  const startRecording = useCallback(async () => {
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permissão necessária",
+          "Habilite o acesso ao microfone nas configurações.",
+        );
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording: rec } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      setRecording(rec);
+      setRecordingDuration(0);
+      recordingInterval.current = setInterval(
+        () => setRecordingDuration((d) => d + 1),
+        1000,
+      );
+    } catch {
+      Alert.alert("Erro", "Não foi possível iniciar a gravação.");
+    }
+  }, []);
+
+  const stopRecording = useCallback(async () => {
+    if (!recording) return;
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
+    }
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      if (!uri) return;
+      const att = await uploadFile(
+        uri,
+        `audio_${Date.now()}.m4a`,
+        "audio/mp4",
+      );
+      if (att) setAttachments((prev) => [...prev, att]);
+    } catch {
+      setRecording(null);
+    }
+  }, [recording, uploadFile]);
+
+  const cancelRecording = useCallback(async () => {
+    if (!recording) return;
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
+    }
+    try {
+      await recording.stopAndUnloadAsync();
+    } catch {
+      // ignore
+    }
+    setRecording(null);
+    setRecordingDuration(0);
+  }, [recording]);
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ── Publish ─────────────────────────────────────────────────────
 
   const handlePublish = useCallback(async () => {
     if (!title.trim()) {
@@ -82,30 +283,41 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     }
     setPublishing(true);
     setError(null);
-
     try {
       await api.post("/posts", {
         type: postType,
         title: title.trim(),
         description: description.trim(),
-        attachments: [],
-        linkPreview: linkPreview,
+        attachments: attachments.map((a) => ({
+          type: a.type,
+          url: a.url,
+          name: a.name,
+          size: a.size,
+        })),
+        linkPreview,
         eventDate: eventDate || null,
         eventEndDate: eventEndDate || null,
         eventLocation: null,
       });
       setStep("success");
     } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "Erro ao publicar";
-      setError(msg);
+      setError(e instanceof Error ? e.message : "Erro ao publicar");
     } finally {
       setPublishing(false);
     }
-  }, [postType, title, description, linkPreview, eventDate, eventEndDate]);
+  }, [
+    postType,
+    title,
+    description,
+    attachments,
+    linkPreview,
+    eventDate,
+    eventEndDate,
+  ]);
 
   const canAdvanceFromContent = title.trim().length > 0;
-  const isEventType = postType === "event" || postType === "championship";
+  const isEventType =
+    postType === "event" || postType === "championship";
 
   if (step === "success") {
     return (
@@ -118,15 +330,31 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     );
   }
 
+  function fmtDuration(s: number): string {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={step === "content" ? onClose : () => {
-          if (step === "media") setStep("content");
-          if (step === "schedule") setStep("media");
-        }}>
-          <Feather name="chevron-left" size={24} color={colors.foreground} />
+        <TouchableOpacity
+          onPress={
+            step === "content"
+              ? onClose
+              : () => {
+                  if (step === "media") setStep("content");
+                  if (step === "schedule") setStep("media");
+                }
+          }
+        >
+          <Feather
+            name="chevron-left"
+            size={24}
+            color={colors.foreground}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Nova Publicação</Text>
         <View style={styles.headerSpacer} />
@@ -140,20 +368,26 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
         {/* ── Step 1: Content ── */}
         {step === "content" && (
           <>
-            {/* Type selector */}
             <View style={styles.typeRow}>
               {TYPE_OPTIONS.map((opt) => {
                 const active = postType === opt.key;
                 return (
                   <TouchableOpacity
                     key={opt.key}
-                    style={[styles.typeChip, active && styles.typeChipActive]}
+                    style={[
+                      styles.typeChip,
+                      active && styles.typeChipActive,
+                    ]}
                     onPress={() => setPostType(opt.key)}
                   >
                     <Feather
                       name={opt.icon}
                       size={16}
-                      color={active ? colors.primaryForeground : colors.mutedForeground}
+                      color={
+                        active
+                          ? colors.primaryForeground
+                          : colors.mutedForeground
+                      }
                     />
                     <Text
                       style={[
@@ -168,7 +402,6 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
               })}
             </View>
 
-            {/* Title */}
             <Text style={styles.label}>TÍTULO</Text>
             <TextInput
               style={styles.input}
@@ -178,7 +411,6 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
               placeholderTextColor={colors.mutedForeground}
             />
 
-            {/* Description */}
             <Text style={styles.label}>DESCRIÇÃO</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -190,7 +422,6 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
               textAlignVertical="top"
             />
 
-            {/* Link preview */}
             {linkPreview && (
               <View style={styles.previewCard}>
                 {linkPreview.image ? (
@@ -211,7 +442,11 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
                   onPress={() => setLinkPreview(null)}
                   style={styles.previewClose}
                 >
-                  <Feather name="x" size={14} color={colors.mutedForeground} />
+                  <Feather
+                    name="x"
+                    size={14}
+                    color={colors.mutedForeground}
+                  />
                 </TouchableOpacity>
               </View>
             )}
@@ -229,32 +464,152 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
             </Text>
 
             <View style={styles.mediaGrid}>
-              <TouchableOpacity style={styles.mediaBtn}>
-                <Feather name="image" size={28} color={colors.mutedForeground} />
+              <TouchableOpacity
+                style={styles.mediaBtn}
+                activeOpacity={0.7}
+                onPress={pickMedia}
+                disabled={uploading}
+              >
+                <Feather
+                  name="image"
+                  size={28}
+                  color={colors.mutedForeground}
+                />
                 <Text style={styles.mediaBtnText}>Foto / Vídeo</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaBtn}>
-                <Feather name="paperclip" size={28} color={colors.mutedForeground} />
+              <TouchableOpacity
+                style={styles.mediaBtn}
+                activeOpacity={0.7}
+                onPress={pickDocument}
+                disabled={uploading}
+              >
+                <Feather
+                  name="paperclip"
+                  size={28}
+                  color={colors.mutedForeground}
+                />
                 <Text style={styles.mediaBtnText}>Arquivo</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.mediaBtnFull}>
-              <Feather name="mic" size={28} color={colors.mutedForeground} />
-              <Text style={styles.mediaBtnText}>Gravar Áudio</Text>
-            </TouchableOpacity>
 
-            {/* Preview section */}
+            {/* Audio recorder */}
+            {recording ? (
+              <View style={styles.audioRecording}>
+                <View style={styles.audioRecordingDot} />
+                <Text style={styles.audioRecordingTime}>
+                  {fmtDuration(recordingDuration)}
+                </Text>
+                <TouchableOpacity
+                  style={styles.audioStopBtn}
+                  onPress={stopRecording}
+                >
+                  <Feather
+                    name="check"
+                    size={18}
+                    color={colors.primaryForeground}
+                  />
+                  <Text style={styles.audioStopText}>Parar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.audioCancelBtn}
+                  onPress={cancelRecording}
+                >
+                  <Feather name="x" size={18} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.mediaBtnFull}
+                activeOpacity={0.7}
+                onPress={startRecording}
+                disabled={uploading}
+              >
+                <Feather
+                  name="mic"
+                  size={28}
+                  color={colors.mutedForeground}
+                />
+                <Text style={styles.mediaBtnText}>Gravar Áudio</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Upload indicator */}
+            {uploading && (
+              <View style={styles.uploadingBar}>
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primary}
+                />
+                <Text style={styles.uploadingText}>
+                  Enviando arquivo...
+                </Text>
+              </View>
+            )}
+
+            {/* Attachment chips */}
+            {attachments.length > 0 && (
+              <View style={styles.attachmentList}>
+                <Text style={styles.previewLabel}>
+                  ANEXOS ({attachments.length})
+                </Text>
+                {attachments.map((att, i) => (
+                  <View key={`${att.url}_${i}`} style={styles.attachmentChip}>
+                    <Feather
+                      name={
+                        att.type === "image"
+                          ? "image"
+                          : att.type === "voice"
+                            ? "mic"
+                            : "paperclip"
+                      }
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={styles.attachmentName}
+                      numberOfLines={1}
+                    >
+                      {att.name}
+                    </Text>
+                    <Text style={styles.attachmentSize}>
+                      {(att.size / 1024).toFixed(0)} KB
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => removeAttachment(i)}
+                      hitSlop={8}
+                    >
+                      <Feather
+                        name="x"
+                        size={14}
+                        color={colors.error}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Preview */}
             <Text style={styles.previewLabel}>PRÉVIA</Text>
             <View style={styles.previewSummary}>
               <Text style={styles.previewSummaryTitle}>{title}</Text>
-              <Text style={styles.previewSummaryDesc} numberOfLines={2}>
+              <Text
+                style={styles.previewSummaryDesc}
+                numberOfLines={2}
+              >
                 {description}
               </Text>
+              {attachments.length > 0 && (
+                <Text style={styles.previewAttCount}>
+                  📎 {attachments.length}{" "}
+                  {attachments.length === 1 ? "anexo" : "anexos"}
+                </Text>
+              )}
             </View>
           </>
         )}
 
-        {/* ── Step 3: Schedule (event/championship only) ── */}
+        {/* ── Step 3: Schedule ── */}
         {step === "schedule" && (
           <>
             <Text style={styles.sectionTitle}>Agendamento</Text>
@@ -297,7 +652,9 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
 
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>Data de Término</Text>
+                  <Text style={styles.dateLabel}>
+                    Data de Término
+                  </Text>
                   <TextInput
                     style={styles.dateInput}
                     value={eventEndDate}
@@ -307,7 +664,9 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
                   />
                 </View>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>Hora de Término</Text>
+                  <Text style={styles.dateLabel}>
+                    Hora de Término
+                  </Text>
                   <TextInput
                     style={styles.dateInput}
                     placeholder="--:--"
@@ -344,8 +703,11 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
 
         {step === "media" && !isEventType && (
           <TouchableOpacity
-            style={styles.primaryBtn}
-            disabled={publishing}
+            style={[
+              styles.primaryBtn,
+              (publishing || uploading) && styles.primaryBtnDisabled,
+            ]}
+            disabled={publishing || uploading}
             onPress={handlePublish}
           >
             {publishing ? (
@@ -381,7 +743,10 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
 
         {step === "schedule" && (
           <TouchableOpacity
-            style={styles.primaryBtn}
+            style={[
+              styles.primaryBtn,
+              publishing && styles.primaryBtnDisabled,
+            ]}
             disabled={publishing}
             onPress={handlePublish}
           >
@@ -389,7 +754,9 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <>
-                <Text style={styles.primaryBtnText}>Publicar Evento</Text>
+                <Text style={styles.primaryBtnText}>
+                  Publicar Evento
+                </Text>
                 <Feather
                   name="send"
                   size={18}
@@ -499,15 +866,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginTop: spacing.md,
   },
-  previewImage: {
-    width: 80,
-    height: 80,
-  },
-  previewText: {
-    flex: 1,
-    padding: spacing.sm,
-    gap: 2,
-  },
+  previewImage: { width: 80, height: 80 },
+  previewText: { flex: 1, padding: spacing.sm, gap: 2 },
   previewTitle: {
     color: colors.foreground,
     fontFamily: typography.fontBodySemiBold,
@@ -518,9 +878,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBody,
     fontSize: 12,
   },
-  previewClose: {
-    padding: spacing.sm,
-  },
+  previewClose: { padding: spacing.sm },
 
   // Media step
   sectionTitle: {
@@ -567,6 +925,93 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBodyMedium,
     fontSize: 13,
   },
+
+  // Audio recording UI
+  audioRecording: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.25)",
+    marginBottom: spacing.lg,
+  },
+  audioRecordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.error,
+  },
+  audioRecordingTime: {
+    flex: 1,
+    color: colors.foreground,
+    fontFamily: typography.fontHeadingSemi,
+    fontSize: 16,
+    fontVariant: ["tabular-nums"],
+  },
+  audioStopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs + 2,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+  },
+  audioStopText: {
+    color: colors.primaryForeground,
+    fontFamily: typography.fontBodySemiBold,
+    fontSize: 13,
+  },
+  audioCancelBtn: {
+    padding: spacing.xs,
+  },
+
+  // Uploading
+  uploadingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  uploadingText: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 13,
+  },
+
+  // Attachment list
+  attachmentList: {
+    marginBottom: spacing.lg,
+  },
+  attachmentChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 4,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.xs,
+  },
+  attachmentName: {
+    flex: 1,
+    color: colors.foreground,
+    fontFamily: typography.fontBody,
+    fontSize: 13,
+  },
+  attachmentSize: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 11,
+  },
+
   previewLabel: {
     color: colors.mutedForeground,
     fontFamily: typography.fontHeadingSemi,
@@ -594,6 +1039,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  previewAttCount: {
+    color: colors.primary,
+    fontFamily: typography.fontBodySemiBold,
+    fontSize: 12,
+    marginTop: spacing.xs,
+  },
 
   // Schedule step
   scheduleCard: {
@@ -619,10 +1070,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  dateField: {
-    flex: 1,
-    gap: spacing.xs,
-  },
+  dateField: { flex: 1, gap: spacing.xs },
   dateLabel: {
     color: colors.mutedForeground,
     fontFamily: typography.fontBody,
@@ -655,9 +1103,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.md,
   },
-  primaryBtnDisabled: {
-    opacity: 0.5,
-  },
+  primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: {
     color: colors.primaryForeground,
     fontFamily: typography.fontBodySemiBold,
