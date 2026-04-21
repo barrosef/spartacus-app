@@ -75,7 +75,7 @@ function MainContent() {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
-  useProxy();
+  const { actingAs, actingAsName } = useProxy();
   const notifs = useNotifications();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
@@ -109,8 +109,14 @@ function MainContent() {
     }
   }, [isGuardian, fetchDependents]);
 
+  // When acting as dependent, show their info in the header
+  const activeDep = actingAs
+    ? dependents.find((d) => d.uid === actingAs)
+    : null;
+  const displayName = activeDep?.name ?? actingAsName ?? profile?.name ?? "Usuário";
+  const displayPhoto = activeDep?.photoUrl ?? (actingAs ? null : profile?.photoUrl);
   const userName = profile?.name ?? "Usuário";
-  const userInitials = getInitials(userName);
+  const userInitials = getInitials(displayName);
 
   const handleProfilePress = () => {
     setShowProfile(true);
@@ -194,7 +200,7 @@ function MainContent() {
       <AppHeader
         subtitle={TAB_SUBTITLES[activeTab]}
         userInitials={userInitials}
-        photoUrl={profile?.photoUrl}
+        photoUrl={displayPhoto}
         onProfilePress={handleProfilePress}
         onMenuPress={() => setDrawerVisible(true)}
         onFilterPress={
