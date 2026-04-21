@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
+import { useProxy } from "../../context/ProxyContext";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
 import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
@@ -72,6 +73,7 @@ export function FeedScreen({
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
   const currentUid = auth.currentUser?.uid ?? "";
+  const { actingAs } = useProxy();
 
   const fetchFeed = useCallback(
     async (cursor?: string | null) => {
@@ -82,9 +84,11 @@ export function FeedScreen({
 
       const qs = params.toString();
       const path = `/timeline${qs ? `?${qs}` : ""}`;
-      return api.get<FeedResponse>(path);
+      const headers: Record<string, string> = {};
+      if (actingAs) headers["X-Acting-As"] = actingAs;
+      return api.get<FeedResponse>(path, { headers });
     },
-    [typeFilter]
+    [typeFilter, actingAs]
   );
 
   const loadFeed = useCallback(async () => {
@@ -117,13 +121,13 @@ export function FeedScreen({
     setLoadingMore(false);
   }, [nextCursor, loadingMore, fetchFeed]);
 
-  // Reload when filter changes — clear stale entries so error state works
+  // Reload when filter or proxy user changes
   useEffect(() => {
     setEntries([]);
     setNextCursor(null);
     setScreen("loading");
     loadFeed();
-  }, [typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeFilter, actingAs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Polling every 30s
   useEffect(() => {
@@ -178,10 +182,9 @@ export function FeedScreen({
       entityId: string,
       status: string
     ) => {
-      const collection =
-        entityType === "presencas" ? "presencas" : "doacoes";
+      // entityType is already "attendance" or "donations" (English)
       try {
-        await api.patch(`/${collection}/${entityId}/validate`, {
+        await api.patch(`/${entityType}/${entityId}/validate`, {
           status,
         });
         // Optimistic update
@@ -201,10 +204,9 @@ export function FeedScreen({
 
   const handleRequestReview = useCallback(
     async (entityType: string, entityId: string, entryId: string) => {
-      const collection =
-        entityType === "presencas" ? "presencas" : "doacoes";
+      // entityType is already "attendance" or "donations" (English)
       try {
-        await api.post(`/${collection}/${entityId}/request-review`, {});
+        await api.post(`/${entityType}/${entityId}/request-review`, {});
         setEntries((prev) =>
           prev.map((e) =>
             e.id === entryId ? { ...e, reviewRequested: true } : e
@@ -302,7 +304,7 @@ export function FeedScreen({
               const ref = entry.id.split("_");
               const entityId = ref.slice(1).join("_");
               const entityType =
-                entry.type === "attendance" ? "presencas" : "doacoes";
+                entry.type === "attendance" ? "attendance" : "donations";
               const entityLabel =
                 entry.type === "attendance" ? "presença" : "doação";
               setConfirmModal({
@@ -319,7 +321,7 @@ export function FeedScreen({
               const ref = entry.id.split("_");
               const entityId = ref.slice(1).join("_");
               const entityType =
-                entry.type === "attendance" ? "presencas" : "doacoes";
+                entry.type === "attendance" ? "attendance" : "donations";
               const entityLabel =
                 entry.type === "attendance" ? "presença" : "doação";
               setConfirmModal({
@@ -336,7 +338,7 @@ export function FeedScreen({
               const ref = entry.id.split("_");
               const entityId = ref.slice(1).join("_");
               const entityType =
-                entry.type === "attendance" ? "presencas" : "doacoes";
+                entry.type === "attendance" ? "attendance" : "donations";
               handleRequestReview(entityType, entityId, entry.id);
             }}
           />
@@ -378,7 +380,11 @@ export function FeedScreen({
             confirmModal.entryId,
             confirmModal.entityType,
             confirmModal.entityId,
-            confirmModal.action === "confirm" ? "confirmed" : "absent",
+            confirmModal.action === "confirm"
+              ? confirmModal.entityType === "attendance"
+                ? "confirmed"
+                : "received"
+              : "absent",
           );
           setConfirmModal((prev) => ({ ...prev, visible: false }));
         }}

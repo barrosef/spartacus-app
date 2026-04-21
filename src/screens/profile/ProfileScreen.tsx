@@ -177,37 +177,6 @@ export function ProfileScreen({
   const proxyHeaders = (): Record<string, string> =>
     actingAs ? { "X-Acting-As": actingAs } : {};
 
-  const uploadPhoto = async (uri: string) => {
-    try {
-      const formData = new FormData();
-      const filename = uri.split("/").pop() ?? "photo.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const ext = (match ? match[1] : "jpg").toLowerCase();
-      const mimeType = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
-      formData.append("file", {
-        uri,
-        name: filename,
-        type: mimeType,
-      } as unknown as Blob);
-
-      await api.upload("/users/me/photo", formData, { headers: proxyHeaders() });
-      fetchProfile();
-    } catch {
-      Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
-    }
-  };
-
-  const uploadPhotoWeb = async (file: File) => {
-    try {
-      const formData = new FormData();
-      (formData as unknown as globalThis.FormData).append("file", file, file.name);
-      await api.upload("/users/me/photo", formData, { headers: proxyHeaders() });
-      fetchProfile();
-    } catch {
-      Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
-    }
-  };
-
   const cleanupPending = () => {
     if (pendingPreviewUri && pendingPhoto?.source === "web") {
       URL.revokeObjectURL(pendingPreviewUri);
@@ -220,33 +189,120 @@ export function ProfileScreen({
   const confirmPendingPhoto = async (region: CropRegion | null) => {
     if (!pendingPhoto) return;
     const photo = pendingPhoto;
+    // Capture actingAs NOW (before any state changes clear it)
+    const headersSnapshot = proxyHeaders();
     cleanupPending();
+
     if (photo.source === "web") {
-      await uploadPhotoWeb(photo.file);
+      // Apply crop via canvas on web
+      try {
+        let fileToUpload = photo.file;
+        if (region && pendingPreviewUri) {
+          const cropped = await cropImageWeb(
+            pendingPreviewUri ?? URL.createObjectURL(photo.file),
+            region,
+          );
+          if (cropped) fileToUpload = cropped;
+        }
+        const formData = new FormData();
+        (formData as unknown as globalThis.FormData).append(
+          "file",
+          fileToUpload,
+          fileToUpload.name,
+        );
+        await api.upload("/users/me/photo", formData, {
+          headers: headersSnapshot,
+        });
+        fetchProfile();
+      } catch {
+        Alert.alert("Erro", "Não foi possível enviar a foto.");
+      }
       return;
     }
+
     try {
       let finalUri = photo.uri;
       if (region) {
         const manipulated = await ImageManipulator.manipulateAsync(
           photo.uri,
-          [{
-            crop: {
-              originX: Math.round(region.originX),
-              originY: Math.round(region.originY),
-              width: Math.round(region.size),
-              height: Math.round(region.size),
+          [
+            {
+              crop: {
+                originX: Math.round(region.originX),
+                originY: Math.round(region.originY),
+                width: Math.round(region.size),
+                height: Math.round(region.size),
+              },
             },
-          }],
+          ],
           { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG },
         );
         finalUri = manipulated.uri;
       }
-      await uploadPhoto(finalUri);
+      // Use snapshot headers (not live closure) to guarantee correct user
+      const formData = new FormData();
+      const filename = finalUri.split("/").pop() ?? "photo.jpg";
+      const ext = (filename.split(".").pop() ?? "jpg").toLowerCase();
+      const mimeType = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
+      formData.append("file", {
+        uri: finalUri,
+        name: filename,
+        type: mimeType,
+      } as unknown as Blob);
+      await api.upload("/users/me/photo", formData, {
+        headers: headersSnapshot,
+      });
+      fetchProfile();
     } catch {
-      Alert.alert("Erro", "Não foi possível processar a foto. Tente novamente.");
+      Alert.alert(
+        "Erro",
+        "Não foi possível processar a foto. Tente novamente.",
+      );
     }
   };
+
+  /** Crop an image via canvas on web. Returns a File or null. */
+  async function cropImageWeb(
+    imageUri: string,
+    region: CropRegion,
+  ): Promise<File | null> {
+    if (Platform.OS !== "web") return null;
+    try {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = imageUri;
+      });
+      const canvas = document.createElement("canvas");
+      const size = Math.round(region.size);
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(
+        img,
+        Math.round(region.originX),
+        Math.round(region.originY),
+        size,
+        size,
+        0,
+        0,
+        size,
+        size,
+      );
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.9),
+      );
+      if (!blob) return null;
+      return new File([blob], `photo_${Date.now()}.jpg`, {
+        type: "image/jpeg",
+      });
+    } catch {
+      return null;
+    }
+  }
 
   const retryPendingPhoto = () => {
     const source = pendingPhoto?.source;

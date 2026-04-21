@@ -50,7 +50,10 @@ export function PhotoConfirmModal({
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   // Image dimensions (with fallback fetch)
-  const [fallbackDims, setFallbackDims] = useState<{ w: number; h: number } | null>(null);
+  const [fallbackDims, setFallbackDims] = useState<{
+    w: number;
+    h: number;
+  } | null>(null);
   useEffect(() => {
     if (uri && (!imageWidth || !imageHeight)) {
       Image.getSize(
@@ -67,14 +70,18 @@ export function PhotoConfirmModal({
   const finalH = imageHeight ?? fallbackDims?.h ?? 0;
 
   const rawCoverScale =
-    finalW > 0 && finalH > 0 ? PREVIEW_SIZE / Math.min(finalW, finalH) : 1;
+    finalW > 0 && finalH > 0
+      ? PREVIEW_SIZE / Math.min(finalW, finalH)
+      : 1;
   const coverScale = Math.max(rawCoverScale * PAN_ZOOM, 0.0001);
-  const displayedW = finalW > 0 ? finalW * coverScale : PREVIEW_SIZE * PAN_ZOOM;
-  const displayedH = finalH > 0 ? finalH * coverScale : PREVIEW_SIZE * PAN_ZOOM;
+  const displayedW =
+    finalW > 0 ? finalW * coverScale : PREVIEW_SIZE * PAN_ZOOM;
+  const displayedH =
+    finalH > 0 ? finalH * coverScale : PREVIEW_SIZE * PAN_ZOOM;
   const maxPanX = Math.max(0, (displayedW - PREVIEW_SIZE) / 2);
   const maxPanY = Math.max(0, (displayedH - PREVIEW_SIZE) / 2);
 
-  // Pan position as useState so transform re-renders
+  // Pan position
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const posRef = useRef({ x: 0, y: 0 });
   posRef.current = pos;
@@ -87,52 +94,80 @@ export function PhotoConfirmModal({
 
   const clamp = (x: number, y: number) => ({
     x: Math.max(-limitsRef.current.x, Math.min(limitsRef.current.x, x)),
-    y: Math.max(-limitsRef.current.y, Math.min(limitsRef.current.y, y)),
+    y: Math.max(
+      -limitsRef.current.y,
+      Math.min(limitsRef.current.y, y),
+    ),
   });
 
-  // ───────────────────────── WEB: native DOM drag ──────────────────────────
-  const webStartRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  // ── WEB: native DOM drag ────────────────────────────────────────
+  const webStartRef = useRef<{
+    mx: number;
+    my: number;
+    px: number;
+    py: number;
+  } | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
-
     const onMove = (e: MouseEvent | TouchEvent) => {
       const start = webStartRef.current;
       if (!start || !canPanRef.current) return;
-      const point = "touches" in e ? e.touches[0] : (e as MouseEvent);
+      const point =
+        "touches" in e ? e.touches[0] : (e as MouseEvent);
       if (!point) return;
-      const dx = point.clientX - start.mx;
-      const dy = point.clientY - start.my;
-      setPos({ x: start.px + dx, y: start.py + dy });
+      setPos({
+        x: start.px + (point.clientX - start.mx),
+        y: start.py + (point.clientY - start.my),
+      });
       if ("preventDefault" in e) e.preventDefault();
     };
     const onUp = (e: MouseEvent | TouchEvent) => {
       const start = webStartRef.current;
       if (!start) return;
-      const point = "changedTouches" in e ? e.changedTouches[0] : (e as MouseEvent);
+      const point =
+        "changedTouches" in e
+          ? e.changedTouches[0]
+          : (e as MouseEvent);
       if (point) {
-        const dx = point.clientX - start.mx;
-        const dy = point.clientY - start.my;
-        setPos(clamp(start.px + dx, start.py + dy));
+        setPos(
+          clamp(
+            start.px + (point.clientX - start.mx),
+            start.py + (point.clientY - start.my),
+          ),
+        );
       }
       webStartRef.current = null;
     };
-
     window.addEventListener("mousemove", onMove as EventListener);
     window.addEventListener("mouseup", onUp as EventListener);
-    window.addEventListener("touchmove", onMove as EventListener, { passive: false });
+    window.addEventListener("touchmove", onMove as EventListener, {
+      passive: false,
+    });
     window.addEventListener("touchend", onUp as EventListener);
     return () => {
-      window.removeEventListener("mousemove", onMove as EventListener);
+      window.removeEventListener(
+        "mousemove",
+        onMove as EventListener,
+      );
       window.removeEventListener("mouseup", onUp as EventListener);
-      window.removeEventListener("touchmove", onMove as EventListener);
+      window.removeEventListener(
+        "touchmove",
+        onMove as EventListener,
+      );
       window.removeEventListener("touchend", onUp as EventListener);
     };
   }, []);
 
-  const handleWebPointerDown = (e: { clientX: number; clientY: number } | React.MouseEvent | React.TouchEvent) => {
+  const handleWebPointerDown = (
+    e:
+      | { clientX: number; clientY: number }
+      | React.MouseEvent
+      | React.TouchEvent,
+  ) => {
     if (!canPanRef.current) return;
-    let cx = 0, cy = 0;
+    let cx = 0,
+      cy = 0;
     if ("touches" in e && e.touches.length > 0) {
       cx = e.touches[0].clientX;
       cy = e.touches[0].clientY;
@@ -148,7 +183,7 @@ export function PhotoConfirmModal({
     };
   };
 
-  // ───────────────────── NATIVE: PanResponder (mobile) ─────────────────────
+  // ── NATIVE: PanResponder ────────────────────────────────────────
   const panStartRef = useRef({ x: 0, y: 0 });
   const panResponder = useRef(
     PanResponder.create({
@@ -166,12 +201,17 @@ export function PhotoConfirmModal({
         });
       },
       onPanResponderRelease: (_, gs) => {
-        setPos(clamp(panStartRef.current.x + gs.dx, panStartRef.current.y + gs.dy));
+        setPos(
+          clamp(
+            panStartRef.current.x + gs.dx,
+            panStartRef.current.y + gs.dy,
+          ),
+        );
       },
     }),
   ).current;
 
-  // Modal open/close animations + pos reset
+  // Modal open/close + pos reset
   useEffect(() => {
     if (visible) {
       setPos({ x: 0, y: 0 });
@@ -200,24 +240,37 @@ export function PhotoConfirmModal({
     const cropSize = PREVIEW_SIZE / coverScale;
     const centerXImg = finalW / 2 - pos.x / coverScale;
     const centerYImg = finalH / 2 - pos.y / coverScale;
-    const originX = Math.max(0, Math.min(finalW - cropSize, centerXImg - cropSize / 2));
-    const originY = Math.max(0, Math.min(finalH - cropSize, centerYImg - cropSize / 2));
+    const originX = Math.max(
+      0,
+      Math.min(finalW - cropSize, centerXImg - cropSize / 2),
+    );
+    const originY = Math.max(
+      0,
+      Math.min(finalH - cropSize, centerYImg - cropSize / 2),
+    );
     return { originX, originY, size: cropSize };
   };
 
   const handleConfirm = () => onConfirm(buildCropRegion());
 
-  // Compose handlers: web uses DOM events, native uses PanResponder
-  const wrapHandlers = Platform.OS === "web"
-    ? {
-        onMouseDown: handleWebPointerDown as unknown as (e: unknown) => void,
-        onTouchStart: handleWebPointerDown as unknown as (e: unknown) => void,
-      }
-    : panResponder.panHandlers;
+  const wrapHandlers =
+    Platform.OS === "web"
+      ? {
+          onMouseDown: handleWebPointerDown as unknown as (
+            e: unknown,
+          ) => void,
+          onTouchStart: handleWebPointerDown as unknown as (
+            e: unknown,
+          ) => void,
+        }
+      : panResponder.panHandlers;
 
-  const cursorStyle = Platform.OS === "web" && canPan
-    ? ({ cursor: webStartRef.current ? "grabbing" : "grab" } as unknown as Record<string, unknown>)
-    : {};
+  const cursorStyle =
+    Platform.OS === "web" && canPan
+      ? ({
+          cursor: "grab",
+        } as unknown as Record<string, unknown>)
+      : {};
 
   return (
     <Modal
@@ -227,8 +280,13 @@ export function PhotoConfirmModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View
+          style={[styles.backdrop, { opacity: fadeAnim }]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+          />
         </Animated.View>
 
         <Animated.View
@@ -240,15 +298,49 @@ export function PhotoConfirmModal({
           <View style={styles.header}>
             <Text style={styles.title}>Ajuste sua foto</Text>
             <Text style={styles.subtitle}>
-              {canPan ? "Arraste para enquadrar" : "Pré-visualização"}
+              {canPan
+                ? "Arraste para enquadrar"
+                : "Pré-visualização"}
             </Text>
           </View>
 
+          {/* Photo area: full image visible (dimmed outside circle) */}
           <View
             style={[styles.previewWrap, cursorStyle]}
             {...wrapHandlers}
           >
-            <View style={styles.previewClip} pointerEvents="none">
+            {/* Full image behind (dimmed) */}
+            {uri && (
+              <View
+                style={styles.previewFull}
+                pointerEvents="none"
+              >
+                <View
+                  style={{
+                    width: displayedW,
+                    height: displayedH,
+                    transform: [
+                      { translateX: pos.x },
+                      { translateY: pos.y },
+                    ],
+                    opacity: 0.3,
+                  }}
+                  pointerEvents="none"
+                >
+                  <Image
+                    source={{ uri }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Circle clip (full opacity) */}
+            <View
+              style={styles.previewClip}
+              pointerEvents="none"
+            >
               {uri && (
                 <View
                   style={{
@@ -269,6 +361,8 @@ export function PhotoConfirmModal({
                 </View>
               )}
             </View>
+
+            {/* Gold ring */}
             <View pointerEvents="none" style={styles.previewRing} />
           </View>
 
@@ -278,7 +372,11 @@ export function PhotoConfirmModal({
               activeOpacity={0.7}
               onPress={onRetry}
             >
-              <Feather name="rotate-ccw" size={16} color={colors.foreground} />
+              <Feather
+                name="rotate-ccw"
+                size={16}
+                color={colors.foreground}
+              />
               <Text style={styles.btnSecondaryText}>Trocar</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -286,7 +384,11 @@ export function PhotoConfirmModal({
               activeOpacity={0.85}
               onPress={handleConfirm}
             >
-              <Feather name="check" size={16} color={colors.primaryForeground} />
+              <Feather
+                name="check"
+                size={16}
+                color={colors.primaryForeground}
+              />
               <Text style={styles.btnPrimaryText}>Usar foto</Text>
             </TouchableOpacity>
           </View>
@@ -309,7 +411,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 400,
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -345,6 +447,16 @@ const styles = StyleSheet.create({
     position: "relative",
     userSelect: "none" as unknown as undefined,
   },
+  // Full image (visible outside circle, dimmed)
+  previewFull: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+    borderRadius: radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  // Circle clip (full opacity)
   previewClip: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: PREVIEW_SIZE / 2,

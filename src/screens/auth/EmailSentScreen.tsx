@@ -8,7 +8,14 @@ import { getProjectId } from "../../lib/api";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export function EmailSentScreen({ email }: { email: string }) {
+export function EmailSentScreen({
+  route,
+  email: emailDirect,
+}: {
+  route?: { params?: { email?: string } };
+  email?: string;
+}) {
+  const email = route?.params?.email ?? emailDirect ?? "";
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
