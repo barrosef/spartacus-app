@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { timeAgo } from "../../utils/timeAgo";
-import { getInitials, avatarColor } from "./helpers";
+import { UserAvatar } from "../ui/UserAvatar";
 import type { TimelineEntry } from "./types";
 
 interface AccountCardProps {
@@ -12,7 +12,7 @@ interface AccountCardProps {
 
 export function AccountCard({ entry }: AccountCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
-  const bgColor = avatarColor(targetName);
+  const classes = entry.classes ?? [];
 
   return (
     <View style={styles.card}>
@@ -23,15 +23,56 @@ export function AccountCard({ entry }: AccountCardProps) {
         <View style={styles.content}>
           <Text style={styles.label}>Nova conta criada</Text>
           <View style={styles.userRow}>
-            <View style={[styles.miniAvatar, { backgroundColor: bgColor }]}>
-              <Text style={styles.miniAvatarText}>
-                {getInitials(targetName)}
-              </Text>
-            </View>
+            <UserAvatar
+              name={targetName}
+              photoUrl={entry.targetPhotoUrl ?? entry.authorPhotoUrl}
+              size={28}
+            />
             <Text style={styles.name} numberOfLines={1}>
               {targetName}
             </Text>
           </View>
+
+          {entry.rolesLabel && (
+            <View style={styles.metaRow}>
+              <Feather
+                name="tag"
+                size={11}
+                color={colors.mutedForeground}
+                style={styles.metaIcon}
+              />
+              <Text style={styles.metaText}>{entry.rolesLabel}</Text>
+            </View>
+          )}
+
+          {classes.length > 0 && (
+            <View style={styles.metaRow}>
+              <Feather
+                name="bookmark"
+                size={11}
+                color={colors.mutedForeground}
+                style={styles.metaIcon}
+              />
+              <Text style={styles.metaText} numberOfLines={2}>
+                {classes.join(" · ")}
+              </Text>
+            </View>
+          )}
+
+          {entry.guardianName && (
+            <View style={styles.metaRow}>
+              <Feather
+                name="shield"
+                size={11}
+                color={colors.mutedForeground}
+                style={styles.metaIcon}
+              />
+              <Text style={styles.metaText} numberOfLines={1}>
+                Responsável: {entry.guardianName}
+              </Text>
+            </View>
+          )}
+
           <Text style={styles.time}>{timeAgo(entry.createdAt)}</Text>
         </View>
       </View>
@@ -93,6 +134,20 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontFamily: typography.fontBodySemiBold,
     fontSize: 14,
+    flex: 1,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  metaIcon: {
+    opacity: 0.8,
+  },
+  metaText: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 12,
     flex: 1,
   },
   time: {

@@ -197,11 +197,8 @@ export function ProfileScreen({
       // Apply crop via canvas on web
       try {
         let fileToUpload = photo.file;
-        if (region && pendingPreviewUri) {
-          const cropped = await cropImageWeb(
-            pendingPreviewUri ?? URL.createObjectURL(photo.file),
-            region,
-          );
+        if (region) {
+          const cropped = await cropImageWeb(photo.file, region);
           if (cropped) fileToUpload = cropped;
         }
         const formData = new FormData();
@@ -263,18 +260,12 @@ export function ProfileScreen({
 
   /** Crop an image via canvas on web. Returns a File or null. */
   async function cropImageWeb(
-    imageUri: string,
+    file: File,
     region: CropRegion,
   ): Promise<File | null> {
     if (Platform.OS !== "web") return null;
     try {
-      const img = new window.Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = imageUri;
-      });
+      const bitmap = await createImageBitmap(file);
       const canvas = document.createElement("canvas");
       const size = Math.round(region.size);
       canvas.width = size;
@@ -282,7 +273,7 @@ export function ProfileScreen({
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
       ctx.drawImage(
-        img,
+        bitmap,
         Math.round(region.originX),
         Math.round(region.originY),
         size,

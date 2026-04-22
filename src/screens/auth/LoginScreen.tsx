@@ -8,8 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from "react-native";
+import { FirebaseError } from "firebase/app";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const logo = require("../../../assets/logo.png");
@@ -28,16 +28,18 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const google = useGoogleSignIn();
 
   async function handleLogin() {
     if (!email || !password) return;
     setLoading(true);
+    setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged in RootNavigator handles navigation
-    } catch {
-      Alert.alert("Erro ao entrar", "E-mail ou senha inválidos.");
+    } catch (e) {
+      setError(mapLoginError(e));
     } finally {
       setLoading(false);
     }
@@ -83,6 +85,12 @@ export function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
               />
+
+              {!!error && (
+                <Text style={styles.errorText} accessibilityLiveRegion="polite">
+                  {error}
+                </Text>
+              )}
 
               <Button
                 label="Entrar"
@@ -142,6 +150,29 @@ export function LoginScreen() {
       </SafeScreen>
     </>
   );
+}
+
+function mapLoginError(e: unknown): string {
+  if (e instanceof FirebaseError) {
+    switch (e.code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+      case "auth/invalid-login-credentials":
+        return "E-mail ou senha incorretos.";
+      case "auth/invalid-email":
+        return "E-mail inválido.";
+      case "auth/user-disabled":
+        return "Esta conta está desativada.";
+      case "auth/too-many-requests":
+        return "Muitas tentativas. Tente novamente em alguns minutos.";
+      case "auth/network-request-failed":
+        return "Falha de conexão. Verifique sua internet.";
+      default:
+        return "Não foi possível entrar. Tente novamente.";
+    }
+  }
+  return "Não foi possível entrar. Tente novamente.";
 }
 
 function GoogleLogo() {
@@ -258,6 +289,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     fontFamily: typography.fontBodySemiBold,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontFamily: typography.fontBodyMedium,
+    textAlign: "center",
+    marginTop: -spacing.xs,
   },
   forgotPasswordRow: {
     alignItems: "center",

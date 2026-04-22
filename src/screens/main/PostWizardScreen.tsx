@@ -26,6 +26,9 @@ import {
 } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+import { AudioPreview } from "../../components/post/AudioPreview";
+import { DateInput } from "../../components/ui/DateInput";
+import { TimeInput } from "../../components/ui/TimeInput";
 
 type PostType = "post" | "event" | "championship";
 type Step = "content" | "media" | "schedule" | "success";
@@ -53,6 +56,21 @@ const TYPE_OPTIONS: {
   { key: "championship", label: "Camp.", icon: "award" },
 ];
 
+/**
+ * Convert BR-format date+time ("dd/mm/aaaa", "HH:mm") into ISO-8601.
+ * The backend stores events in this format and the calendar filter
+ * slices the first 7 chars ("YYYY-MM") to match a month.
+ */
+function combineDateTime(date: string, time: string): string | null {
+  if (!date) return null;
+  const parts = date.split("/");
+  if (parts.length !== 3) return null;
+  const [dd, mm, yyyy] = parts;
+  const iso = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  const timePart = time ? time.padStart(5, "0") : "00:00";
+  return `${iso}T${timePart}:00`;
+}
+
 export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   const [step, setStep] = useState<Step>("content");
   const [postType, setPostType] = useState<PostType>("post");
@@ -66,6 +84,8 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   } | null>(null);
   const [eventDate, setEventDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
+  const [eventStartTime, setEventStartTime] = useState("");
+  const [eventEndTime, setEventEndTime] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -75,6 +95,8 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Between stop and upload: local URI awaiting user confirmation.
+  const [pendingAudioUri, setPendingAudioUri] = useState<string | null>(null);
 
   // Detect URLs in description
   const handleDescriptionChange = useCallback(
@@ -244,16 +266,12 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
       const uri = recording.getURI();
       setRecording(null);
       if (!uri) return;
-      const att = await uploadFile(
-        uri,
-        `audio_${Date.now()}.m4a`,
-        "audio/mp4",
-      );
-      if (att) setAttachments((prev) => [...prev, att]);
+      // Enter preview phase — user must confirm before upload.
+      setPendingAudioUri(uri);
     } catch {
       setRecording(null);
     }
-  }, [recording, uploadFile]);
+  }, [recording]);
 
   const cancelRecording = useCallback(async () => {
     if (!recording) return;
@@ -269,6 +287,25 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     setRecording(null);
     setRecordingDuration(0);
   }, [recording]);
+
+  const confirmPendingAudio = useCallback(async () => {
+    if (!pendingAudioUri) return;
+    const uri = pendingAudioUri;
+    setPendingAudioUri(null);
+    const att = await uploadFile(
+      uri,
+      `audio_${Date.now()}.m4a`,
+      "audio/mp4",
+    );
+    if (att) setAttachments((prev) => [...prev, att]);
+  }, [pendingAudioUri, uploadFile]);
+
+  const retryPendingAudio = useCallback(() => {
+    setPendingAudioUri(null);
+    setRecordingDuration(0);
+    // Kick off a new recording right away.
+    startRecording();
+  }, [startRecording]);
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
@@ -295,8 +332,8 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
           size: a.size,
         })),
         linkPreview,
-        eventDate: eventDate || null,
-        eventEndDate: eventEndDate || null,
+        eventDate: combineDateTime(eventDate, eventStartTime),
+        eventEndDate: combineDateTime(eventEndDate, eventEndTime),
         eventLocation: null,
       });
       setStep("success");
@@ -313,6 +350,8 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     linkPreview,
     eventDate,
     eventEndDate,
+    eventStartTime,
+    eventEndTime,
   ]);
 
   const canAdvanceFromContent = title.trim().length > 0;
@@ -492,7 +531,7 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
               </TouchableOpacity>
             </View>
 
-            {/* Audio recorder */}
+            {/* Audio recorder: recording → preview → button */}
             {recording ? (
               <View style={styles.audioRecording}>
                 <View style={styles.audioRecordingDot} />
@@ -517,6 +556,13 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
                   <Feather name="x" size={18} color={colors.error} />
                 </TouchableOpacity>
               </View>
+            ) : pendingAudioUri ? (
+              <AudioPreview
+                uri={pendingAudioUri}
+                onConfirm={confirmPendingAudio}
+                onRetry={retryPendingAudio}
+                disabled={uploading}
+              />
             ) : (
               <TouchableOpacity
                 style={styles.mediaBtnFull}
@@ -631,46 +677,34 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
 
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>Data de Início</Text>
-                  <TextInput
-                    style={styles.dateInput}
+                  <DateInput
+                    label="Data de Início"
                     value={eventDate}
-                    onChangeText={setEventDate}
-                    placeholder="dd/mm/aaaa"
-                    placeholderTextColor={colors.mutedForeground}
+                    onChange={setEventDate}
                   />
                 </View>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>Hora de Início</Text>
-                  <TextInput
-                    style={styles.dateInput}
-                    placeholder="--:--"
-                    placeholderTextColor={colors.mutedForeground}
+                  <TimeInput
+                    label="Hora de Início"
+                    value={eventStartTime}
+                    onChange={setEventStartTime}
                   />
                 </View>
               </View>
 
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>
-                    Data de Término
-                  </Text>
-                  <TextInput
-                    style={styles.dateInput}
+                  <DateInput
+                    label="Data de Término"
                     value={eventEndDate}
-                    onChangeText={setEventEndDate}
-                    placeholder="dd/mm/aaaa"
-                    placeholderTextColor={colors.mutedForeground}
+                    onChange={setEventEndDate}
                   />
                 </View>
                 <View style={styles.dateField}>
-                  <Text style={styles.dateLabel}>
-                    Hora de Término
-                  </Text>
-                  <TextInput
-                    style={styles.dateInput}
-                    placeholder="--:--"
-                    placeholderTextColor={colors.mutedForeground}
+                  <TimeInput
+                    label="Hora de Término"
+                    value={eventEndTime}
+                    onChange={setEventEndTime}
                   />
                 </View>
               </View>

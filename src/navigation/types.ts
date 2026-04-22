@@ -2,6 +2,7 @@
 export type AuthStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
+  ResetPassword: { oobCode: string };
   Step0AuthMethod: undefined;
   Step0bCredentials: undefined;
   Step0cProject: undefined;

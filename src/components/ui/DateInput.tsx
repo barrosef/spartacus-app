@@ -409,7 +409,7 @@ export function DateInput({ label, value, onChange, error, hint }: DateInputProp
         <View style={modal.overlay}>
           <View style={modal.sheet}>
             <View style={modal.header}>
-              <Text style={modal.title}>Data de Nascimento</Text>
+              <Text style={modal.title}>{label ?? "Data"}</Text>
               <Text style={modal.preview}>
                 {toDisplay(selected.day, selected.month, selected.year)}
               </Text>

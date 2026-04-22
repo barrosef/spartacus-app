@@ -24,8 +24,10 @@ export interface TimelineEntry {
   authorUid: string;
   authorName: string;
   authorRoles: string[];
+  authorPhotoUrl?: string | null;
   targetUid?: string | null;
   targetName?: string | null;
+  targetPhotoUrl?: string | null;
   title?: string | null;
   description?: string | null;
   attachments?: TimelineAttachment[] | null;
@@ -41,6 +43,9 @@ export interface TimelineEntry {
   modalidadeName?: string | null;
   classDate?: string | null;
   donationAmount?: string | null;
+  rolesLabel?: string | null;
+  classes?: string[] | null;
+  guardianName?: string | null;
   createdAt: string;
 }
 

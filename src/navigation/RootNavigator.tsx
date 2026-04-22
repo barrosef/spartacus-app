@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { Platform, View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
@@ -31,9 +31,22 @@ export function useSignupGuard() {
 
 type AppState = "loading" | "auth" | "email_pending" | "blocked" | "anamnese" | "approved";
 
+function isPasswordResetLanding(): boolean {
+  if (Platform.OS !== "web" || typeof window === "undefined") return false;
+  try {
+    return new URLSearchParams(window.location.search).has("oobCode");
+  } catch {
+    return false;
+  }
+}
+
 export function RootNavigator() {
   const [user, setUser] = useState<User | null>(null);
   const [appState, setAppState] = useState<AppState>("loading");
+  // Password-reset link landing bypasses the normal app-state routing:
+  // regardless of whether the user is signed in, show AuthNavigator so the
+  // ResetPassword screen can handle the oobCode.
+  const resetLanding = isPasswordResetLanding();
   const [accountStatus, setAccountStatus] = useState("");
   const [anamneseTargets, setAnamneseTargets] = useState<AnamneseTarget[]>([]);
   const [timedOut, setTimedOut] = useState(false);
@@ -125,7 +138,7 @@ export function RootNavigator() {
     return cleanup;
   }, [user, signupInProgress]);
 
-  if (appState === "loading") {
+  if (appState === "loading" && !resetLanding) {
     return (
       <View style={styles.loading}>
         <Text style={styles.loadingText}>Spartacus</Text>
@@ -138,7 +151,7 @@ export function RootNavigator() {
     );
   }
 
-  const showAuth = appState === "auth" || signupInProgress;
+  const showAuth = resetLanding || appState === "auth" || signupInProgress;
 
   return (
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>

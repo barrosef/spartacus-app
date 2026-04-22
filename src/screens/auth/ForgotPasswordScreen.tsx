@@ -10,9 +10,8 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Feather } from "@expo/vector-icons";
-import { sendPasswordResetEmail } from "firebase/auth";
 import { useAuthNavigation } from "../../navigation/AuthNavContext";
-import { auth } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SafeScreen } from "../../components/ui/SafeScreen";
@@ -35,17 +34,12 @@ export function ForgotPasswordScreen() {
     setLoading(true);
     setError(null);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await api.post("/auth/password-reset", { email: email.trim() });
+      // Backend always 200s (does not reveal whether the email exists),
+      // so we always show the "sent" screen.
       setScreen("sent");
-    } catch (e: unknown) {
-      const err = e as { code?: string };
-      if (err.code === "auth/user-not-found") {
-        setError("E-mail não encontrado em nossa base.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("E-mail inválido.");
-      } else {
-        setError("Erro ao enviar link. Tente novamente.");
-      }
+    } catch {
+      setError("Erro ao enviar link. Tente novamente.");
     } finally {
       setLoading(false);
     }
