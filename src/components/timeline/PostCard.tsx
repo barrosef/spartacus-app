@@ -1,10 +1,26 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { timeAgo } from "../../utils/timeAgo";
-import { getInitials, avatarColor, formatRoles } from "./helpers";
+import { formatRoles } from "./helpers";
+import { AttachmentList } from "./AttachmentList";
+import { UserAvatar } from "../ui/UserAvatar";
 import type { TimelineEntry } from "./types";
+
+const LIKE_COLOR = "#ef4444";
+
+/** ISO-8601 → "DD/MM/AAAA [HH:mm]"; falls back to the raw value. */
+function formatEventDate(raw?: string | null): string {
+  if (!raw) return "";
+  const match = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/,
+  );
+  if (!match) return raw;
+  const [, y, m, d, hh, mm] = match;
+  const time = hh && mm && !(hh === "00" && mm === "00") ? ` ${hh}:${mm}` : "";
+  return `${d}/${m}/${y}${time}`;
+}
 
 interface PostCardProps {
   entry: TimelineEntry;
@@ -13,18 +29,17 @@ interface PostCardProps {
 }
 
 export function PostCard({ entry, onLike, onViewLikes }: PostCardProps) {
-  const bgColor = avatarColor(entry.authorName);
   const isEvent = entry.type === "event" || entry.type === "championship";
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: bgColor }]}>
-          <Text style={styles.avatarText}>
-            {getInitials(entry.authorName)}
-          </Text>
-        </View>
+        <UserAvatar
+          name={entry.authorName}
+          photoUrl={entry.authorPhotoUrl}
+          size={40}
+        />
         <View style={styles.headerInfo}>
           <Text style={styles.authorName} numberOfLines={1}>
             {entry.authorName}
@@ -50,20 +65,16 @@ export function PostCard({ entry, onLike, onViewLikes }: PostCardProps) {
         <View style={styles.eventRow}>
           <Feather name="calendar" size={14} color={colors.primary} />
           <Text style={styles.eventText}>
-            {[entry.eventDate, entry.eventLocation]
+            {[formatEventDate(entry.eventDate), entry.eventLocation]
               .filter(Boolean)
               .join(" · ")}
           </Text>
         </View>
       ) : null}
 
-      {/* First attachment image */}
+      {/* Attachments: image / audio / file — rendered per type */}
       {entry.attachments && entry.attachments.length > 0 ? (
-        <Image
-          source={{ uri: entry.attachments[0].url }}
-          style={styles.attachmentImage}
-          resizeMode="cover"
-        />
+        <AttachmentList attachments={entry.attachments} />
       ) : null}
 
       {/* Link preview */}
@@ -100,10 +111,10 @@ export function PostCard({ entry, onLike, onViewLikes }: PostCardProps) {
             onPress={onLike}
             activeOpacity={0.7}
           >
-            <Feather
-              name="heart"
-              size={18}
-              color={entry.userLiked ? colors.primary : colors.mutedForeground}
+            <Ionicons
+              name={entry.userLiked ? "heart" : "heart-outline"}
+              size={20}
+              color={entry.userLiked ? LIKE_COLOR : colors.mutedForeground}
             />
           </TouchableOpacity>
           {entry.likesCount > 0 ? (
@@ -253,6 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   likesCountActive: {
-    color: colors.primary,
+    color: LIKE_COLOR,
+    fontFamily: typography.fontBodySemiBold,
   },
 });

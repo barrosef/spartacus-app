@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
-import { getInitials, avatarColor } from "./helpers";
+import { api } from "../../lib/api";
+import { UserAvatar } from "../ui/UserAvatar";
 
 interface LikeUser {
   uid: string;
   name: string;
   role: string;
+  photoUrl?: string | null;
 }
 
 interface LikesModalProps {
@@ -35,23 +37,42 @@ const ROLE_LABELS: Record<string, string> = {
   assistant: "Assistente",
 };
 
-/**
- * Placeholder data until the likes list endpoint is available.
- * Replace with actual API call when ready.
- */
-function useLikes(_entryId: string): { data: LikeUser[]; loading: boolean } {
-  return { data: [], loading: false };
+function useLikes(
+  entryId: string,
+  enabled: boolean,
+): { data: LikeUser[]; loading: boolean } {
+  const [data, setData] = useState<LikeUser[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || !entryId) return;
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get<{ users: LikeUser[] }>(`/timeline/${entryId}/reactions`)
+      .then((res) => {
+        if (!cancelled) setData(res.users ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setData([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entryId, enabled]);
+
+  return { data, loading };
 }
 
 function LikeRow({ user }: { user: LikeUser }) {
-  const bgColor = avatarColor(user.name);
   const roleText = ROLE_LABELS[user.role] ?? user.role;
 
   return (
     <View style={styles.userRow}>
-      <View style={[styles.avatar, { backgroundColor: bgColor }]}>
-        <Text style={styles.avatarText}>{getInitials(user.name)}</Text>
-      </View>
+      <UserAvatar name={user.name} photoUrl={user.photoUrl} size={36} />
       <View style={styles.userInfo}>
         <Text style={styles.userName} numberOfLines={1}>
           {user.name}
@@ -63,7 +84,7 @@ function LikeRow({ user }: { user: LikeUser }) {
 }
 
 export function LikesModal({ visible, onClose, entryId }: LikesModalProps) {
-  const { data, loading } = useLikes(entryId);
+  const { data, loading } = useLikes(entryId, visible);
 
   return (
     <Modal

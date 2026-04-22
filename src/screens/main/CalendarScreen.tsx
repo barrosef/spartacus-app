@@ -52,8 +52,8 @@ interface EventOut {
   id: string;
   title: string;
   type: "event" | "championship";
-  start_date: string;
-  end_date?: string;
+  startDate: string;
+  endDate?: string;
   location?: string;
 }
 
@@ -136,15 +136,15 @@ export function CalendarScreen() {
         for (const ev of eventsRes.value.events) {
           const type = ev.type === "championship"
             ? "championship" : "event";
-          const d = new Date(ev.start_date);
+          const d = new Date(ev.startDate);
           result.push({
             id: ev.id,
             title: ev.title,
             type,
             date: d,
             startTime: d.toTimeString().slice(0, 5),
-            endTime: ev.end_date
-              ? new Date(ev.end_date).toTimeString().slice(0, 5)
+            endTime: ev.endDate
+              ? new Date(ev.endDate).toTimeString().slice(0, 5)
               : "",
             location: ev.location,
           });

@@ -44,6 +44,13 @@ async function request<T>(
     throw new ApiError(message, res.status, body);
   }
 
+  // 204 No Content / empty body → don't try to parse JSON. Callers that
+  // type this as <void> won't use the return value anyway; callers typing
+  // a concrete shape shouldn't be calling endpoints that return 204.
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+
   return res.json() as Promise<T>;
 }
 

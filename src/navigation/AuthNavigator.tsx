@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from "react";
+import { Platform } from "react-native";
 import type { AuthScreenName, AuthStackParamList } from "./types";
 import { AuthNavContext } from "./AuthNavContext";
 import { WizardProvider } from "../context/WizardContext";
 
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 import { Step0AuthMethod } from "../screens/auth/SignupWizard/Step0AuthMethod";
 import { Step0bCredentials } from "../screens/auth/SignupWizard/Step0bCredentials";
 import { Step0cProject } from "../screens/auth/SignupWizard/Step0cProject";
@@ -24,6 +26,7 @@ import { EmailSentScreen } from "../screens/auth/EmailSentScreen";
 const SCREENS: Record<AuthScreenName, React.ComponentType<any>> = {
   Login: LoginScreen,
   ForgotPassword: ForgotPasswordScreen,
+  ResetPassword: ResetPasswordScreen,
   Step0AuthMethod,
   Step0bCredentials,
   Step0cProject,
@@ -45,8 +48,25 @@ interface StackEntry {
   params?: AuthStackParamList[AuthScreenName];
 }
 
+function initialStack(): StackEntry[] {
+  // Web only: if URL carries ?oobCode=... (password-reset link landing),
+  // open the ResetPassword screen directly.
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const oobCode = params.get("oobCode");
+      if (oobCode) {
+        return [{ screen: "ResetPassword", params: { oobCode } }];
+      }
+    } catch {
+      // ignore and fall through
+    }
+  }
+  return [{ screen: "Login" }];
+}
+
 export function AuthNavigator() {
-  const [stack, setStack] = useState<StackEntry[]>([{ screen: "Login" }]);
+  const [stack, setStack] = useState<StackEntry[]>(initialStack);
 
   const navigate = useCallback(<T extends AuthScreenName>(
     screen: T,

@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { timeAgo } from "../../utils/timeAgo";
-import { getInitials, avatarColor, formatRoles } from "./helpers";
+import { formatRoles } from "./helpers";
+import { UserAvatar } from "../ui/UserAvatar";
 import { ValidationBadge } from "./ValidationBadge";
 import type { TimelineEntry } from "./types";
 
@@ -33,7 +34,6 @@ export function DonationCard({
 }: DonationCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
   const targetRoles = entry.targetName ? ["supporter"] : entry.authorRoles;
-  const bgColor = avatarColor(targetName);
 
   const canRequestReview =
     isTarget &&
@@ -44,9 +44,11 @@ export function DonationCard({
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: bgColor }]}>
-          <Text style={styles.avatarText}>{getInitials(targetName)}</Text>
-        </View>
+        <UserAvatar
+          name={targetName}
+          photoUrl={entry.targetPhotoUrl ?? entry.authorPhotoUrl}
+          size={36}
+        />
         <View style={styles.headerInfo}>
           <Text style={styles.authorName} numberOfLines={1}>
             {targetName}
