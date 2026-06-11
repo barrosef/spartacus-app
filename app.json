@@ -2,6 +2,7 @@
   "expo": {
     "name": "Spartacus",
     "slug": "spartacus",
+    "owner": "digital-business-one",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "spartacus",
@@ -34,7 +35,8 @@
         "android.permission.VIBRATE",
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED"
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "extra": {
       "eas": {

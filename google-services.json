@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "820921472402",
+    "project_id": "spartacus-artes-marciais",
+    "storage_bucket": "spartacus-artes-marciais.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:820921472402:android:3f36be6cc4cc2deaf65d4b",
+        "android_client_info": {
+          "package_name": "br.com.spartacus.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2cxHqp7aRmtvphb563Aq2bnejhThP3h8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
