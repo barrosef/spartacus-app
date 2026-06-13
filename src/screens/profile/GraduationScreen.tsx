@@ -22,6 +22,8 @@ interface GraduationEntry {
   belt: string;
   degree: number;
   prajied?: number | null;
+  status?: "pending" | "approved" | "rejected" | null;
+  lockedByStudent?: boolean;
 }
 
 interface ProfileData {
@@ -33,6 +35,14 @@ interface ClassOut {
   id: string;
   modality_name: string;
 }
+
+/** Modality name → slug (mirrors backend normalization). */
+function modalitySlug(name: string): string {
+  return (name || "").trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+/** Modalities that graduate by belt/cord only (no degree, no prajied). */
+const BELT_ONLY = new Set(["muay-thai", "capoeira"]);
 
 const BELT_OPTIONS: Record<string, { label: string; color: string }[]> = {
   "Jiu-Jitsu": [
@@ -80,7 +90,7 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const [graduation, setGraduation] = useState<Record<string, GraduationEntry>>({});
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [pickerModal, setPickerModal] = useState<{ modality: string } | null>(null);
+  const [pickerModal, setPickerModal] = useState<{ slug: string; name: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -109,10 +119,10 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const updateField = (mod: string, field: keyof GraduationEntry, value: string | number) => {
+  const updateField = (slug: string, field: keyof GraduationEntry, value: string | number) => {
     setGraduation((prev) => ({
       ...prev,
-      [mod]: { ...(prev[mod] ?? { belt: "", degree: 0 }), [field]: value },
+      [slug]: { ...(prev[slug] ?? { belt: "", degree: 0 }), [field]: value },
     }));
   };
 
@@ -134,9 +144,8 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
     }
   };
 
-  const modalModality = pickerModal?.modality;
-  const belts = modalModality
-    ? (BELT_OPTIONS[modalModality] ?? getDefaultBelts())
+  const belts = pickerModal
+    ? (BELT_OPTIONS[pickerModal.name] ?? getDefaultBelts())
     : [];
 
   if (showSuccess) {
@@ -165,52 +174,95 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
           </View>
         ) : (
           modalities.map((mod) => {
-            const entry = graduation[mod] ?? { belt: "", degree: 0 };
+            const slug = modalitySlug(mod);
+            const entry = graduation[slug] ?? { belt: "", degree: 0 };
             const beltOptions = BELT_OPTIONS[mod] ?? getDefaultBelts();
             const selectedBelt = beltOptions.find((b) => b.label === entry.belt);
-            const showPrajied = mod === "Muay Thai";
-            const showDegree = mod === "Jiu-Jitsu";
+            // Locked once inserted (pending) or approved; a rejected entry is
+            // editable again so the student can correct and resubmit.
+            const locked =
+              entry.status === "pending" || entry.status === "approved";
+            const rejected = entry.status === "rejected";
+            const showDegree = slug === "jiu-jitsu" && !BELT_ONLY.has(slug);
 
             return (
-              <View key={mod} style={styles.section}>
+              <View key={slug} style={styles.section}>
                 <Text style={styles.modalityTitle}>{mod.toUpperCase()}</Text>
 
-                <View style={styles.fieldRow}>
-                  <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
-                    <Text style={styles.fieldLabel}>Faixa</Text>
-                    <TouchableOpacity style={styles.select}
-                      onPress={() => setPickerModal({ modality: mod })}>
+                {locked ? (
+                  <View style={styles.lockedCard}>
+                    <View style={styles.lockedRow}>
                       {selectedBelt && (
                         <View style={[styles.beltDot, { backgroundColor: selectedBelt.color }]} />
                       )}
-                      <Text style={styles.selectText}>
-                        {entry.belt || "Selecionar"}
+                      <Text style={styles.lockedBelt}>
+                        {entry.belt || "—"}
+                        {showDegree && entry.degree ? ` · ${entry.degree}º grau` : ""}
                       </Text>
-                      <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
-                    </TouchableOpacity>
-                  </View>
-
-                  {showDegree && (
-                    <View style={styles.fieldSmall}>
-                      <Input label="Grau" value={String(entry.degree || "")}
-                        onChangeText={(v) => updateField(mod, "degree", parseInt(v) || 0)}
-                        keyboardType="numeric" maxLength={1} />
                     </View>
-                  )}
-                </View>
+                    <View style={[
+                      styles.statusPill,
+                      entry.status === "approved" ? styles.statusApproved : styles.statusPending,
+                    ]}>
+                      <Feather
+                        name={entry.status === "approved" ? "check-circle" : "clock"}
+                        size={12}
+                        color={entry.status === "approved" ? colors.success : colors.primary}
+                      />
+                      <Text style={[
+                        styles.statusText,
+                        { color: entry.status === "approved" ? colors.success : colors.primary },
+                      ]}>
+                        {entry.status === "approved"
+                          ? "Graduação aprovada"
+                          : "Aguardando aprovação"}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    {rejected && (
+                      <View style={styles.rejectedNote}>
+                        <Feather name="alert-circle" size={13} color={colors.error} />
+                        <Text style={styles.rejectedNoteText}>
+                          Graduação não aprovada. Corrija e salve novamente.
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.fieldRow}>
+                    <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
+                      <Text style={styles.fieldLabel}>Faixa</Text>
+                      <TouchableOpacity style={styles.select}
+                        onPress={() => setPickerModal({ slug, name: mod })}>
+                        {selectedBelt && (
+                          <View style={[styles.beltDot, { backgroundColor: selectedBelt.color }]} />
+                        )}
+                        <Text style={styles.selectText}>
+                          {entry.belt || "Selecionar"}
+                        </Text>
+                        <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+                      </TouchableOpacity>
+                    </View>
 
-                {showPrajied && (
-                  <Input label="Prajied"
-                    value={String(entry.prajied ?? "")}
-                    onChangeText={(v) => updateField(mod, "prajied", parseInt(v) || 0)}
-                    keyboardType="numeric" maxLength={2} />
+                    {showDegree && (
+                      <View style={styles.fieldSmall}>
+                        <Input label="Grau" value={String(entry.degree || "")}
+                          onChangeText={(v) => updateField(slug, "degree", parseInt(v) || 0)}
+                          keyboardType="numeric" maxLength={1} />
+                      </View>
+                    )}
+                    </View>
+                  </>
                 )}
               </View>
             );
           })
         )}
 
-        {modalities.length > 0 && (
+        {modalities.some((m) => {
+          const e = graduation[modalitySlug(m)];
+          return !(e?.status === "pending" || e?.status === "approved");
+        }) && (
           <Button label="Salvar" loading={saving} onPress={handleSave} style={styles.btn} />
         )}
       </ScrollView>
@@ -221,11 +273,12 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
         <Pressable style={styles.overlay} onPress={() => setPickerModal(null)}>
           <View style={styles.pickerSheet}>
             {belts.map((b) => {
-              const isSelected = modalModality && graduation[modalModality]?.belt === b.label;
+              const slug = pickerModal?.slug;
+              const isSelected = !!slug && graduation[slug]?.belt === b.label;
               return (
                 <TouchableOpacity key={b.label} style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
                   onPress={() => {
-                    if (modalModality) updateField(modalModality, "belt", b.label);
+                    if (slug) updateField(slug, "belt", b.label);
                     setPickerModal(null);
                   }}>
                   <View style={[styles.beltDot, { backgroundColor: b.color }]} />
@@ -261,6 +314,27 @@ const styles = StyleSheet.create({
     color: colors.primary, fontFamily: typography.fontHeading,
     fontSize: 14, letterSpacing: 1.5, marginBottom: spacing.sm,
   },
+  lockedCard: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: colors.card ?? "rgba(255,255,255,0.03)",
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, padding: spacing.md,
+  },
+  lockedRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flex: 1 },
+  lockedBelt: { color: colors.foreground, fontSize: 15, fontFamily: typography.fontBodyMedium },
+  statusPill: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm,
+  },
+  statusPending: { backgroundColor: colors.primaryMuted },
+  statusApproved: { backgroundColor: "rgba(76,175,80,0.12)" },
+  statusText: { fontSize: 11, fontFamily: typography.fontBodyMedium },
+  rejectedNote: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(231,76,76,0.10)",
+    borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.sm,
+  },
+  rejectedNoteText: { color: colors.error, fontSize: 12, flex: 1 },
   fieldRow: { flexDirection: "row", gap: spacing.sm },
   fieldFlex: { flex: 2 },
   fieldFull: { flex: 1 },
