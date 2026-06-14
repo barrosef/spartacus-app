@@ -33,6 +33,7 @@ type SupportType = "donation" | "service";
 
 type Screen =
   | "loading"
+  | "error"
   | "type"
   | "select"
   | "month"
@@ -82,10 +83,11 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         `/projects/${projectId}/support-config`,
       );
       setConfig(cfg);
-    } catch {
-      // keep going with empty config
-    } finally {
       setScreen("type");
+    } catch {
+      // Surface the failure instead of dead-ending the wizard with an
+      // empty config (no items → continue stuck on the select step).
+      setScreen("error");
     }
   }, [projectId]);
 
@@ -142,6 +144,27 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  /* ── Error (config failed to load) ── */
+  if (screen === "error") {
+    return (
+      <View style={styles.container}>
+        <WizardHeader />
+        <View style={styles.center}>
+          <Feather name="wifi-off" size={40} color={colors.mutedForeground} />
+          <Text style={[styles.heading, styles.errorTitle]}>
+            Não foi possível carregar
+          </Text>
+          <Text style={[styles.sub, styles.errorSub]}>
+            Verifique sua conexão e tente novamente.
+          </Text>
+        </View>
+        <View style={styles.footer}>
+          <Button label="Tentar novamente" onPress={fetchData} />
+        </View>
       </View>
     );
   }
@@ -319,29 +342,37 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
             : "Qual serviço você gostaria de oferecer?"}
         </Text>
 
-        <View style={styles.itemList}>
-          {items.map((item) => {
-            const active = selectedItem === item.code;
-            return (
-              <TouchableOpacity
-                key={item.code}
-                style={[styles.itemCard, active && styles.itemCardActive]}
-                activeOpacity={0.7}
-                onPress={() => setSelectedItem(item.code)}
-              >
-                <View style={styles.radio}>
-                  {active && <View style={styles.radioDot} />}
-                </View>
-                <Text style={[
-                  styles.itemLabel,
-                  active && styles.itemLabelActive,
-                ]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {items.length === 0 ? (
+          <Text style={styles.sub}>
+            {supportType === "donation"
+              ? "Nenhuma opção de doação configurada no momento."
+              : "Nenhuma opção de serviço configurada no momento."}
+          </Text>
+        ) : (
+          <View style={styles.itemList}>
+            {items.map((item) => {
+              const active = selectedItem === item.code;
+              return (
+                <TouchableOpacity
+                  key={item.code}
+                  style={[styles.itemCard, active && styles.itemCardActive]}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedItem(item.code)}
+                >
+                  <View style={styles.radio}>
+                    {active && <View style={styles.radioDot} />}
+                  </View>
+                  <Text style={[
+                    styles.itemLabel,
+                    active && styles.itemLabelActive,
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {selectedItem === "other" && (
           <Input
@@ -423,6 +454,14 @@ const styles = StyleSheet.create({
   },
   ghostBtn: {
     marginTop: spacing.sm,
+  },
+  errorTitle: {
+    marginTop: spacing.md,
+    textAlign: "center",
+  },
+  errorSub: {
+    textAlign: "center",
+    paddingHorizontal: spacing.lg,
   },
 
   // Wizard header
