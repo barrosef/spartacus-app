@@ -18,26 +18,33 @@ import { Button } from "../../components/ui/Button";
 
 interface DonationHistoryItem {
   id: string;
-  month: string;
-  monthLabel: string;
+  supportType: "donation" | "service";
+  month?: string | null;
+  monthLabel?: string | null;
   itemLabel: string;
-  status: string;       // "pledged" | "received" | "pending"
+  status: string;       // "pledged" | "received" | "absent"
   statusLabel: string;
   createdAt: string;
 }
 
 interface DonationHistory {
-  donations: DonationHistoryItem[];
+  items: DonationHistoryItem[];
 }
 
 type FilterTab = "all" | "received" | "pending";
 type Screen = "loading" | "loaded" | "empty";
+
+const TYPE_LABEL: Record<string, string> = {
+  donation: "Doação",
+  service: "Serviço",
+};
 
 /* ── Status styling ────────────────────────────────────────────── */
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   received: { bg: "rgba(76,175,80,0.15)", text: colors.success },
   pledged: { bg: "rgba(245,158,11,0.15)", text: colors.warning },
+  absent: { bg: "rgba(231,76,76,0.15)", text: colors.error },
   pending: { bg: "rgba(245,158,11,0.15)", text: colors.warning },
 };
 
@@ -63,11 +70,11 @@ export function MyDonationsScreen({
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
       const res = await api.get<DonationHistory>(
-        "/donations/history",
+        "/support/history",
         { headers },
       );
-      setDonations(res.donations);
-      setScreen(res.donations.length > 0 ? "loaded" : "empty");
+      setDonations(res.items);
+      setScreen(res.items.length > 0 ? "loaded" : "empty");
     } catch {
       setScreen("empty");
     }
@@ -159,7 +166,7 @@ export function MyDonationsScreen({
               {/* Month header */}
               <View style={styles.monthRow}>
                 <Feather name="calendar" size={16} color={colors.primary} />
-                <Text style={styles.monthLabel}>{d.monthLabel}</Text>
+                <Text style={styles.monthLabel}>{d.monthLabel ?? "Apoio"}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: ss.bg }]}>
                   <Text style={[styles.statusText, { color: ss.text }]}>
                     {d.statusLabel}
@@ -174,7 +181,9 @@ export function MyDonationsScreen({
                 </Text>
               ) : (
                 <>
-                  <Text style={styles.itemLabel}>{d.itemLabel}</Text>
+                  <Text style={styles.itemLabel}>
+                    {TYPE_LABEL[d.supportType] ?? "Apoio"} · {d.itemLabel}
+                  </Text>
                   <Text style={styles.dateLabel}>
                     Data do registro: {d.createdAt}
                   </Text>

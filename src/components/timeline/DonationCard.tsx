@@ -63,7 +63,7 @@ export function DonationCard({
       <View style={styles.bodyRow}>
         <Feather name="gift" size={16} color={colors.primary} />
         <Text style={styles.body}>
-          Registrou doacao:{" "}
+          Registrou apoio:{" "}
           <Text style={styles.highlight}>
             {entry.donationAmount ?? "—"}
           </Text>

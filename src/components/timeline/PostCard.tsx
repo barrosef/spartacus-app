@@ -24,15 +24,31 @@ function formatEventDate(raw?: string | null): string {
 
 interface PostCardProps {
   entry: TimelineEntry;
+  isSocial?: boolean;
   onLike: () => void;
   onViewLikes: () => void;
+  onPin?: () => void;
 }
 
-export function PostCard({ entry, onLike, onViewLikes }: PostCardProps) {
+export function PostCard({
+  entry,
+  isSocial = false,
+  onLike,
+  onViewLikes,
+  onPin,
+}: PostCardProps) {
   const isEvent = entry.type === "event" || entry.type === "championship";
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, entry.isPinned && styles.cardPinned]}>
+      {/* Pinned badge — visible to everyone */}
+      {entry.isPinned ? (
+        <View style={styles.pinnedBadge}>
+          <Ionicons name="pin" size={12} color={colors.primary} />
+          <Text style={styles.pinnedText}>Fixado</Text>
+        </View>
+      ) : null}
+
       {/* Header */}
       <View style={styles.header}>
         <UserAvatar
@@ -130,9 +146,19 @@ export function PostCard({ entry, onLike, onViewLikes }: PostCardProps) {
             </TouchableOpacity>
           ) : null}
         </View>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-          <Feather name="share-2" size={18} color={colors.mutedForeground} />
-        </TouchableOpacity>
+        {isSocial ? (
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={onPin}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={entry.isPinned ? "pin" : "pin-outline"}
+              size={19}
+              color={entry.isPinned ? colors.primary : colors.mutedForeground}
+            />
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -147,6 +173,22 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm + 4,
+  },
+  cardPinned: {
+    borderColor: colors.primary,
+  },
+  pinnedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: -spacing.xs,
+  },
+  pinnedText: {
+    color: colors.primary,
+    fontFamily: typography.fontBodySemiBold,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   header: {
     flexDirection: "row",

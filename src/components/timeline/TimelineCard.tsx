@@ -9,22 +9,26 @@ interface TimelineCardProps {
   entry: TimelineEntry;
   isStaff: boolean;
   isTarget: boolean;
+  isSocial?: boolean;
   onLike: (entryId: string) => void;
   onViewLikes: (entryId: string) => void;
   onConfirm: (entryId: string) => void;
   onAbsent: (entryId: string) => void;
   onRequestReview: (entryId: string) => void;
+  onPin?: (entryId: string) => void;
 }
 
 export function TimelineCard({
   entry,
   isStaff,
   isTarget,
+  isSocial = false,
   onLike,
   onViewLikes,
   onConfirm,
   onAbsent,
   onRequestReview,
+  onPin,
 }: TimelineCardProps) {
   switch (entry.type) {
     case "post":
@@ -33,8 +37,10 @@ export function TimelineCard({
       return (
         <PostCard
           entry={entry}
+          isSocial={isSocial}
           onLike={() => onLike(entry.id)}
           onViewLikes={() => onViewLikes(entry.id)}
+          onPin={() => onPin?.(entry.id)}
         />
       );
 

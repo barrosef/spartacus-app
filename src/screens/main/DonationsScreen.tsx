@@ -17,32 +17,27 @@ import { SuccessScreen } from "../../components/ui/SuccessScreen";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
-interface DonationConfigItem {
+interface SupportConfigItem {
   code: string;
   label: string;
   active: boolean;
 }
 
-interface DonationConfig {
-  items: DonationConfigItem[];
+interface SupportConfig {
+  donations: SupportConfigItem[];
+  services: SupportConfigItem[];
   thankYouMessage: string;
 }
 
-interface CurrentDonation {
-  id: string;
-  item: string;
-  itemLabel: string;
-  month: string;
-  status: string;
-}
+type SupportType = "donation" | "service";
 
 type Screen =
   | "loading"
+  | "type"
   | "select"
   | "month"
   | "confirm"
-  | "success"
-  | "already";
+  | "success";
 
 /* ── Month helpers ─────────────────────────────────────────────── */
 
@@ -70,8 +65,8 @@ interface DonationsScreenProps {
 export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const { actingAs } = useProxy();
   const [screen, setScreen] = useState<Screen>("loading");
-  const [config, setConfig] = useState<DonationConfig | null>(null);
-  const [existing, setExisting] = useState<CurrentDonation | null>(null);
+  const [config, setConfig] = useState<SupportConfig | null>(null);
+  const [supportType, setSupportType] = useState<SupportType>("donation");
   const [selectedItem, setSelectedItem] = useState("");
   const [otherText, setOtherText] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
@@ -83,26 +78,16 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const fetchData = useCallback(async () => {
     setScreen("loading");
     try {
-      const headers: Record<string, string> = {};
-      if (actingAs) headers["X-Acting-As"] = actingAs;
-      const [cfg, cur] = await Promise.allSettled([
-        api.get<DonationConfig>(
-          `/projects/${projectId}/donation-config`,
-        ),
-        api.get<CurrentDonation>("/donations/current", { headers }),
-      ]);
-
-      if (cfg.status === "fulfilled") setConfig(cfg.value);
-      if (cur.status === "fulfilled") {
-        setExisting(cur.value);
-        setScreen("already");
-        return;
-      }
-      setScreen("select");
+      const cfg = await api.get<SupportConfig>(
+        `/projects/${projectId}/support-config`,
+      );
+      setConfig(cfg);
     } catch {
-      setScreen("select");
+      // keep going with empty config
+    } finally {
+      setScreen("type");
     }
-  }, [projectId, actingAs]);
+  }, [projectId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -112,11 +97,11 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
       await api.post(
-        "/donations",
+        "/support",
         {
+          supportType,
           item: selectedItem,
-          itemDescription: selectedItem === "other"
-            ? otherText : undefined,
+          itemDescription: selectedItem === "other" ? otherText : undefined,
           month: selectedMonth,
         },
         { headers },
@@ -129,37 +114,25 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     }
   };
 
-  const items = config?.items.filter((i) => i.active) ?? [];
+  const items = (
+    config ? (supportType === "donation" ? config.donations : config.services) : []
+  ).filter((i) => i.active);
   const selectedLabel = items.find(
     (i) => i.code === selectedItem,
   )?.label ?? selectedItem;
 
   const now = new Date();
-  const monthLabel = now.toLocaleDateString("pt-BR", {
-    month: "long", year: "numeric",
-  });
 
   /* ── Success ── */
   if (screen === "success") {
     return (
       <SuccessScreen
-        title="Doação Registrada!"
+        title="Apoio registrado!"
         message={
           config?.thankYouMessage
           || "Muito obrigado pelo seu apoio!"
         }
         onDismiss={onDone}
-      />
-    );
-  }
-
-  /* ── Already donated ── */
-  if (screen === "already" && existing) {
-    return (
-      <SuccessScreen
-        variant="warning"
-        title="Doação já registrada"
-        message={`${existing.itemLabel} — ${monthLabel}`}
       />
     );
   }
@@ -219,14 +192,14 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
 
         <View style={styles.footer}>
           <Button
-            label="Confirmar Doação"
+            label="Confirmar apoio"
             loading={submitting}
             onPress={handleSubmit}
           />
           <Button
             label="Voltar e alterar"
             variant="ghost"
-            onPress={() => setScreen("select")}
+            onPress={() => setScreen("type")}
             style={styles.ghostBtn}
           />
         </View>
@@ -282,19 +255,68 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     );
   }
 
+  /* ── Step 0: Type (donation | service) ── */
+  if (screen === "type") {
+    return (
+      <View style={styles.container}>
+        <WizardHeader />
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.heading}>Apoie o Projeto</Text>
+          <Text style={styles.sub}>
+            Você pode apoiar o Spartacus de duas formas. O que você
+            gostaria de oferecer?
+          </Text>
+
+          <View style={styles.itemList}>
+            {([
+              { t: "donation" as SupportType, label: "Doação", hint: "Itens (alimentos, materiais...)" },
+              { t: "service" as SupportType, label: "Serviço", hint: "Prestar um serviço ao projeto" },
+            ]).map(({ t, label, hint }) => {
+              const active = supportType === t;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.itemCard, active && styles.itemCardActive]}
+                  activeOpacity={0.7}
+                  onPress={() => { setSupportType(t); setSelectedItem(""); }}
+                >
+                  <View style={styles.radio}>
+                    {active && <View style={styles.radioDot} />}
+                  </View>
+                  <View>
+                    <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>
+                      {label}
+                    </Text>
+                    <Text style={styles.sub}>{hint}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button label="Continuar →" onPress={() => setScreen("select")} />
+        </View>
+      </View>
+    );
+  }
+
   /* ── Step 1: Select item ── */
   const canContinue = selectedItem !== ""
     && (selectedItem !== "other" || otherText.trim().length > 0);
 
   return (
     <View style={styles.container}>
-      <WizardHeader />
+      <WizardHeader onBack={() => setScreen("type")} />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>Apoie o Projeto</Text>
+        <Text style={styles.heading}>
+          {supportType === "donation" ? "Escolha a doação" : "Escolha o serviço"}
+        </Text>
         <Text style={styles.sub}>
-          Sua contribuição ajuda a manter o projeto
-          Spartacus Artes Marciais vivo. O que você
-          gostaria de doar?
+          {supportType === "donation"
+            ? "O que você gostaria de doar?"
+            : "Qual serviço você gostaria de oferecer?"}
         </Text>
 
         <View style={styles.itemList}>
@@ -357,7 +379,7 @@ function WizardHeader({ onBack }: { onBack?: () => void } = {}) {
       )}
       <View style={styles.wizardTitleRow}>
         <Feather name="heart" size={18} color={colors.primary} />
-        <Text style={styles.wizardTitle}>Doação Mensal</Text>
+        <Text style={styles.wizardTitle}>Apoio ao Projeto</Text>
       </View>
       <View style={styles.wizardHeaderSpacer} />
     </View>

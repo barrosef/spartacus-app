@@ -39,6 +39,7 @@ export interface TimelineEntry {
   reviewResolved?: boolean;
   likesCount: number;
   userLiked: boolean;
+  isPinned?: boolean;
   turmaName?: string | null;
   modalidadeName?: string | null;
   classDate?: string | null;

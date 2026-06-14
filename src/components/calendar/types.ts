@@ -1,6 +1,12 @@
 export type CalendarView = "month" | "agenda" | "day" | "week";
 
-export type EventType = "class" | "event" | "championship";
+export type EventType =
+  | "class"
+  | "event"
+  | "championship"
+  | "own"
+  | "external"
+  | "guest_class";
 
 export interface CalendarEvent {
   id: string;
@@ -15,9 +21,12 @@ export interface CalendarEvent {
 }
 
 export const EVENT_COLORS: Record<EventType, string> = {
-  class: "#2563EB",        // blue
-  event: "#0D9488",        // teal
-  championship: "#EA580C", // orange
+  class: "#2563EB",        // aula (azul)
+  event: "#0D9488",        // legado → próprio (teal)
+  championship: "#EA580C", // legado → terceiro (laranja)
+  own: "#0D9488",          // evento próprio (teal)
+  external: "#EA580C",     // evento de terceiro (laranja)
+  guest_class: "#7C3AED",  // aulão substituto (roxo)
 };
 
 export const FILTER_COLORS: Record<string, string> = {

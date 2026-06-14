@@ -72,6 +72,7 @@ export function FeedScreen({
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
+  const isSocial = userRoles.includes("social");
   const currentUid = auth.currentUser?.uid ?? "";
   const { actingAs } = useProxy();
 
@@ -219,6 +220,20 @@ export function FeedScreen({
     []
   );
 
+  const handlePin = useCallback(
+    async (entryId: string) => {
+      try {
+        // Backend toggles + enforces single-pin-per-project; reload so the
+        // pinned item jumps to the top of the feed.
+        await api.patch(`/timeline/${entryId}/pin`, {});
+        await loadFeed();
+      } catch {
+        // Silent fail — next poll reconciles state
+      }
+    },
+    [loadFeed]
+  );
+
   const handleScroll = useCallback(
     (event: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
       const { contentOffset, layoutMeasurement, contentSize } =
@@ -298,8 +313,10 @@ export function FeedScreen({
             entry={entry}
             isStaff={isStaff}
             isTarget={entry.targetUid === currentUid}
+            isSocial={isSocial}
             onLike={() => handleLike(entry.id, entry.userLiked)}
             onViewLikes={() => setLikesEntryId(entry.id)}
+            onPin={() => handlePin(entry.id)}
             onConfirm={() => {
               const ref = entry.id.split("_");
               const entityId = ref.slice(1).join("_");

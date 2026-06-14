@@ -55,6 +55,36 @@ interface EventOut {
   startDate: string;
   endDate?: string;
   location?: string;
+  eventCategory?: "own" | "external" | "guest_class" | null;
+}
+
+function toMin(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm);
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+}
+
+/** Remove class instances overlapped by an event with a time window. */
+function applySubstitution(items: CalendarEvent[]): CalendarEvent[] {
+  const timedEvents = items.filter(
+    (e) => e.type !== "class" && toMin(e.startTime) != null,
+  );
+  return items.filter((e) => {
+    if (e.type !== "class") return true;
+    const cs = toMin(e.startTime);
+    const ce = toMin(e.endTime);
+    if (cs == null) return true;
+    const ceEff = ce ?? cs + 60;
+    return !timedEvents.some((ev) => {
+      if (
+        ev.date.getFullYear() !== e.date.getFullYear() ||
+        ev.date.getMonth() !== e.date.getMonth() ||
+        ev.date.getDate() !== e.date.getDate()
+      ) return false;
+      const es = toMin(ev.startTime)!;
+      const ee = toMin(ev.endTime) ?? es + 60;
+      return cs < ee && es < ceEff;
+    });
+  });
 }
 
 interface MyClassOut {
@@ -134,8 +164,11 @@ export function CalendarScreen() {
 
       if (eventsRes.status === "fulfilled") {
         for (const ev of eventsRes.value.events) {
-          const type = ev.type === "championship"
-            ? "championship" : "event";
+          const type: CalendarEvent["type"] = ev.eventCategory
+            ? ev.eventCategory
+            : ev.type === "championship"
+              ? "championship"
+              : "event";
           const d = new Date(ev.startDate);
           result.push({
             id: ev.id,
@@ -151,7 +184,7 @@ export function CalendarScreen() {
         }
       }
 
-      setEvents(result);
+      setEvents(applySubstitution(result));
     } catch {
       // graceful
     }
@@ -311,8 +344,15 @@ export function CalendarScreen() {
       if (showAll && showMine) return !e.isMine; // show non-mine when both active
       return false;
     }
-    if (e.type === "event" && !filters.has("events")) return false;
-    if (e.type === "championship" && !filters.has("championships")) return false;
+    // own / guest_class agrupam com "events"; external com "championships"
+    if (
+      (e.type === "event" || e.type === "own" || e.type === "guest_class") &&
+      !filters.has("events")
+    ) return false;
+    if (
+      (e.type === "championship" || e.type === "external") &&
+      !filters.has("championships")
+    ) return false;
     return true;
   });
 
