@@ -76,6 +76,13 @@ jobs:
       - name: Build Android (EAS)
         run: eas build --platform android --profile production --non-interactive
 
+      # eas.json submit.production.android.serviceAccountKeyPath points at this
+      # file; it is gitignored, so materialize it from the secret before submit.
+      - name: Write Google Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY }}
+        run: printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_KEY" > google-sa-key.json
+
       - name: Submit to Play Store (internal track)
         run: eas submit --platform android --profile production --latest --non-interactive
 

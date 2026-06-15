@@ -50,7 +50,7 @@
     "production": {
       "android": {
         "serviceAccountKeyPath": "./google-sa-key.json",
-        "track": "alpha",
+        "track": "internal",
         "releaseStatus": "completed",
         "changesNotSentForReview": true
       }
