@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Image,
   StyleSheet,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { colors, radius, typography } from "../../theme/tokens";
 import type { TimelineAttachment } from "./types";
-import { MediaViewer } from "./MediaViewer";
+import { useMediaViewer } from "./MediaViewerContext";
 
 const GAP = 3;
 const TALL = 240;
@@ -25,21 +25,12 @@ interface MediaGalleryProps {
  * fullscreen swipeable viewer at that image.
  */
 export function MediaGallery({ images }: MediaGalleryProps) {
-  const [viewer, setViewer] = useState({ open: false, index: 0 });
+  const { open } = useMediaViewer();
   if (!images.length) return null;
-
-  const open = (index: number) => setViewer({ open: true, index });
-  const close = () => setViewer((v) => ({ ...v, open: false }));
 
   return (
     <View style={styles.wrap}>
-      {renderGrid(images, open)}
-      <MediaViewer
-        images={images}
-        initialIndex={viewer.index}
-        visible={viewer.open}
-        onClose={close}
-      />
+      {renderGrid(images, (index) => open(images, index))}
     </View>
   );
 }

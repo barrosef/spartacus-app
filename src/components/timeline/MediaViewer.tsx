@@ -74,12 +74,13 @@ export function MediaViewer({
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          initialScrollIndex={initialIndex}
+          contentOffset={{ x: initialIndex * width, y: 0 }}
           getItemLayout={(_, i) => ({
             length: width,
             offset: width * i,
             index: i,
           })}
+          onScrollToIndexFailed={() => {}}
           keyExtractor={(item, i) => `${item.url}-${i}`}
           onMomentumScrollEnd={onMomentumEnd}
           renderItem={({ item }) => (

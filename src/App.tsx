@@ -4,6 +4,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "
 import { Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { RootNavigator } from "./navigation/RootNavigator";
+import { MediaViewerProvider } from "./components/timeline/MediaViewerContext";
 import { colors } from "./theme/tokens";
 
 interface ErrorBoundaryState {
@@ -59,7 +60,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <RootNavigator />
+        <MediaViewerProvider>
+          <RootNavigator />
+        </MediaViewerProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );
