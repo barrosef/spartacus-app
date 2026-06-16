@@ -14,6 +14,7 @@ import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
+import { PinnedRow } from "../../components/timeline/PinnedRow";
 import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
@@ -71,6 +72,8 @@ export function FeedScreen({
   });
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const pinnedCardY = useRef(0);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
   const isSocial = userRoles.includes("social");
   const currentUid = auth.currentUser?.uid ?? "";
@@ -234,6 +237,13 @@ export function FeedScreen({
     [loadFeed]
   );
 
+  const scrollToPinned = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(pinnedCardY.current - spacing.sm, 0),
+      animated: true,
+    });
+  }, []);
+
   const handleScroll = useCallback(
     (event: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
       const { contentOffset, layoutMeasurement, contentSize } =
@@ -247,6 +257,13 @@ export function FeedScreen({
     },
     [loadMore]
   );
+
+  // The pinned entry is shown as a shortcut bar at the top, while its full card
+  // stays in chronological position (sort by createdAt so it isn't hoisted).
+  const pinnedEntry = entries.find((e) => e.isPinned);
+  const displayEntries = pinnedEntry
+    ? [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    : entries;
 
   // ─── Render ───
   // Modals must always be mounted so the filter button in the header
@@ -293,7 +310,12 @@ export function FeedScreen({
       )}
 
       {screen === "content" && (
+        <>
+        {pinnedEntry && (
+          <PinnedRow entry={pinnedEntry} onPress={scrollToPinned} />
+        )}
         <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -307,7 +329,8 @@ export function FeedScreen({
         onScroll={handleScroll}
         scrollEventThrottle={400}
       >
-        {entries.map((entry) => (
+        {displayEntries.map((entry) => {
+          const card = (
           <TimelineCard
             key={entry.id}
             entry={entry}
@@ -359,7 +382,19 @@ export function FeedScreen({
               handleRequestReview(entityType, entityId, entry.id);
             }}
           />
-        ))}
+          );
+          if (!entry.isPinned) return card;
+          return (
+            <View
+              key={entry.id}
+              onLayout={(e) => {
+                pinnedCardY.current = e.nativeEvent.layout.y;
+              }}
+            >
+              {card}
+            </View>
+          );
+        })}
 
           {loadingMore && (
             <ActivityIndicator
@@ -369,6 +404,7 @@ export function FeedScreen({
             />
           )}
         </ScrollView>
+        </>
       )}
 
       <FilterModal

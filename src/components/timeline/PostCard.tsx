@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { timeAgo } from "../../utils/timeAgo";
 import { formatRoles } from "./helpers";
@@ -44,7 +44,7 @@ export function PostCard({
       {/* Pinned badge — visible to everyone */}
       {entry.isPinned ? (
         <View style={styles.pinnedBadge}>
-          <Ionicons name="pin" size={12} color={colors.primary} />
+          <MaterialCommunityIcons name="pin" size={13} color={colors.primary} />
           <Text style={styles.pinnedText}>Fixado</Text>
         </View>
       ) : null}
@@ -152,9 +152,9 @@ export function PostCard({
             onPress={onPin}
             activeOpacity={0.7}
           >
-            <Ionicons
+            <MaterialCommunityIcons
               name={entry.isPinned ? "pin" : "pin-outline"}
-              size={19}
+              size={20}
               color={entry.isPinned ? colors.primary : colors.mutedForeground}
             />
           </TouchableOpacity>
