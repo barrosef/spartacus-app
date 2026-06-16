@@ -35,6 +35,22 @@ const CONDITION_LABELS: Record<string, string> = {
   other: "Outro",
 };
 
+const WEEKLY_HOURS_LABELS: Record<string, string> = {
+  less_than_20: "Menos de 20h",
+  "20_to_40": "20 a 40h",
+  "41_to_60": "41 a 60h",
+  more_than_60: "Mais de 60h",
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  sitting: "Sentado",
+  lifting_weights: "Carregando peso",
+  standing: "Em pé",
+  walking: "Caminhando",
+  driving: "Dirigindo",
+  other: "Outro",
+};
+
 const GOAL_LABELS: Record<string, string> = {
   discipline: "Disciplina",
   self_defense: "Defesa pessoal",
@@ -160,9 +176,18 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
           {/* Summary sections */}
           {userAge >= 16 && state.weeklyWorkHours && (
             <SummarySection title="Atividades Diárias">
-              <Row label="Horas de trabalho" value={state.weeklyWorkHours} />
+              <Row
+                label="Horas de trabalho"
+                value={
+                  WEEKLY_HOURS_LABELS[state.weeklyWorkHours] ??
+                  state.weeklyWorkHours
+                }
+              />
               {state.workActivities.length > 0 && (
-                <Row label="Atividades" value={state.workActivities.join(", ")} />
+                <Row
+                  label="Atividades"
+                  value={translateList(state.workActivities, ACTIVITY_LABELS)}
+                />
               )}
             </SummarySection>
           )}
