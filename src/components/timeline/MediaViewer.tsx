@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BackHandler,
   FlatList,
   Image,
-  Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   StatusBar,
@@ -24,8 +24,10 @@ interface MediaViewerProps {
 }
 
 /**
- * Fullscreen, swipeable media viewer (Instagram-style): paginated horizontal
- * pager over all the card's images, a counter, and tap/X to dismiss.
+ * Fullscreen, swipeable media viewer (Instagram-style). Rendered as an absolute
+ * overlay (NOT a <Modal>) at the app root: react-native-web's Modal + a flex
+ * backdrop sized the inner pager to zero height (blank viewer, frozen page), so
+ * an explicitly-sized absolute overlay is used for reliable web + native behavior.
  */
 export function MediaViewer({
   images,
@@ -38,8 +40,28 @@ export function MediaViewer({
   const [index, setIndex] = useState(initialIndex);
 
   useEffect(() => {
-    if (visible) setIndex(initialIndex);
-  }, [visible, initialIndex]);
+    if (!visible) return;
+    setIndex(initialIndex);
+    // Position at the tapped image after layout. scrollToOffset is reliable on
+    // both native and react-native-web.
+    const id = setTimeout(() => {
+      listRef.current?.scrollToOffset({
+        offset: initialIndex * width,
+        animated: false,
+      });
+    }, 0);
+    return () => clearTimeout(id);
+  }, [visible, initialIndex, width]);
+
+  // Android hardware back closes the viewer instead of leaving the screen.
+  useEffect(() => {
+    if (!visible) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, onClose]);
 
   const onMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -57,96 +79,96 @@ export function MediaViewer({
     [images.length],
   );
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View style={styles.backdrop}>
-        <StatusBar hidden />
+    <View style={[styles.overlay, { width, height }]}>
+      <StatusBar hidden />
 
-        <FlatList
-          ref={listRef}
-          data={images}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          contentOffset={{ x: initialIndex * width, y: 0 }}
-          getItemLayout={(_, i) => ({
-            length: width,
-            offset: width * i,
-            index: i,
-          })}
-          onScrollToIndexFailed={() => {}}
-          keyExtractor={(item, i) => `${item.url}-${i}`}
-          onMomentumScrollEnd={onMomentumEnd}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={onClose}
-              style={[styles.page, { width, height }]}
-            >
-              <Image
-                source={{ uri: item.url }}
-                style={{ width, height }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          )}
-        />
-
-        {/* Overlay chrome */}
-        <View style={styles.topBar} pointerEvents="box-none">
-          {images.length > 1 ? (
-            <View style={styles.counterPill}>
-              <Text style={styles.counterText}>
-                {index + 1} / {images.length}
-              </Text>
-            </View>
-          ) : (
-            <View />
-          )}
+      <FlatList
+        ref={listRef}
+        data={images}
+        horizontal
+        pagingEnabled
+        style={{ width, height }}
+        showsHorizontalScrollIndicator={false}
+        getItemLayout={(_, i) => ({
+          length: width,
+          offset: width * i,
+          index: i,
+        })}
+        onScrollToIndexFailed={() => {}}
+        keyExtractor={(item, i) => `${item.url}-${i}`}
+        onMomentumScrollEnd={onMomentumEnd}
+        renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.closeBtn}
+            activeOpacity={1}
             onPress={onClose}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={[styles.page, { width, height }]}
           >
-            <Feather name="x" size={22} color="#fff" />
+            <Image
+              source={{ uri: item.url }}
+              style={{ width, height }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
-        </View>
+        )}
+      />
 
-        {/* Prev/next arrows — left from the 2nd image, right until the last but
-            one. Faint translucent tone; swipe still works alongside them. */}
-        {index > 0 ? (
-          <TouchableOpacity
-            style={[styles.navBtn, styles.navLeft]}
-            onPress={() => goTo(index - 1)}
-            hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
-          >
-            <Feather name="chevron-left" size={26} color="rgba(255,255,255,0.92)" />
-          </TouchableOpacity>
-        ) : null}
-        {index < images.length - 1 ? (
-          <TouchableOpacity
-            style={[styles.navBtn, styles.navRight]}
-            onPress={() => goTo(index + 1)}
-            hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
-          >
-            <Feather name="chevron-right" size={26} color="rgba(255,255,255,0.92)" />
-          </TouchableOpacity>
-        ) : null}
+      {/* Overlay chrome */}
+      <View style={styles.topBar} pointerEvents="box-none">
+        {images.length > 1 ? (
+          <View style={styles.counterPill}>
+            <Text style={styles.counterText}>
+              {index + 1} / {images.length}
+            </Text>
+          </View>
+        ) : (
+          <View />
+        )}
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={onClose}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Feather name="x" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      {/* Prev/next arrows — left from the 2nd image, right until the last but
+          one. Faint translucent tone; swipe still works alongside them. */}
+      {index > 0 ? (
+        <TouchableOpacity
+          style={[styles.navBtn, styles.navLeft]}
+          onPress={() => goTo(index - 1)}
+          hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
+        >
+          <Feather name="chevron-left" size={26} color="rgba(255,255,255,0.92)" />
+        </TouchableOpacity>
+      ) : null}
+      {index < images.length - 1 ? (
+        <TouchableOpacity
+          style={[styles.navBtn, styles.navRight]}
+          onPress={() => goTo(index + 1)}
+          hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
+        >
+          <Feather name="chevron-right" size={26} color="rgba(255,255,255,0.92)" />
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "#000",
+    zIndex: 9999,
+    elevation: 9999,
   },
   page: {
     alignItems: "center",
