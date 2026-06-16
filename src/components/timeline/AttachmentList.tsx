@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
 import { Audio, type AVPlaybackStatus } from "expo-av";
 import { Feather } from "@expo/vector-icons";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
+import { MediaGallery } from "./MediaGallery";
 import type { TimelineAttachment } from "./types";
 
 interface AttachmentListProps {
@@ -24,20 +24,14 @@ interface AttachmentListProps {
  */
 export function AttachmentList({ attachments }: AttachmentListProps) {
   if (!attachments?.length) return null;
+  // Images collapse into a single mosaic gallery; audio/files render inline.
+  const images = attachments.filter((a) => a.type === "image");
+  const rest = attachments.filter((a) => a.type !== "image");
   return (
     <View style={styles.list}>
-      {attachments.map((att, i) => {
+      {images.length > 0 ? <MediaGallery images={images} /> : null}
+      {rest.map((att, i) => {
         const key = `${att.url}-${i}`;
-        if (att.type === "image") {
-          return (
-            <Image
-              key={key}
-              source={{ uri: att.url }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          );
-        }
         if (att.type === "voice" || att.type.startsWith("audio")) {
           return <AudioAttachment key={key} attachment={att} />;
         }
@@ -165,11 +159,6 @@ function formatTime(ms: number): string {
 const styles = StyleSheet.create({
   list: {
     gap: spacing.sm,
-  },
-  image: {
-    width: "100%",
-    height: 200,
-    borderRadius: radius.sm,
   },
   audioBox: {
     flexDirection: "row",
