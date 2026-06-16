@@ -143,7 +143,7 @@ export function MediaViewer({
           onPress={() => goTo(index - 1)}
           hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
         >
-          <Feather name="chevron-left" size={26} color="rgba(255,255,255,0.92)" />
+          <Feather name="chevron-left" size={28} color="#fff" style={styles.navIcon} />
         </TouchableOpacity>
       ) : null}
       {index < images.length - 1 ? (
@@ -152,7 +152,7 @@ export function MediaViewer({
           onPress={() => goTo(index + 1)}
           hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
         >
-          <Feather name="chevron-right" size={26} color="rgba(255,255,255,0.92)" />
+          <Feather name="chevron-right" size={28} color="#fff" style={styles.navIcon} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -216,10 +216,17 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    // Faint, near-transparent glass — visible over both light and dark images.
-    backgroundColor: "rgba(255,255,255,0.12)",
+    // Translucent glass + a darker scrim so the white chevron keeps contrast
+    // over both light and dark images.
+    backgroundColor: "rgba(0,0,0,0.32)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.20)",
+    borderColor: "rgba(255,255,255,0.45)",
+  },
+  navIcon: {
+    // Dark halo so the chevron stays visible even over bright photos.
+    textShadowColor: "rgba(0,0,0,0.7)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   navLeft: {
     left: spacing.md,
