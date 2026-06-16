@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -34,6 +34,7 @@ export function MediaViewer({
   onClose,
 }: MediaViewerProps) {
   const { width, height } = useWindowDimensions();
+  const listRef = useRef<FlatList<TimelineAttachment>>(null);
   const [index, setIndex] = useState(initialIndex);
 
   useEffect(() => {
@@ -45,6 +46,15 @@ export function MediaViewer({
       setIndex(Math.round(e.nativeEvent.contentOffset.x / width));
     },
     [width],
+  );
+
+  const goTo = useCallback(
+    (target: number) => {
+      const clamped = Math.max(0, Math.min(target, images.length - 1));
+      listRef.current?.scrollToIndex({ index: clamped, animated: true });
+      setIndex(clamped);
+    },
+    [images.length],
   );
 
   return (
@@ -59,6 +69,7 @@ export function MediaViewer({
         <StatusBar hidden />
 
         <FlatList
+          ref={listRef}
           data={images}
           horizontal
           pagingEnabled
@@ -105,6 +116,27 @@ export function MediaViewer({
             <Feather name="x" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
+
+        {/* Prev/next arrows — left from the 2nd image, right until the last but
+            one. Faint translucent tone; swipe still works alongside them. */}
+        {index > 0 ? (
+          <TouchableOpacity
+            style={[styles.navBtn, styles.navLeft]}
+            onPress={() => goTo(index - 1)}
+            hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
+          >
+            <Feather name="chevron-left" size={26} color="rgba(255,255,255,0.92)" />
+          </TouchableOpacity>
+        ) : null}
+        {index < images.length - 1 ? (
+          <TouchableOpacity
+            style={[styles.navBtn, styles.navRight]}
+            onPress={() => goTo(index + 1)}
+            hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
+          >
+            <Feather name="chevron-right" size={26} color="rgba(255,255,255,0.92)" />
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Modal>
   );
@@ -151,5 +183,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  navBtn: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    // Faint, near-transparent glass — visible over both light and dark images.
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.20)",
+  },
+  navLeft: {
+    left: spacing.md,
+  },
+  navRight: {
+    right: spacing.md,
   },
 });
