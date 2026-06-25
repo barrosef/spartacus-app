@@ -21,6 +21,7 @@ import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import type { TimelineEntry } from "../../components/timeline/types";
 import { AnamneseReminderBanner } from "../../components/profile/AnamneseReminderBanner";
 import { useAnamneseStatus } from "../../hooks/useAnamneseStatus";
+import { STAFF_ROLES } from "../../constants/roles";
 
 interface FeedResponse {
   entries: TimelineEntry[];
@@ -37,9 +38,6 @@ interface FeedScreenProps {
 }
 
 const POLL_INTERVAL = 30_000;
-const STAFF_ROLES = new Set([
-  "owner", "assistant", "teacher", "instructor",
-]);
 
 export function FeedScreen({
   userRoles = [],

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
+import { isStaffRoles } from "../../constants/roles";
 
 const DRAWER_WIDTH = 280;
 
@@ -24,11 +25,20 @@ const MENU_ITEMS: DrawerItem[] = [
   { key: "donations", label: "Doações", icon: "heart" },
 ];
 
+const STAFF_MENU_ITEMS: DrawerItem[] = [
+  { key: "staff_matriculas", label: "Matrículas", icon: "user-check" },
+  { key: "staff_anamneses", label: "Anamneses", icon: "clipboard" },
+  { key: "staff_graduacoes", label: "Graduações", icon: "award" },
+  { key: "staff_frequencia", label: "Frequência (gestão)", icon: "check-square" },
+  { key: "staff_doacoes", label: "Doações (gestão)", icon: "heart" },
+];
+
 interface AppDrawerProps {
   visible: boolean;
   onClose: () => void;
   userName: string;
   userInitials: string;
+  userRoles: string[];
   onNavigate: (key: string) => void;
 }
 
@@ -37,6 +47,7 @@ export function AppDrawer({
   onClose,
   userName,
   userInitials,
+  userRoles,
   onNavigate,
 }: AppDrawerProps) {
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -142,6 +153,29 @@ export function AppDrawer({
               <Text style={styles.rowLabel}>{item.label}</Text>
             </TouchableOpacity>
           ))}
+
+          {/* Staff-only Gestão section */}
+          {isStaffRoles(userRoles) && (
+            <>
+              <View style={styles.sectionDivider} />
+              <Text style={styles.sectionLabel}>GESTÃO</Text>
+              {STAFF_MENU_ITEMS.map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.row}
+                  activeOpacity={0.7}
+                  onPress={() => handleNavigate(item.key)}
+                >
+                  <Feather
+                    name={item.icon}
+                    size={20}
+                    color={colors.mutedForeground}
+                  />
+                  <Text style={styles.rowLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
         </Animated.View>
 
         {/* Backdrop */}
@@ -206,6 +240,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginBottom: spacing.sm,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sectionLabel: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBodyMedium,
+    fontSize: 11,
+    letterSpacing: 1,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xs,
   },
   row: {
     flexDirection: "row",

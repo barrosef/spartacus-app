@@ -18,6 +18,9 @@ import { DonationsScreen } from "../screens/main/DonationsScreen";
 import { FrequencyHistoryScreen } from "../screens/main/FrequencyHistoryScreen";
 import { MyDonationsScreen } from "../screens/main/MyDonationsScreen";
 import { PostWizardScreen } from "../screens/main/PostWizardScreen";
+import { StaffMatriculasScreen } from "../screens/staff/StaffMatriculasScreen";
+import { StaffAnamnesesScreen } from "../screens/staff/StaffAnamnesesScreen";
+import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
@@ -70,6 +73,7 @@ function MainContent() {
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
+  const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes">(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [feedFilterVisible, setFeedFilterVisible] = useState(false);
   const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
@@ -132,6 +136,11 @@ function MainContent() {
   const handleDrawerNavigate = (key: string) => {
     if (key === "donations") setShowMyDonations(true);
     if (key === "frequency") setShowFrequency(true);
+    if (key === "staff_matriculas") setStaffScreen("matriculas");
+    if (key === "staff_anamneses") setStaffScreen("anamneses");
+    if (key === "staff_graduacoes") setStaffScreen("graduacoes");
+    if (key === "staff_frequencia") { setActiveTab("feed"); setFeedTypeFilter("attendance"); }
+    if (key === "staff_doacoes") { setActiveTab("feed"); setFeedTypeFilter("donation"); }
   };
 
   if (showProfile) {
@@ -180,6 +189,23 @@ function MainContent() {
         }}
       />
     );
+  }
+
+  if (staffScreen === "matriculas") {
+    return (
+      <StaffMatriculasScreen
+        onBack={() => setStaffScreen(null)}
+        userRoles={profile?.roles ?? []}
+      />
+    );
+  }
+
+  if (staffScreen === "anamneses") {
+    return <StaffAnamnesesScreen onBack={() => setStaffScreen(null)} />;
+  }
+
+  if (staffScreen === "graduacoes") {
+    return <StaffGraduacoesScreen onBack={() => setStaffScreen(null)} />;
   }
 
   const renderTab = () => {
@@ -235,6 +261,7 @@ function MainContent() {
         onClose={() => setDrawerVisible(false)}
         userName={userName}
         userInitials={userInitials}
+        userRoles={profile?.roles ?? []}
         onNavigate={handleDrawerNavigate}
       />
 
