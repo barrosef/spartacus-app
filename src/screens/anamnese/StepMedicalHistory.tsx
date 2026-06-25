@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  findNodeHandle,
 } from "react-native";
 import { SafeScreen } from "../../components/ui/SafeScreen";
 import { WizardHeader } from "../../components/wizard/WizardHeader";
@@ -17,7 +18,7 @@ import { YesNoToggle } from "../../components/ui/YesNoToggle";
 import { SymptomRow } from "../../components/ui/SymptomRow";
 import { useAnamnese } from "../../context/AnamneseContext";
 import { useAnamneseNavigation } from "../../navigation/AnamneseNavigator";
-import { colors, typography, spacing } from "../../theme/tokens";
+import { colors, typography, spacing, radius } from "../../theme/tokens";
 
 type Frequency = "always" | "sometimes" | "never" | "";
 
@@ -93,18 +94,64 @@ export function StepMedicalHistory() {
   const [restrictionDetails, setRestrictionDetails] = useState(state.restrictionDetails);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Scroll-to-first-error plumbing: each error-capable field registers a
+  // ref keyed by its error name; on a failed validation we measure the
+  // errored fields against the scroll content and scroll to the topmost one.
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const fieldRefs = useRef<Record<string, View | null>>({});
+  const setFieldRef = (key: string) => (node: View | null) => {
+    fieldRefs.current[key] = node;
+  };
+
+  function scrollToFirstError(keys: string[]) {
+    const content = contentRef.current;
+    const contentHandle = content ? findNodeHandle(content) : null;
+    if (contentHandle == null) return;
+    const nodes = keys
+      .map((k) => fieldRefs.current[k])
+      .filter((n): n is View => !!n);
+    if (nodes.length === 0) return;
+    Promise.all(
+      nodes.map(
+        (node) =>
+          new Promise<number>((resolve) => {
+            node.measureLayout(
+              contentHandle,
+              (_x, y) => resolve(y),
+              () => resolve(Number.POSITIVE_INFINITY),
+            );
+          }),
+      ),
+    ).then((ys) => {
+      const top = Math.min(...ys);
+      if (Number.isFinite(top)) {
+        scrollRef.current?.scrollTo({ y: Math.max(top - 24, 0), animated: true });
+      }
+    });
+  }
+
   function toggleList(list: string[], value: string): string[] {
     return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
   }
 
   function updateSymptom(key: string, value: Frequency) {
     setSymptoms((prev) => ({ ...prev, [key]: value }));
+    // Clear this row's error as soon as the user answers it.
+    setErrors((prev) => {
+      const errKey = `symptom_${key}`;
+      if (!prev[errKey]) return prev;
+      const next = { ...prev };
+      delete next[errKey];
+      return next;
+    });
   }
 
   function validate() {
     const e: Record<string, string> = {};
-    const allFilled = SYMPTOMS.every((s) => symptoms[s.key] !== "");
-    if (!allFilled) e.symptoms = "Preencha todos os sintomas";
+    SYMPTOMS.forEach((s) => {
+      if (!symptoms[s.key]) e[`symptom_${s.key}`] = "Selecione uma opção";
+    });
     if (hasAllergies === null) e.allergies = "Informe se possui alergias";
     if (hasAllergies && !allergiesDetails.trim()) e.allergiesDetails = "Detalhe as alergias";
     if (hasInjury === null) e.injury = "Informe se teve lesão recente";
@@ -114,8 +161,12 @@ export function StepMedicalHistory() {
     if (surgeries.includes("other") && !surgeriesOther.trim()) e.surgeriesOther = "Detalhe a cirurgia";
     if (conditions.includes("other") && !conditionsOther.trim()) e.conditionsOther = "Detalhe a condição";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    const keys = Object.keys(e);
+    if (keys.length > 0) scrollToFirstError(keys);
+    return keys.length === 0;
   }
+
+  const hasSymptomError = SYMPTOMS.some((s) => errors[`symptom_${s.key}`]);
 
   function handleNext() {
     if (!validate()) return;
@@ -154,10 +205,12 @@ export function StepMedicalHistory() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View ref={contentRef} collapsable={false}>
           <Text style={styles.heading}>Histórico médico</Text>
           <Text style={styles.description}>
             Informações de saúde para garantir sua segurança nas atividades.
@@ -184,12 +237,14 @@ export function StepMedicalHistory() {
               onToggle={(v) => setSurgeries((p) => toggleList(p, v))}
             />
             {surgeries.includes("other") && (
-              <Input
-                label="Qual cirurgia?"
-                value={surgeriesOther}
-                onChangeText={setSurgeriesOther}
-                error={errors.surgeriesOther}
-              />
+              <View ref={setFieldRef("surgeriesOther")} collapsable={false}>
+                <Input
+                  label="Qual cirurgia?"
+                  value={surgeriesOther}
+                  onChangeText={setSurgeriesOther}
+                  error={errors.surgeriesOther}
+                />
+              </View>
             )}
 
             <ChipSelect
@@ -199,12 +254,14 @@ export function StepMedicalHistory() {
               onToggle={(v) => setConditions((p) => toggleList(p, v))}
             />
             {conditions.includes("other") && (
-              <Input
-                label="Qual condição?"
-                value={conditionsOther}
-                onChangeText={setConditionsOther}
-                error={errors.conditionsOther}
-              />
+              <View ref={setFieldRef("conditionsOther")} collapsable={false}>
+                <Input
+                  label="Qual condição?"
+                  value={conditionsOther}
+                  onChangeText={setConditionsOther}
+                  error={errors.conditionsOther}
+                />
+              </View>
             )}
 
             <Input
@@ -216,67 +273,85 @@ export function StepMedicalHistory() {
             />
 
             {/* Symptoms */}
-            <View>
+            <View style={[styles.symptomsPanel, hasSymptomError && styles.panelError]}>
               <Text style={styles.sectionTitle}>Sintomas</Text>
-              {errors.symptoms && <Text style={styles.errorText}>{errors.symptoms}</Text>}
               {SYMPTOMS.map((s) => (
-                <SymptomRow
+                <View
                   key={s.key}
-                  label={s.label}
-                  value={symptoms[s.key] ?? ""}
-                  onChange={(v) => updateSymptom(s.key, v)}
-                />
+                  ref={setFieldRef(`symptom_${s.key}`)}
+                  collapsable={false}
+                >
+                  <SymptomRow
+                    label={s.label}
+                    value={symptoms[s.key] ?? ""}
+                    onChange={(v) => updateSymptom(s.key, v)}
+                    error={errors[`symptom_${s.key}`]}
+                  />
+                </View>
               ))}
             </View>
 
-            <YesNoToggle
-              label="Possui alergias?"
-              value={hasAllergies}
-              onChange={setHasAllergies}
-              error={errors.allergies}
-            />
+            <View ref={setFieldRef("allergies")} collapsable={false}>
+              <YesNoToggle
+                label="Possui alergias?"
+                value={hasAllergies}
+                onChange={setHasAllergies}
+                error={errors.allergies}
+              />
+            </View>
             {hasAllergies && (
-              <Input
-                label="Quais alergias?"
-                value={allergiesDetails}
-                onChangeText={setAllergiesDetails}
-                error={errors.allergiesDetails}
-              />
+              <View ref={setFieldRef("allergiesDetails")} collapsable={false}>
+                <Input
+                  label="Quais alergias?"
+                  value={allergiesDetails}
+                  onChangeText={setAllergiesDetails}
+                  error={errors.allergiesDetails}
+                />
+              </View>
             )}
 
-            <YesNoToggle
-              label="Lesão recente?"
-              value={hasInjury}
-              onChange={setHasInjury}
-              error={errors.injury}
-            />
+            <View ref={setFieldRef("injury")} collapsable={false}>
+              <YesNoToggle
+                label="Lesão recente?"
+                value={hasInjury}
+                onChange={setHasInjury}
+                error={errors.injury}
+              />
+            </View>
             {hasInjury && (
-              <Input
-                label="Descreva a lesão"
-                value={injuryDetails}
-                onChangeText={setInjuryDetails}
-                error={errors.injuryDetails}
-              />
+              <View ref={setFieldRef("injuryDetails")} collapsable={false}>
+                <Input
+                  label="Descreva a lesão"
+                  value={injuryDetails}
+                  onChangeText={setInjuryDetails}
+                  error={errors.injuryDetails}
+                />
+              </View>
             )}
 
-            <YesNoToggle
-              label="Restrição para exercícios?"
-              value={hasRestriction}
-              onChange={setHasRestriction}
-              error={errors.restriction}
-            />
-            {hasRestriction && (
-              <Input
-                label="Descreva a restrição"
-                value={restrictionDetails}
-                onChangeText={setRestrictionDetails}
-                error={errors.restrictionDetails}
+            <View ref={setFieldRef("restriction")} collapsable={false}>
+              <YesNoToggle
+                label="Restrição para exercícios?"
+                value={hasRestriction}
+                onChange={setHasRestriction}
+                error={errors.restriction}
               />
+            </View>
+            {hasRestriction && (
+              <View ref={setFieldRef("restrictionDetails")} collapsable={false}>
+                <Input
+                  label="Descreva a restrição"
+                  value={restrictionDetails}
+                  onChangeText={setRestrictionDetails}
+                  error={errors.restrictionDetails}
+                />
+              </View>
             )}
           </View>
 
           <View style={styles.footer}>
             <Button label="Continuar" onPress={handleNext} />
+          </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -315,6 +390,17 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     marginLeft: 4,
     marginBottom: spacing.xs,
+  },
+  symptomsPanel: {
+    borderWidth: 1,
+    borderColor: "transparent",
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginHorizontal: -spacing.sm,
+  },
+  panelError: {
+    borderColor: colors.error,
   },
   errorText: {
     fontSize: 12,
