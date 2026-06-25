@@ -8,7 +8,6 @@ import {
   setupNotificationListeners,
 } from "../lib/pushNotifications";
 import { AuthNavigator } from "./AuthNavigator";
-import { AnamneseNavigator, type AnamneseTarget } from "./AnamneseNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
@@ -29,7 +28,7 @@ export function useSignupGuard() {
   return useContext(SignupGuardCtx);
 }
 
-type AppState = "loading" | "auth" | "email_pending" | "blocked" | "anamnese" | "approved";
+type AppState = "loading" | "auth" | "email_pending" | "blocked" | "approved";
 
 function isPasswordResetLanding(): boolean {
   if (Platform.OS !== "web" || typeof window === "undefined") return false;
@@ -48,7 +47,6 @@ export function RootNavigator() {
   // ResetPassword screen can handle the oobCode.
   const resetLanding = isPasswordResetLanding();
   const [accountStatus, setAccountStatus] = useState("");
-  const [anamneseTargets, setAnamneseTargets] = useState<AnamneseTarget[]>([]);
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
@@ -66,34 +64,8 @@ export function RootNavigator() {
         return;
       }
 
-      // Check pending anamneses (self + dependents)
-      // Even if self is "approved", may have dependents waiting
-      try {
-        const pending = await api.get<{
-          pending: AnamneseTarget[];
-        }>("/medical-history/pending");
-        if (pending.pending.length > 0) {
-          setAnamneseTargets(pending.pending);
-          setAppState("anamnese");
-          return;
-        }
-      } catch {
-        // Endpoint might not be available — fall through
-      }
-
       if (status === "approved") {
         setAppState("approved");
-      } else if (status === "waiting_medical_history") {
-        // Fallback: should have been caught by pending endpoint above
-        setAnamneseTargets([
-          {
-            uid: user?.uid ?? "",
-            name: user?.displayName ?? "Você",
-            birthDate: res.birthDate ?? "",
-            isSelf: true,
-          },
-        ]);
-        setAppState("anamnese");
       } else {
         setAppState("blocked");
       }
@@ -163,15 +135,6 @@ export function RootNavigator() {
           onVerified={() => {
             setAccountStatus("pending_approval");
             setAppState("blocked");
-          }}
-        />
-      ) : appState === "anamnese" ? (
-        <AnamneseNavigator
-          targets={anamneseTargets}
-          onAllSubmitted={() => {
-            // After all anamneses (self + dependents) are submitted,
-            // re-check approval status to determine next screen
-            checkApproval();
           }}
         />
       ) : appState === "blocked" ? (
