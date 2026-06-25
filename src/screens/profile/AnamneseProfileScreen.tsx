@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -13,7 +14,12 @@ import { api, ApiError } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
 import { Button } from "../../components/ui/Button";
 import { AnamneseStepsHost } from "../anamnese/AnamneseStepsHost";
+import {
+  AnamneseSummary,
+  type AnamneseSummaryData,
+} from "../../components/anamnese/AnamneseSummary";
 import type { AnamneseTarget } from "../../navigation/AnamneseNavigator";
+import type { AnamneseState } from "../../context/AnamneseContext";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -24,26 +30,65 @@ type AnamneseStatus =
   | "approved"
   | "needs_revision";
 
-interface MedicalHistoryResponse {
+interface MedicalHistoryResponse extends AnamneseSummaryData {
   status: AnamneseStatus;
   reviewNote?: string | null;
 }
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
-const STATUS_LABEL: Record<AnamneseStatus, string> = {
-  not_started: "Não preenchida",
+const STATUS_LABEL: Record<Exclude<AnamneseStatus, "not_started">, string> = {
   pending_approval: "Em análise",
   approved: "Aprovada",
   needs_revision: "Revisão solicitada",
 };
 
-const STATUS_COLOR: Record<AnamneseStatus, string> = {
-  not_started: colors.mutedForeground,
+const STATUS_COLOR: Record<Exclude<AnamneseStatus, "not_started">, string> = {
   pending_approval: colors.warning,
   approved: colors.success,
   needs_revision: colors.error,
 };
+
+const STATUS_DESCRIPTION: Record<Exclude<AnamneseStatus, "not_started">, string> = {
+  pending_approval: "Sua ficha foi enviada e está aguardando análise pela equipe.",
+  approved: "Sua ficha de saúde foi aprovada pela equipe.",
+  needs_revision: "A equipe pediu ajustes na sua ficha. Edite e reenvie.",
+};
+
+// Map the backend response into the flat wizard state (for editing).
+function responseToState(data: MedicalHistoryResponse): Partial<AnamneseState> {
+  const mh = data.medicalHistory ?? {};
+  const hb = data.healthBehavior ?? {};
+  const da = data.dailyActivities ?? undefined;
+  return {
+    weeklyWorkHours: da?.weeklyWorkHours ?? "",
+    workActivities: da?.workActivities ?? [],
+    workActivitiesNotes: da?.workActivitiesNotes ?? "",
+    lastMedicalExamDate: mh.lastMedicalExamDate ?? "",
+    familyHeartDisease: mh.familyHeartDisease ?? [],
+    surgeries: mh.surgeries ?? [],
+    surgeriesOther: mh.surgeriesOther ?? "",
+    diagnosedConditions: mh.diagnosedConditions ?? [],
+    diagnosedConditionsOther: mh.diagnosedConditionsOther ?? "",
+    currentMedications: mh.currentMedications ?? "",
+    symptoms: (mh.symptoms ?? {}) as AnamneseState["symptoms"],
+    hasAllergies: mh.hasAllergies ?? null,
+    allergiesDetails: mh.allergiesDetails ?? "",
+    hasRecentInjury: mh.hasRecentInjury ?? null,
+    injuryDetails: mh.injuryDetails ?? "",
+    hasExerciseRestriction: mh.hasExerciseRestriction ?? null,
+    restrictionDetails: mh.restrictionDetails ?? "",
+    smokes: hb.smokes ?? null,
+    cigarettesPerDay: hb.cigarettesPerDay ?? "",
+    practicesPhysicalActivity: hb.practicesPhysicalActivity ?? null,
+    physicalActivityDescription: hb.physicalActivityDescription ?? "",
+    physicalActivityFrequency: hb.physicalActivityFrequency ?? "",
+    physicalActivityDuration: hb.physicalActivityDuration ?? "",
+    goals: data.goals ?? [],
+    goalsOther: data.goalsOther ?? "",
+    generalComments: data.generalComments ?? "",
+  };
+}
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
@@ -56,11 +101,13 @@ export function AnamneseProfileScreen({ onBack }: Props) {
   const currentUid = auth.currentUser?.uid ?? "";
   const targetUid = actingAs ?? currentUid;
 
+  const [data, setData] = useState<MedicalHistoryResponse | null>(null);
   const [status, setStatus] = useState<AnamneseStatus | null>(null);
   const [reviewNote, setReviewNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [showSteps, setShowSteps] = useState(false);
+  const [showSteps, setShowSteps] = useState(false); // edit mode (filled → wizard)
+  const [editInitial, setEditInitial] = useState<Partial<AnamneseState> | undefined>();
   const [userBirthDate, setUserBirthDate] = useState("01/01/2000");
 
   const fetchStatus = useCallback(async () => {
@@ -69,15 +116,16 @@ export function AnamneseProfileScreen({ onBack }: Props) {
     try {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
-
-      const data = await api.get<MedicalHistoryResponse>(
+      const res = await api.get<MedicalHistoryResponse>(
         `/medical-history/${targetUid}`,
         { headers },
       );
-      setStatus(data.status);
-      setReviewNote(data.reviewNote ?? null);
+      setData(res);
+      setStatus(res.status);
+      setReviewNote(res.reviewNote ?? null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
+        setData(null);
         setStatus("not_started");
         setReviewNote(null);
       } else {
@@ -92,14 +140,12 @@ export function AnamneseProfileScreen({ onBack }: Props) {
     try {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
-      const data = await api.get<{ birthDate?: string }>(
-        "/users/me/profile",
-        { headers },
-      );
-      const date = data.birthDate;
-      if (date) setUserBirthDate(date);
+      const profile = await api.get<{ birthDate?: string }>("/users/me/profile", {
+        headers,
+      });
+      if (profile.birthDate) setUserBirthDate(profile.birthDate);
     } catch {
-      // use default — steps can still run
+      // default keeps the wizard usable
     }
   }, [actingAs]);
 
@@ -108,21 +154,37 @@ export function AnamneseProfileScreen({ onBack }: Props) {
     fetchBirthDate();
   }, [fetchStatus, fetchBirthDate]);
 
-  const handleStartSteps = useCallback(() => {
+  const handleStartEdit = useCallback(() => {
+    if (data) setEditInitial(responseToState(data));
     setShowSteps(true);
-  }, []);
+  }, [data]);
+
+  const handleExit = useCallback(() => {
+    if (showSteps) {
+      // editing an existing anamnese → return to the read-only summary
+      setShowSteps(false);
+      setEditInitial(undefined);
+    } else {
+      // fresh fill (not_started) → leave to the profile
+      onBack();
+    }
+  }, [showSteps, onBack]);
 
   const handleStepsSubmitted = useCallback(() => {
     setShowSteps(false);
+    setEditInitial(undefined);
     fetchStatus();
   }, [fetchStatus]);
 
-  // ── Step flow ───────────────────────────────────────────────────────────────
+  // ── Wizard: fresh fill (not_started) OR editing an existing anamnese ─────────
 
-  if (showSteps) {
+  const wizardActive =
+    showSteps || (!loading && !fetchError && status === "not_started");
+
+  if (wizardActive) {
     const target: AnamneseTarget = {
       uid: targetUid,
-      name: "",        // banner not shown when total === 1
+      name: "",
       birthDate: userBirthDate,
       isSelf: !actingAs,
     };
@@ -130,21 +192,28 @@ export function AnamneseProfileScreen({ onBack }: Props) {
       <AnamneseStepsHost
         target={target}
         onSubmitted={handleStepsSubmitted}
+        onExit={handleExit}
+        initialState={editInitial}
       />
     );
   }
 
-  // ── Status view ─────────────────────────────────────────────────────────────
+  // ── Read-only summary (filled) ───────────────────────────────────────────────
+
+  const filledStatus =
+    status && status !== "not_started"
+      ? (status as Exclude<AnamneseStatus, "not_started">)
+      : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Feather
-          name="chevron-left"
-          size={24}
-          color={colors.foreground}
+        <TouchableOpacity
           onPress={onBack}
-        />
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Feather name="chevron-left" size={24} color={colors.foreground} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Ficha de saúde</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -163,66 +232,35 @@ export function AnamneseProfileScreen({ onBack }: Props) {
               {fetchError}
             </Text>
           </View>
-        ) : (
+        ) : filledStatus && data ? (
           <>
-            {/* Status card */}
             <View style={styles.statusCard}>
               <View style={styles.statusRow}>
-                <Feather
-                  name="activity"
-                  size={20}
-                  color={STATUS_COLOR[status ?? "not_started"]}
-                />
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    { color: STATUS_COLOR[status ?? "not_started"] },
-                  ]}
-                >
-                  {STATUS_LABEL[status ?? "not_started"]}
+                <Feather name="activity" size={20} color={STATUS_COLOR[filledStatus]} />
+                <Text style={[styles.statusLabel, { color: STATUS_COLOR[filledStatus] }]}>
+                  {STATUS_LABEL[filledStatus]}
                 </Text>
               </View>
-
-              {status === "needs_revision" && reviewNote ? (
+              <Text style={styles.statusDescription}>
+                {STATUS_DESCRIPTION[filledStatus]}
+              </Text>
+              {filledStatus === "needs_revision" && reviewNote ? (
                 <View style={styles.reviewNoteBox}>
-                  <Text style={styles.reviewNoteTitle}>Observação do assistente</Text>
+                  <Text style={styles.reviewNoteTitle}>Observação da equipe</Text>
                   <Text style={styles.reviewNoteText}>{reviewNote}</Text>
                 </View>
               ) : null}
-
-              {status === "not_started" && (
-                <Text style={styles.statusDescription}>
-                  A ficha de saúde ainda não foi preenchida. Preencha agora para
-                  que a equipe possa acompanhar seu histórico de saúde.
-                </Text>
-              )}
-
-              {status === "pending_approval" && (
-                <Text style={styles.statusDescription}>
-                  Sua ficha foi enviada e está aguardando análise pela equipe.
-                </Text>
-              )}
-
-              {status === "approved" && (
-                <Text style={styles.statusDescription}>
-                  Sua ficha de saúde foi aprovada pela equipe.
-                </Text>
-              )}
             </View>
 
-            {/* Action button */}
-            {(status === "not_started" || status === "needs_revision") && (
-              <View style={styles.buttonWrap}>
-                <Button
-                  label={
-                    status === "not_started" ? "Preencher" : "Editar e reenviar"
-                  }
-                  onPress={handleStartSteps}
-                />
-              </View>
-            )}
+            <View style={styles.summaryWrap}>
+              <AnamneseSummary data={data} />
+            </View>
+
+            <View style={styles.buttonWrap}>
+              <Button label="Editar ficha" onPress={handleStartEdit} />
+            </View>
           </>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -265,6 +303,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   statusRow: {
     flexDirection: "row",
@@ -280,7 +319,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mutedForeground,
     lineHeight: 19,
-    marginTop: spacing.xs,
   },
   reviewNoteBox: {
     backgroundColor: "rgba(239,68,68,0.08)",
@@ -304,7 +342,10 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     lineHeight: 19,
   },
+  summaryWrap: {
+    marginBottom: spacing.md,
+  },
   buttonWrap: {
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
   },
 });

@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
-import { AnamneseProvider } from "../../context/AnamneseContext";
+import { AnamneseProvider, type AnamneseState } from "../../context/AnamneseContext";
 import { StepDailyActivities } from "./StepDailyActivities";
 import { StepMedicalHistory } from "./StepMedicalHistory";
 import { StepHealthBehavior } from "./StepHealthBehavior";
@@ -51,6 +51,14 @@ interface Props {
   index?: number;
   total?: number;
   onSubmitted: () => void;
+  /**
+   * Called when the user goes back from the FIRST step. In the blocking gate
+   * (AnamneseNavigator) this is omitted so the first step has nowhere to go;
+   * the profile sub-screen passes it to return to the status view.
+   */
+  onExit?: () => void;
+  /** Pre-fill the form when editing an existing anamnese. */
+  initialState?: Partial<AnamneseState>;
 }
 
 export function AnamneseStepsHost({
@@ -58,6 +66,8 @@ export function AnamneseStepsHost({
   index = 0,
   total = 1,
   onSubmitted,
+  onExit,
+  initialState,
 }: Props) {
   const userAge = useMemo(() => calculateAge(target.birthDate), [target.birthDate]);
 
@@ -72,15 +82,19 @@ export function AnamneseStepsHost({
   }, []);
 
   const goBack = useCallback(() => {
-    setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
-  }, []);
+    if (stack.length <= 1) {
+      onExit?.();
+      return;
+    }
+    setStack((prev) => prev.slice(0, -1));
+  }, [stack.length, onExit]);
 
   const Screen = SCREENS[stack[stack.length - 1]];
 
   return (
     <AnamneseTargetCtx.Provider value={{ current: target, index, total }}>
       <AnamneseNavCtx.Provider value={{ navigate, goBack }}>
-        <AnamneseProvider key={resetKey} userAge={userAge}>
+        <AnamneseProvider key={resetKey} userAge={userAge} initialState={initialState}>
           <Screen onSubmitted={onSubmitted} />
         </AnamneseProvider>
       </AnamneseNavCtx.Provider>
