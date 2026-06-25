@@ -34,6 +34,7 @@ import { ClassesScreen } from "./ClassesScreen";
 import { GraduationScreen } from "./GraduationScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
 import { DependentsListScreen } from "./DependentsListScreen";
+import { AnamneseProfileScreen } from "./AnamneseProfileScreen";
 
 interface ProfileData {
   uid: string;
@@ -54,7 +55,8 @@ type Screen =
   | "dependents-list"
   | "classes"
   | "graduation"
-  | "change-password";
+  | "change-password"
+  | "anamnese";
 
 interface DependentInfo {
   uid: string;
@@ -390,6 +392,11 @@ export function ProfileScreen({
       <ChangePasswordScreen onBack={() => setScreen("profile")} />
     );
   }
+  if (screen === "anamnese") {
+    return (
+      <AnamneseProfileScreen onBack={() => setScreen("profile")} />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -499,6 +506,15 @@ export function ProfileScreen({
               />
             </>
           )}
+
+          {/* Health form — visible to all roles */}
+          <MenuDivider />
+          <MenuCard
+            icon="heart"
+            title="Ficha de saúde"
+            subtitle="Anamnese e histórico de saúde"
+            onPress={() => setScreen("anamnese")}
+          />
 
           {/* Change password */}
           <MenuDivider />
