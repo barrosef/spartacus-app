@@ -19,6 +19,8 @@ import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import type { TimelineEntry } from "../../components/timeline/types";
+import { AnamneseReminderBanner } from "../../components/profile/AnamneseReminderBanner";
+import { useAnamneseStatus } from "../../hooks/useAnamneseStatus";
 
 interface FeedResponse {
   entries: TimelineEntry[];
@@ -31,6 +33,7 @@ interface FeedScreenProps {
   filterVisible?: boolean;
   onFilterClose?: () => void;
   onFilterChange?: (type: string | null) => void;
+  onOpenAnamnese?: () => void;
 }
 
 const POLL_INTERVAL = 30_000;
@@ -44,6 +47,7 @@ export function FeedScreen({
   filterVisible = false,
   onFilterClose,
   onFilterChange,
+  onOpenAnamnese,
 }: FeedScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [screen, setScreen] = useState<
@@ -78,6 +82,7 @@ export function FeedScreen({
   const isSocial = userRoles.includes("social");
   const currentUid = auth.currentUser?.uid ?? "";
   const { actingAs } = useProxy();
+  const { status: anamneseStatus } = useAnamneseStatus();
 
   const fetchFeed = useCallback(
     async (cursor?: string | null) => {
@@ -311,6 +316,13 @@ export function FeedScreen({
 
       {screen === "content" && (
         <>
+        {anamneseStatus !== null && onOpenAnamnese && (
+          <AnamneseReminderBanner
+            roles={userRoles}
+            anamneseStatus={anamneseStatus}
+            onPress={onOpenAnamnese}
+          />
+        )}
         {pinnedEntry && (
           <PinnedRow entry={pinnedEntry} onPress={scrollToPinned} />
         )}

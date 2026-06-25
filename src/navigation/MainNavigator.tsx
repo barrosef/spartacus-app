@@ -66,6 +66,7 @@ function calculateAge(birthDate: string): number | null {
 function MainContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("feed");
   const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialScreen, setProfileInitialScreen] = useState<"profile" | "anamnese">("profile");
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
@@ -119,6 +120,12 @@ function MainContent() {
   const userInitials = getInitials(displayName);
 
   const handleProfilePress = () => {
+    setProfileInitialScreen("profile");
+    setShowProfile(true);
+  };
+
+  const handleOpenAnamnese = () => {
+    setProfileInitialScreen("anamnese");
     setShowProfile(true);
   };
 
@@ -141,6 +148,7 @@ function MainContent() {
         realUserName={userName}
         realUserPhotoUrl={profile?.photoUrl}
         realUserIsGuardian={isGuardian}
+        initialScreen={profileInitialScreen}
       />
     );
   }
@@ -184,6 +192,7 @@ function MainContent() {
             filterVisible={feedFilterVisible}
             onFilterClose={() => setFeedFilterVisible(false)}
             onFilterChange={(t) => setFeedTypeFilter(t)}
+            onOpenAnamnese={handleOpenAnamnese}
           />
         );
       case "checkin":
