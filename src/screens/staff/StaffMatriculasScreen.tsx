@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -109,10 +110,10 @@ export function StaffMatriculasScreen({
     setActionLoading(uid);
     try {
       await api.post(`/accounts/${uid}/transitions`, { action: "approve" });
-      setAccounts((prev) => prev.filter((a) => a.uid !== uid));
-      setScreenState((prev) => {
-        const remaining = accounts.filter((a) => a.uid !== uid);
-        return remaining.length === 0 ? "empty" : prev;
+      setAccounts((prev) => {
+        const next = prev.filter((a) => a.uid !== uid);
+        if (next.length === 0) setScreenState("empty");
+        return next;
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao aprovar conta.";
@@ -120,7 +121,7 @@ export function StaffMatriculasScreen({
     } finally {
       setActionLoading(null);
     }
-  }, [accounts]);
+  }, []);
 
   const handleReject = useCallback((uid: string, name: string) => {
     Alert.alert(
@@ -135,10 +136,10 @@ export function StaffMatriculasScreen({
             setActionLoading(uid);
             try {
               await api.post(`/accounts/${uid}/transitions`, { action: "reject" });
-              setAccounts((prev) => prev.filter((a) => a.uid !== uid));
-              setScreenState((prev) => {
-                const remaining = accounts.filter((a) => a.uid !== uid);
-                return remaining.length === 0 ? "empty" : prev;
+              setAccounts((prev) => {
+                const next = prev.filter((a) => a.uid !== uid);
+                if (next.length === 0) setScreenState("empty");
+                return next;
               });
             } catch (err) {
               const message = err instanceof Error ? err.message : "Erro ao recusar conta.";
@@ -150,7 +151,7 @@ export function StaffMatriculasScreen({
         },
       ],
     );
-  }, [accounts]);
+  }, []);
 
   /* ── Loading ── */
   if (screenState === "loading") {
@@ -297,12 +298,9 @@ export function StaffMatriculasScreen({
 function ScreenHeader({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
-      <Feather
-        name="chevron-left"
-        size={24}
-        color={colors.foreground}
-        onPress={onBack}
-      />
+      <TouchableOpacity onPress={onBack} hitSlop={8}>
+        <Feather name="chevron-left" size={24} color={colors.foreground} />
+      </TouchableOpacity>
       <Text style={styles.headerTitle}>Matrículas</Text>
       <View style={styles.headerSpacer} />
     </View>
