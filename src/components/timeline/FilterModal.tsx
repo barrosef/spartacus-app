@@ -19,6 +19,7 @@ interface FilterModalProps {
   onClose: () => void;
   selectedType: string | null;
   onApply: (type: string | null) => void;
+  isStaff?: boolean;
 }
 
 interface TypeOption {
@@ -52,6 +53,7 @@ export function FilterModal({
   onClose,
   selectedType,
   onApply,
+  isStaff = false,
 }: FilterModalProps) {
   const [localType, setLocalType] = useState<string | null>(selectedType);
   const [localPeriod, setLocalPeriod] = useState<string | null>(null);
@@ -200,6 +202,45 @@ export function FilterModal({
                 })}
               </View>
             </View>
+
+            {/* Management section — staff only */}
+            {isStaff && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Gestão</Text>
+                <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.chip,
+                      localType === "unevaluated" && styles.chipActive,
+                    ]}
+                    onPress={() =>
+                      setLocalType(
+                        localType === "unevaluated" ? null : "unevaluated"
+                      )
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Feather
+                      name="clock"
+                      size={14}
+                      color={
+                        localType === "unevaluated"
+                          ? colors.primary
+                          : colors.mutedForeground
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        localType === "unevaluated" && styles.chipTextActive,
+                      ]}
+                    >
+                      Só não avaliadas
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </ScrollView>
 
           {/* Actions */}

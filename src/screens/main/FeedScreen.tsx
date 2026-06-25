@@ -84,8 +84,10 @@ export function FeedScreen({
 
   const fetchFeed = useCallback(
     async (cursor?: string | null) => {
+      const isUnevaluated = typeFilter === "unevaluated";
       const params = new URLSearchParams();
-      if (typeFilter) params.set("type", typeFilter);
+      // "unevaluated" is a client-side sentinel — do not send it to the backend
+      if (typeFilter && !isUnevaluated) params.set("type", typeFilter);
       if (cursor) params.set("cursor", cursor);
       params.set("limit", "5");
 
@@ -93,7 +95,18 @@ export function FeedScreen({
       const path = `/timeline${qs ? `?${qs}` : ""}`;
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
-      return api.get<FeedResponse>(path, { headers });
+      const data = await api.get<FeedResponse>(path, { headers });
+
+      if (isUnevaluated) {
+        const filtered = data.entries.filter(
+          (e) =>
+            (e.type === "attendance" || e.type === "donation") &&
+            (e.validationStatus === "pending" || e.validationStatus == null)
+        );
+        return { ...data, entries: filtered };
+      }
+
+      return data;
     },
     [typeFilter, actingAs]
   );
@@ -421,6 +434,7 @@ export function FeedScreen({
         visible={filterVisible}
         onClose={() => onFilterClose?.()}
         selectedType={typeFilter}
+        isStaff={isStaff}
         onApply={(type) => {
           onFilterChange?.(type);
           onFilterClose?.();
