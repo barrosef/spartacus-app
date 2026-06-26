@@ -37,6 +37,7 @@ export function StepGoals() {
 
   const [goals, setGoals] = useState<string[]>(state.goals);
   const [goalsOther, setGoalsOther] = useState(state.goalsOther);
+  const [comments, setComments] = useState(state.generalComments);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function toggleGoal(value: string) {
@@ -59,7 +60,7 @@ export function StepGoals() {
     if (!validate()) return;
     dispatch({
       type: "SET_GOALS",
-      payload: { goals, goalsOther },
+      payload: { goals, goalsOther, generalComments: comments },
     });
     navigation.navigate("StepReview");
   }
@@ -103,6 +104,16 @@ export function StepGoals() {
                 error={errors.goalsOther}
               />
             )}
+
+            <Input
+              label="Comentários gerais (opcional)"
+              placeholder="Algo mais que gostaria de informar?"
+              value={comments}
+              onChangeText={setComments}
+              multiline
+              numberOfLines={4}
+              style={{ minHeight: 100, textAlignVertical: "top" }}
+            />
           </View>
 
           <View style={styles.footer}>

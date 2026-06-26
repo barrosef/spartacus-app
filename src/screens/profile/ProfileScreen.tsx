@@ -34,6 +34,9 @@ import { ClassesScreen } from "./ClassesScreen";
 import { GraduationScreen } from "./GraduationScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
 import { DependentsListScreen } from "./DependentsListScreen";
+import { AnamneseProfileScreen } from "./AnamneseProfileScreen";
+import { AnamneseReminderBanner } from "../../components/profile/AnamneseReminderBanner";
+import { useAnamneseStatus } from "../../hooks/useAnamneseStatus";
 
 interface ProfileData {
   uid: string;
@@ -54,7 +57,8 @@ type Screen =
   | "dependents-list"
   | "classes"
   | "graduation"
-  | "change-password";
+  | "change-password"
+  | "anamnese";
 
 interface DependentInfo {
   uid: string;
@@ -69,6 +73,7 @@ interface ProfileScreenProps {
   realUserName?: string;
   realUserPhotoUrl?: string | null;
   realUserIsGuardian?: boolean;
+  initialScreen?: Screen;
 }
 
 export function ProfileScreen({
@@ -77,10 +82,12 @@ export function ProfileScreen({
   realUserName,
   realUserPhotoUrl,
   realUserIsGuardian = false,
+  initialScreen = "profile",
 }: ProfileScreenProps) {
   const { actingAs, switchTo, clearProxy } = useProxy();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [screen, setScreen] = useState<Screen>("profile");
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const { status: anamneseStatus } = useAnamneseStatus();
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<
     | { uri: string; source: "camera" | "gallery"; width: number; height: number }
@@ -390,6 +397,11 @@ export function ProfileScreen({
       <ChangePasswordScreen onBack={() => setScreen("profile")} />
     );
   }
+  if (screen === "anamnese") {
+    return (
+      <AnamneseProfileScreen onBack={() => setScreen("profile")} />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -416,6 +428,14 @@ export function ProfileScreen({
         />
 
         <CompletionBar percent={profile.completionPercent} />
+
+        {anamneseStatus !== null && (
+          <AnamneseReminderBanner
+            roles={profile.roles}
+            anamneseStatus={anamneseStatus}
+            onPress={() => setScreen("anamnese")}
+          />
+        )}
 
         {showAccountSwitcher && (
           <AccountSwitcherPanel
@@ -499,6 +519,15 @@ export function ProfileScreen({
               />
             </>
           )}
+
+          {/* Health form — visible to all roles */}
+          <MenuDivider />
+          <MenuCard
+            icon="heart"
+            title="Ficha de saúde"
+            subtitle="Anamnese e histórico de saúde"
+            onPress={() => setScreen("anamnese")}
+          />
 
           {/* Change password */}
           <MenuDivider />

@@ -42,7 +42,7 @@ interface AnamneseTargetContextValue {
   total: number;
 }
 
-const AnamneseTargetCtx = createContext<AnamneseTargetContextValue | null>(null);
+export const AnamneseTargetCtx = createContext<AnamneseTargetContextValue | null>(null);
 
 export function useAnamneseTarget(): AnamneseTargetContextValue {
   const ctx = useContext(AnamneseTargetCtx);
@@ -57,7 +57,7 @@ interface AnamneseNavigation {
   goBack: () => void;
 }
 
-const AnamneseNavCtx = createContext<AnamneseNavigation | null>(null);
+export const AnamneseNavCtx = createContext<AnamneseNavigation | null>(null);
 
 export function useAnamneseNavigation(): AnamneseNavigation {
   const ctx = useContext(AnamneseNavCtx);

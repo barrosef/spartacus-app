@@ -8,6 +8,7 @@ interface SymptomRowProps {
   label: string;
   value: Frequency;
   onChange: (v: Frequency) => void;
+  error?: string;
 }
 
 const OPTIONS: { value: Frequency; label: string }[] = [
@@ -16,17 +17,21 @@ const OPTIONS: { value: Frequency; label: string }[] = [
   { value: "never", label: "Nunca" },
 ];
 
-export function SymptomRow({ label, value, onChange }: SymptomRowProps) {
+export function SymptomRow({ label, value, onChange, error }: SymptomRowProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, !!error && styles.labelError]}>{label}</Text>
       <View style={styles.row}>
         {OPTIONS.map((opt) => {
           const active = value === opt.value;
           return (
             <TouchableOpacity
               key={opt.value}
-              style={[styles.option, active && styles.optionActive]}
+              style={[
+                styles.option,
+                active && styles.optionActive,
+                !!error && !active && styles.optionError,
+              ]}
               onPress={() => onChange(opt.value as Frequency)}
               activeOpacity={0.8}
             >
@@ -37,6 +42,7 @@ export function SymptomRow({ label, value, onChange }: SymptomRowProps) {
           );
         })}
       </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -51,6 +57,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontBodyMedium,
     color: colors.foreground,
     lineHeight: 18,
+  },
+  labelError: {
+    color: colors.error,
+  },
+  optionError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    fontFamily: typography.fontBody,
+    marginTop: 2,
   },
   row: {
     flexDirection: "row",

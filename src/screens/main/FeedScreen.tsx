@@ -19,6 +19,9 @@ import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import type { TimelineEntry } from "../../components/timeline/types";
+import { AnamneseReminderBanner } from "../../components/profile/AnamneseReminderBanner";
+import { useAnamneseStatus } from "../../hooks/useAnamneseStatus";
+import { STAFF_ROLES } from "../../constants/roles";
 
 interface FeedResponse {
   entries: TimelineEntry[];
@@ -31,12 +34,10 @@ interface FeedScreenProps {
   filterVisible?: boolean;
   onFilterClose?: () => void;
   onFilterChange?: (type: string | null) => void;
+  onOpenAnamnese?: () => void;
 }
 
 const POLL_INTERVAL = 30_000;
-const STAFF_ROLES = new Set([
-  "owner", "assistant", "teacher", "instructor",
-]);
 
 export function FeedScreen({
   userRoles = [],
@@ -44,6 +45,7 @@ export function FeedScreen({
   filterVisible = false,
   onFilterClose,
   onFilterChange,
+  onOpenAnamnese,
 }: FeedScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [screen, setScreen] = useState<
@@ -78,11 +80,14 @@ export function FeedScreen({
   const isSocial = userRoles.includes("social");
   const currentUid = auth.currentUser?.uid ?? "";
   const { actingAs } = useProxy();
+  const { status: anamneseStatus } = useAnamneseStatus();
 
   const fetchFeed = useCallback(
     async (cursor?: string | null) => {
+      const isUnevaluated = typeFilter === "unevaluated";
       const params = new URLSearchParams();
-      if (typeFilter) params.set("type", typeFilter);
+      // "unevaluated" is a client-side sentinel — do not send it to the backend
+      if (typeFilter && !isUnevaluated) params.set("type", typeFilter);
       if (cursor) params.set("cursor", cursor);
       params.set("limit", "5");
 
@@ -90,7 +95,18 @@ export function FeedScreen({
       const path = `/timeline${qs ? `?${qs}` : ""}`;
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
-      return api.get<FeedResponse>(path, { headers });
+      const data = await api.get<FeedResponse>(path, { headers });
+
+      if (isUnevaluated) {
+        const filtered = data.entries.filter(
+          (e) =>
+            (e.type === "attendance" || e.type === "donation") &&
+            (e.validationStatus === "pending" || e.validationStatus == null)
+        );
+        return { ...data, entries: filtered };
+      }
+
+      return data;
     },
     [typeFilter, actingAs]
   );
@@ -311,6 +327,13 @@ export function FeedScreen({
 
       {screen === "content" && (
         <>
+        {anamneseStatus !== null && onOpenAnamnese && (
+          <AnamneseReminderBanner
+            roles={userRoles}
+            anamneseStatus={anamneseStatus}
+            onPress={onOpenAnamnese}
+          />
+        )}
         {pinnedEntry && (
           <PinnedRow entry={pinnedEntry} onPress={scrollToPinned} />
         )}
@@ -411,6 +434,7 @@ export function FeedScreen({
         visible={filterVisible}
         onClose={() => onFilterClose?.()}
         selectedType={typeFilter}
+        isStaff={isStaff}
         onApply={(type) => {
           onFilterChange?.(type);
           onFilterClose?.();

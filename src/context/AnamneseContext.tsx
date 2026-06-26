@@ -117,11 +117,18 @@ const AnamneseCtx = createContext<AnamneseContextValue | null>(null);
 export function AnamneseProvider({
   children,
   userAge,
+  initialState,
 }: {
   children: React.ReactNode;
   userAge: number;
+  /** Pre-fill the form (e.g. editing an existing anamnese). */
+  initialState?: Partial<AnamneseState>;
 }) {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(reducer, {
+    ...INITIAL_STATE,
+    ...initialState,
+    symptoms: { ...INITIAL_SYMPTOMS, ...(initialState?.symptoms ?? {}) },
+  });
 
   return (
     <AnamneseCtx.Provider value={{ state, dispatch, userAge }}>

@@ -18,6 +18,9 @@ import { DonationsScreen } from "../screens/main/DonationsScreen";
 import { FrequencyHistoryScreen } from "../screens/main/FrequencyHistoryScreen";
 import { MyDonationsScreen } from "../screens/main/MyDonationsScreen";
 import { PostWizardScreen } from "../screens/main/PostWizardScreen";
+import { StaffMatriculasScreen } from "../screens/staff/StaffMatriculasScreen";
+import { StaffAnamnesesScreen } from "../screens/staff/StaffAnamnesesScreen";
+import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
@@ -66,9 +69,11 @@ function calculateAge(birthDate: string): number | null {
 function MainContent() {
   const [activeTab, setActiveTab] = useState<TabKey>("feed");
   const [showProfile, setShowProfile] = useState(false);
+  const [profileInitialScreen, setProfileInitialScreen] = useState<"profile" | "anamnese">("profile");
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
+  const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes">(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [feedFilterVisible, setFeedFilterVisible] = useState(false);
   const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
@@ -119,12 +124,23 @@ function MainContent() {
   const userInitials = getInitials(displayName);
 
   const handleProfilePress = () => {
+    setProfileInitialScreen("profile");
+    setShowProfile(true);
+  };
+
+  const handleOpenAnamnese = () => {
+    setProfileInitialScreen("anamnese");
     setShowProfile(true);
   };
 
   const handleDrawerNavigate = (key: string) => {
     if (key === "donations") setShowMyDonations(true);
     if (key === "frequency") setShowFrequency(true);
+    if (key === "staff_matriculas") setStaffScreen("matriculas");
+    if (key === "staff_anamneses") setStaffScreen("anamneses");
+    if (key === "staff_graduacoes") setStaffScreen("graduacoes");
+    if (key === "staff_frequencia") { setActiveTab("feed"); setFeedTypeFilter("attendance"); }
+    if (key === "staff_doacoes") { setActiveTab("feed"); setFeedTypeFilter("donation"); }
   };
 
   if (showProfile) {
@@ -141,6 +157,7 @@ function MainContent() {
         realUserName={userName}
         realUserPhotoUrl={profile?.photoUrl}
         realUserIsGuardian={isGuardian}
+        initialScreen={profileInitialScreen}
       />
     );
   }
@@ -174,6 +191,23 @@ function MainContent() {
     );
   }
 
+  if (staffScreen === "matriculas") {
+    return (
+      <StaffMatriculasScreen
+        onBack={() => setStaffScreen(null)}
+        userRoles={profile?.roles ?? []}
+      />
+    );
+  }
+
+  if (staffScreen === "anamneses") {
+    return <StaffAnamnesesScreen onBack={() => setStaffScreen(null)} />;
+  }
+
+  if (staffScreen === "graduacoes") {
+    return <StaffGraduacoesScreen onBack={() => setStaffScreen(null)} />;
+  }
+
   const renderTab = () => {
     switch (activeTab) {
       case "feed":
@@ -184,6 +218,7 @@ function MainContent() {
             filterVisible={feedFilterVisible}
             onFilterClose={() => setFeedFilterVisible(false)}
             onFilterChange={(t) => setFeedTypeFilter(t)}
+            onOpenAnamnese={handleOpenAnamnese}
           />
         );
       case "checkin":
@@ -216,7 +251,12 @@ function MainContent() {
       <View style={styles.content}>{renderTab()}</View>
       <BottomNav
         activeTab={activeTab}
-        onTabPress={setActiveTab}
+        onTabPress={(tab) => {
+          // Opening the Timeline via the bottom nav resets to the default
+          // "Todos" filter; the Gestão drawer shortcuts set it explicitly.
+          if (tab === "feed") setFeedTypeFilter(null);
+          setActiveTab(tab);
+        }}
         showPostButton={hasSocialRole}
         onPostPress={() => setShowPostWizard(true)}
       />
@@ -226,6 +266,7 @@ function MainContent() {
         onClose={() => setDrawerVisible(false)}
         userName={userName}
         userInitials={userInitials}
+        userRoles={profile?.roles ?? []}
         onNavigate={handleDrawerNavigate}
       />
 

@@ -65,12 +65,24 @@ export function ConfirmationModal({
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
-  const config = ACTION_CONFIG[action];
+  // Donations don't have an "absence" — rejecting a donation means the
+  // pledged donation was not received. Use clearer copy for that case.
+  const isDonation = entityLabel === "doação";
+  const config =
+    action === "absent" && isDonation
+      ? {
+          ...ACTION_CONFIG.absent,
+          title: "Recusar doação",
+          buttonLabel: "Sim, recusar",
+        }
+      : ACTION_CONFIG[action];
 
   const message =
     action === "confirm"
       ? `Você está prestes a confirmar o registro de ${entityLabel} de ${targetName}. Esta ação valida que o registro é legítimo.`
-      : `Você está prestes a marcar como ausência o registro de ${entityLabel} de ${targetName}. O aluno poderá solicitar uma revisão.`;
+      : isDonation
+        ? `Você está prestes a recusar o registro de doação de ${targetName}. O usuário poderá solicitar uma revisão.`
+        : `Você está prestes a marcar como ausência o registro de ${entityLabel} de ${targetName}. O aluno poderá solicitar uma revisão.`;
 
   return (
     <Modal
