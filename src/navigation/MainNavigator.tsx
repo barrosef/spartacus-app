@@ -251,7 +251,12 @@ function MainContent() {
       <View style={styles.content}>{renderTab()}</View>
       <BottomNav
         activeTab={activeTab}
-        onTabPress={setActiveTab}
+        onTabPress={(tab) => {
+          // Opening the Timeline via the bottom nav resets to the default
+          // "Todos" filter; the Gestão drawer shortcuts set it explicitly.
+          if (tab === "feed") setFeedTypeFilter(null);
+          setActiveTab(tab);
+        }}
         showPostButton={hasSocialRole}
         onPostPress={() => setShowPostWizard(true)}
       />
