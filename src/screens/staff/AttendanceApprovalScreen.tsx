@@ -25,7 +25,7 @@ interface AttendanceStudent {
   name: string;
   nickname?: string;
   photoUrl?: string | null;
-  birthDate?: string;
+  age?: number | null;
   ageCategory?: string | null;
   status: "registered" | "absent" | "confirmed";
   source?: "qr" | "manual";
@@ -33,8 +33,7 @@ interface AttendanceStudent {
 }
 
 interface AttendanceDashboard {
-  aulaId: string;
-  classId: string;
+  aulaId: string | null;
   date: string;
   students: AttendanceStudent[];
 }
@@ -53,22 +52,6 @@ const ORDER: Record<AttendanceStudent["status"], number> = {
   absent: 1,
   confirmed: 2,
 };
-
-/* ── Age helper ─────────────────────────────────────────────────── */
-
-function computeAge(birthDate?: string): string | null {
-  if (!birthDate) return null;
-  const match = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return birthDate;
-  const birth = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age -= 1;
-  }
-  return `${age} anos`;
-}
 
 /* ── Date formatter ─────────────────────────────────────────────── */
 
@@ -240,7 +223,7 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
 
   function renderCard(student: AttendanceStudent) {
     const displayName = student.nickname ?? student.name;
-    const age = computeAge(student.birthDate);
+    const age = student.age != null ? `${student.age} anos` : null;
     const isActing = actionLoading === student.userId;
     const busy = actionLoading !== null;
 
