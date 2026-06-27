@@ -20,7 +20,7 @@ type ActionType = "confirm" | "absent";
 interface ConfirmationModalProps {
   visible: boolean;
   action: ActionType;
-  /** "presença" or "doação" */
+  /** "presença" or "apoio" */
   entityLabel: string;
   /** Name of the student/user */
   targetName: string;
@@ -65,14 +65,14 @@ export function ConfirmationModal({
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
-  // Donations don't have an "absence" — rejecting a donation means the
-  // pledged donation was not received. Use clearer copy for that case.
-  const isDonation = entityLabel === "doação";
+  // Support (donation/service) records don't have an "absence" — rejecting
+  // means the pledged support was not received. Use clearer copy for that case.
+  const isSupport = entityLabel === "apoio";
   const config =
-    action === "absent" && isDonation
+    action === "absent" && isSupport
       ? {
           ...ACTION_CONFIG.absent,
-          title: "Recusar doação",
+          title: "Recusar apoio",
           buttonLabel: "Sim, recusar",
         }
       : ACTION_CONFIG[action];
@@ -80,8 +80,8 @@ export function ConfirmationModal({
   const message =
     action === "confirm"
       ? `Você está prestes a confirmar o registro de ${entityLabel} de ${targetName}. Esta ação valida que o registro é legítimo.`
-      : isDonation
-        ? `Você está prestes a recusar o registro de doação de ${targetName}. O usuário poderá solicitar uma revisão.`
+      : isSupport
+        ? `Você está prestes a recusar o registro de apoio de ${targetName}. O usuário poderá solicitar uma revisão.`
         : `Você está prestes a marcar como ausência o registro de ${entityLabel} de ${targetName}. O aluno poderá solicitar uma revisão.`;
 
   return (

@@ -21,12 +21,14 @@ import { PostWizardScreen } from "../screens/main/PostWizardScreen";
 import { StaffMatriculasScreen } from "../screens/staff/StaffMatriculasScreen";
 import { StaffAnamnesesScreen } from "../screens/staff/StaffAnamnesesScreen";
 import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
+import { AttendanceApprovalScreen } from "../screens/staff/AttendanceApprovalScreen";
+import { DonationApprovalScreen } from "../screens/staff/DonationApprovalScreen";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
   checkin: "Check-in de Presença",
   calendar: "Calendário",
-  donations: "Doações",
+  donations: "Apoio",
 };
 
 interface ProfileData {
@@ -74,6 +76,8 @@ function MainContent() {
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
   const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes">(null);
+  const [showAttendanceApproval, setShowAttendanceApproval] = useState(false);
+  const [showDonationApproval, setShowDonationApproval] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [feedFilterVisible, setFeedFilterVisible] = useState(false);
   const [feedTypeFilter, setFeedTypeFilter] = useState<string | null>(null);
@@ -139,8 +143,8 @@ function MainContent() {
     if (key === "staff_matriculas") setStaffScreen("matriculas");
     if (key === "staff_anamneses") setStaffScreen("anamneses");
     if (key === "staff_graduacoes") setStaffScreen("graduacoes");
-    if (key === "staff_frequencia") { setActiveTab("feed"); setFeedTypeFilter("attendance"); }
-    if (key === "staff_doacoes") { setActiveTab("feed"); setFeedTypeFilter("donation"); }
+    if (key === "staff_frequencia") setShowAttendanceApproval(true);
+    if (key === "staff_doacoes") setShowDonationApproval(true);
   };
 
   if (showProfile) {
@@ -206,6 +210,14 @@ function MainContent() {
 
   if (staffScreen === "graduacoes") {
     return <StaffGraduacoesScreen onBack={() => setStaffScreen(null)} />;
+  }
+
+  if (showAttendanceApproval) {
+    return <AttendanceApprovalScreen onBack={() => setShowAttendanceApproval(false)} />;
+  }
+
+  if (showDonationApproval) {
+    return <DonationApprovalScreen onBack={() => setShowDonationApproval(false)} />;
   }
 
   const renderTab = () => {

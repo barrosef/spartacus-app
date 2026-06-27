@@ -38,7 +38,7 @@ const PERIOD_OPTIONS = [
 
 const TYPE_OPTIONS: TypeOption[] = [
   { value: null, label: "Todos", icon: "layers" },
-  { value: "donation", label: "Doações", icon: "gift" },
+  { value: "donation", label: "Apoio", icon: "gift" },
   { value: "attendance", label: "Frequência", icon: "check-square" },
   { value: "post", label: "Posts & Avisos", icon: "edit-3" },
   { value: "event", label: "Eventos", icon: "calendar" },
