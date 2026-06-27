@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ interface AttendanceStudent {
   nickname?: string;
   photoUrl?: string | null;
   birthDate?: string;
-  category?: string;
+  ageCategory?: string | null;
   status: "registered" | "absent" | "confirmed";
   source?: "qr" | "manual";
   attendanceId?: string;
@@ -107,16 +107,17 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
 
   /* ── Derived data ── */
 
-  const modalities: { id: string; name: string }[] = [];
-  {
+  const modalities = useMemo(() => {
     const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
     for (const c of classes) {
       if (c.modalityId && !seen.has(c.modalityId)) {
         seen.add(c.modalityId);
-        modalities.push({ id: c.modalityId, name: c.modality });
+        result.push({ id: c.modalityId, name: c.modality });
       }
     }
-  }
+    return result;
+  }, [classes]);
 
   const filteredClasses = selectedModalityId
     ? classes.filter((c) => c.modalityId === selectedModalityId)
@@ -165,11 +166,17 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
     try {
       await postAction(path, body);
       await loadDashboard(selectedClassId);
+      setActionLoading(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao registrar.";
       if (message.includes("Sem aula")) {
+        // Keep actionLoading set — cleared by Alert callback
         Alert.alert("Sem aula hoje", "Registrar presença fora do dia agendado?", [
-          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Cancelar",
+            style: "cancel",
+            onPress: () => setActionLoading(null),
+          },
           {
             text: "Registrar mesmo assim",
             onPress: async () => {
@@ -178,15 +185,16 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
                 await loadDashboard(selectedClassId);
               } catch (e) {
                 Alert.alert("Erro", e instanceof Error ? e.message : "Erro ao registrar.");
+              } finally {
+                setActionLoading(null);
               }
             },
           },
         ]);
       } else {
         Alert.alert("Erro", message);
+        setActionLoading(null);
       }
-    } finally {
-      setActionLoading(null);
     }
   }
 
@@ -248,10 +256,10 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
             )}
             <View style={styles.cardMetaRow}>
               {age !== null && <Text style={styles.cardMeta}>{age}</Text>}
-              {student.category ? (
+              {student.ageCategory ? (
                 <>
                   {age !== null && <Text style={styles.cardMetaSep}>·</Text>}
-                  <Text style={styles.cardMeta}>{student.category}</Text>
+                  <Text style={styles.cardMeta}>{student.ageCategory}</Text>
                 </>
               ) : null}
             </View>
