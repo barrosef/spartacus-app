@@ -110,13 +110,13 @@ export function MyDonationsScreen({
           <View style={styles.emptyIcon}>
             <Feather name="heart" size={28} color={colors.mutedForeground} />
           </View>
-          <Text style={styles.emptyTitle}>Nenhuma doação</Text>
+          <Text style={styles.emptyTitle}>Nenhum apoio</Text>
           <Text style={styles.emptyMsg}>
-            Suas doações aparecerão aqui após o primeiro registro.
+            Seus apoios aparecerão aqui após o primeiro registro.
           </Text>
         </View>
         <View style={styles.footer}>
-          <Button label="Fazer Nova Doação" onPress={onNewDonation} />
+          <Button label="Registrar Apoio" onPress={onNewDonation} />
         </View>
       </SafeAreaView>
     );
@@ -201,7 +201,7 @@ export function MyDonationsScreen({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Fazer Nova Doação" onPress={onNewDonation} />
+        <Button label="Registrar Apoio" onPress={onNewDonation} />
       </View>
     </SafeAreaView>
   );
@@ -218,7 +218,7 @@ function ScreenHeader({ onBack }: { onBack: () => void }) {
         color={colors.foreground}
         onPress={onBack}
       />
-      <Text style={styles.headerTitle}>Minhas Doações</Text>
+      <Text style={styles.headerTitle}>Meu Apoio</Text>
       <View style={styles.headerSpacer} />
     </View>
   );

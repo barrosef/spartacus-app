@@ -22,7 +22,7 @@ interface DrawerItem {
 
 const MENU_ITEMS: DrawerItem[] = [
   { key: "frequency", label: "Frequência", icon: "check-square" },
-  { key: "donations", label: "Doações", icon: "heart" },
+  { key: "donations", label: "Apoio", icon: "heart" },
 ];
 
 const STAFF_MENU_ITEMS: DrawerItem[] = [
@@ -30,7 +30,7 @@ const STAFF_MENU_ITEMS: DrawerItem[] = [
   { key: "staff_anamneses", label: "Anamneses", icon: "clipboard" },
   { key: "staff_graduacoes", label: "Graduações", icon: "award" },
   { key: "staff_frequencia", label: "Frequência (gestão)", icon: "check-square" },
-  { key: "staff_doacoes", label: "Doações", icon: "heart" },
+  { key: "staff_doacoes", label: "Apoio (gestão)", icon: "heart" },
 ];
 
 interface AppDrawerProps {

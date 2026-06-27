@@ -177,7 +177,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.heading}>Confirmação</Text>
           <Text style={styles.sub}>
-            Confirme os detalhes da sua doação. Você deverá
+            Confirme os detalhes do seu apoio. Você deverá
             entregar o item no próximo treino.
           </Text>
 
@@ -239,8 +239,8 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.heading}>Mês de Referência</Text>
           <Text style={styles.sub}>
-            A qual mês essa doação se refere? Você pode registrar
-            doações de meses passados se esqueceu.
+            A qual mês esse apoio se refere? Você pode registrar
+            apoios de meses passados se esqueceu.
           </Text>
 
           <View style={styles.monthGrid}>
@@ -270,7 +270,7 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
 
         <View style={styles.footer}>
           <Button
-            label="Revisar Doação →"
+            label="Revisar Apoio →"
             onPress={() => setScreen("confirm")}
           />
         </View>

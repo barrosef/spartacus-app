@@ -369,7 +369,7 @@ export function FeedScreen({
               const entityType =
                 entry.type === "attendance" ? "attendance" : "donations";
               const entityLabel =
-                entry.type === "attendance" ? "presença" : "doação";
+                entry.type === "attendance" ? "presença" : "apoio";
               setConfirmModal({
                 visible: true,
                 action: "confirm",
@@ -386,7 +386,7 @@ export function FeedScreen({
               const entityType =
                 entry.type === "attendance" ? "attendance" : "donations";
               const entityLabel =
-                entry.type === "attendance" ? "presença" : "doação";
+                entry.type === "attendance" ? "presença" : "apoio";
               setConfirmModal({
                 visible: true,
                 action: "absent",

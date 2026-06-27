@@ -28,7 +28,7 @@ const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
   checkin: "Check-in de Presença",
   calendar: "Calendário",
-  donations: "Doações",
+  donations: "Apoio",
 };
 
 interface ProfileData {

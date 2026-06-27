@@ -388,7 +388,7 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
         <TouchableOpacity onPress={onBack} hitSlop={8}>
           <Feather name="chevron-left" size={24} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Doações</Text>
+        <Text style={styles.headerTitle}>Apoio</Text>
         <TouchableOpacity
           onPress={() => setFilterVisible(true)}
           hitSlop={8}
@@ -519,7 +519,7 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
         <ConfirmationModal
           visible
           action="absent"
-          entityLabel="doação"
+          entityLabel="apoio"
           targetName={rejectTarget.nickname ?? rejectTarget.name}
           onConfirm={handleRejectConfirm}
           onCancel={() => setRejectTarget(null)}

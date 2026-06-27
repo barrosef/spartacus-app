@@ -25,7 +25,7 @@ const TABS: Tab[] = [
   { key: "feed", label: "Feed", icon: "home" },
   { key: "checkin", label: "Check-in", icon: "check-square" },
   { key: "calendar", label: "Calendário", icon: "calendar" },
-  { key: "donations", label: "Doações", icon: "heart" },
+  { key: "donations", label: "Apoio", icon: "heart" },
 ];
 
 interface BottomNavProps {
