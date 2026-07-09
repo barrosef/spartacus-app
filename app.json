@@ -6,6 +6,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "spartacus",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9c2a3ad1-2083-45e1-bb03-3d127b554099"
+    },
     "platforms": [
       "android",
       "web"
