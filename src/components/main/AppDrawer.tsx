@@ -9,10 +9,15 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import * as Application from "expo-application";
 import { colors, typography, spacing } from "../../theme/tokens";
 import { isStaffRoles } from "../../constants/roles";
 
 const DRAWER_WIDTH = 280;
+
+// Versão exibida no rodapé do menu (facilita identificar o build instalado).
+const APP_VERSION = Application.nativeApplicationVersion ?? "—";
+const BUILD_NUMBER = Application.nativeBuildVersion ?? "—";
 
 interface DrawerItem {
   key: string;
@@ -176,6 +181,12 @@ export function AppDrawer({
               ))}
             </>
           )}
+
+          {/* Rodapé: versão do app */}
+          <View style={styles.footerSpacer} />
+          <Text style={styles.versionText}>
+            Versão {APP_VERSION} (build {BUILD_NUMBER})
+          </Text>
         </Animated.View>
 
         {/* Backdrop */}
@@ -205,6 +216,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",
     zIndex: 1,
+  },
+  footerSpacer: {
+    flex: 1,
+    minHeight: spacing.lg,
+  },
+  versionText: {
+    fontFamily: typography.fontBody,
+    fontSize: 12,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    paddingTop: spacing.md,
   },
   header: {
     flexDirection: "row",

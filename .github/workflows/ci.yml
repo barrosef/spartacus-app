@@ -50,20 +50,29 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Auto-increment versionCode
+      - name: Auto-increment version + versionCode
         run: |
+          # versionCode (Android build number): +1
           CURRENT=$(grep -o '"versionCode": *[0-9]*' app.json | grep -o '[0-9]*')
           NEW=$((CURRENT + 1))
           sed -i "s/\"versionCode\": *$CURRENT/\"versionCode\": $NEW/" app.json
-          echo "versionCode: $CURRENT → $NEW"
-          echo "VERSION_CODE=$NEW" >> "$GITHUB_ENV"
 
-      - name: Commit versionCode bump
+          # versionName (semver exibido): bump do patch — major/minor continuam manuais
+          VER=$(grep -o '"version": *"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"' app.json | grep -o '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*')
+          IFS=. read -r MA MI PA <<< "$VER"
+          NEWVER="$MA.$MI.$((PA + 1))"
+          sed -i "s/\"version\": *\"$VER\"/\"version\": \"$NEWVER\"/" app.json
+
+          echo "version: $VER → $NEWVER | versionCode: $CURRENT → $NEW"
+          echo "VERSION_CODE=$NEW" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$NEWVER" >> "$GITHUB_ENV"
+
+      - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app.json
-          git commit -m "chore: bump versionCode to ${{ env.VERSION_CODE }} [skip ci]"
+          git commit -m "chore: bump version to ${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }}) [skip ci]"
           git push
 
       - name: Setup Expo e EAS CLI
@@ -85,6 +94,12 @@ jobs:
 
       - name: Submit to Play Store (internal track)
         run: eas submit --platform android --profile production --latest --non-interactive
+
+      # OTA: publica o bundle JS no canal 'production'. Alcança apps já instalados
+      # que compartilham o mesmo runtimeVersion (fingerprint nativo). Mudanças só
+      # de JS chegam sem passar pela loja; mudanças nativas exigem novo build.
+      - name: Publish OTA update (EAS Update)
+        run: eas update --branch production --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
 
   # ─── Build Web PWA → Firebase Hosting ──────────────────────────────────────
   deploy-web:
