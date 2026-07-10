@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing } from "../../theme/tokens";
@@ -135,7 +143,14 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
         <Input
           label="Nome completo"
           value={name}
@@ -223,7 +238,8 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
           onPress={handleSave}
           style={styles.saveBtn}
         />
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -251,10 +267,13 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 24,
   },
-  content: {
+  flex: {
     flex: 1,
+  },
+  content: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
   genderRow: {
