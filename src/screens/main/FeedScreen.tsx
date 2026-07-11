@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
@@ -207,7 +208,7 @@ export function FeedScreen({
         await api.patch(`/${entityType}/${entityId}/validate`, {
           status,
         });
-        // Optimistic update
+        // Apply only after the backend confirms the change.
         setEntries((prev) =>
           prev.map((e) =>
             e.id === entryId
@@ -215,8 +216,15 @@ export function FeedScreen({
               : e
           )
         );
-      } catch {
-        // Revert handled by next poll
+      } catch (err: unknown) {
+        // Surface the real failure instead of swallowing it — the card kept
+        // its previous state, so the staff member must know it didn't apply.
+        Alert.alert(
+          "Erro",
+          err instanceof Error
+            ? err.message
+            : "Não foi possível validar. Tente novamente.",
+        );
       }
     },
     []

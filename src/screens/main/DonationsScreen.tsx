@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
@@ -109,8 +110,15 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
         { headers },
       );
       setScreen("success");
-    } catch {
-      // handled by API error
+    } catch (err: unknown) {
+      // Surface the real failure — never leave the user on the confirmation
+      // step with no feedback (previously an empty catch swallowed it).
+      Alert.alert(
+        "Erro",
+        err instanceof Error
+          ? err.message
+          : "Não foi possível registrar seu apoio. Tente novamente.",
+      );
     } finally {
       setSubmitting(false);
     }
