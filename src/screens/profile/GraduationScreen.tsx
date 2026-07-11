@@ -131,12 +131,20 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
     try {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
-      await api.patch(
+      const res = await api.patch<{ changed: boolean }>(
         "/users/me/graduation",
         { graduation },
         { headers },
       );
-      setShowSuccess(true);
+      // Only claim success when the server actually persisted a change.
+      if (res?.changed) {
+        setShowSuccess(true);
+      } else {
+        Alert.alert(
+          "Nenhuma alteração",
+          "Não havia mudanças para salvar na sua graduação.",
+        );
+      }
     } catch (err: unknown) {
       Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
     } finally {
@@ -178,91 +186,97 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
             const entry = graduation[slug] ?? { belt: "", degree: 0 };
             const beltOptions = BELT_OPTIONS[mod] ?? getDefaultBelts();
             const selectedBelt = beltOptions.find((b) => b.label === entry.belt);
-            // Locked once inserted (pending) or approved; a rejected entry is
-            // editable again so the student can correct and resubmit.
-            const locked =
-              entry.status === "pending" || entry.status === "approved";
-            const rejected = entry.status === "rejected";
+            // Always editable: the student may re-edit any modality at any
+            // time. A real change re-opens staff approval (server resets it
+            // to "pending"). The badge shows the current approval state.
             const showDegree = slug === "jiu-jitsu" && !BELT_ONLY.has(slug);
 
             return (
               <View key={slug} style={styles.section}>
-                <Text style={styles.modalityTitle}>{mod.toUpperCase()}</Text>
-
-                {locked ? (
-                  <View style={styles.lockedCard}>
-                    <View style={styles.lockedRow}>
-                      {selectedBelt && (
-                        <View style={[styles.beltDot, { backgroundColor: selectedBelt.color }]} />
-                      )}
-                      <Text style={styles.lockedBelt}>
-                        {entry.belt || "—"}
-                        {showDegree && entry.degree ? ` · ${entry.degree}º grau` : ""}
-                      </Text>
-                    </View>
+                <View style={styles.modalityHeader}>
+                  <Text style={styles.modalityTitle}>{mod.toUpperCase()}</Text>
+                  {entry.status && (
                     <View style={[
                       styles.statusPill,
-                      entry.status === "approved" ? styles.statusApproved : styles.statusPending,
+                      entry.status === "approved"
+                        ? styles.statusApproved
+                        : entry.status === "rejected"
+                        ? styles.statusRejected
+                        : styles.statusPending,
                     ]}>
                       <Feather
-                        name={entry.status === "approved" ? "check-circle" : "clock"}
+                        name={
+                          entry.status === "approved"
+                            ? "check-circle"
+                            : entry.status === "rejected"
+                            ? "alert-circle"
+                            : "clock"
+                        }
                         size={12}
-                        color={entry.status === "approved" ? colors.success : colors.primary}
+                        color={
+                          entry.status === "approved"
+                            ? colors.success
+                            : entry.status === "rejected"
+                            ? colors.error
+                            : colors.primary
+                        }
                       />
                       <Text style={[
                         styles.statusText,
-                        { color: entry.status === "approved" ? colors.success : colors.primary },
+                        {
+                          color:
+                            entry.status === "approved"
+                              ? colors.success
+                              : entry.status === "rejected"
+                              ? colors.error
+                              : colors.primary,
+                        },
                       ]}>
                         {entry.status === "approved"
-                          ? "Graduação aprovada"
-                          : "Aguardando aprovação"}
+                          ? "Aprovada"
+                          : entry.status === "rejected"
+                          ? "Não aprovada"
+                          : "Em análise"}
                       </Text>
                     </View>
-                  </View>
-                ) : (
-                  <>
-                    {rejected && (
-                      <View style={styles.rejectedNote}>
-                        <Feather name="alert-circle" size={13} color={colors.error} />
-                        <Text style={styles.rejectedNoteText}>
-                          Graduação não aprovada. Corrija e salve novamente.
-                        </Text>
-                      </View>
-                    )}
-                    <View style={styles.fieldRow}>
-                    <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
-                      <Text style={styles.fieldLabel}>Faixa</Text>
-                      <TouchableOpacity style={styles.select}
-                        onPress={() => setPickerModal({ slug, name: mod })}>
-                        {selectedBelt && (
-                          <View style={[styles.beltDot, { backgroundColor: selectedBelt.color }]} />
-                        )}
-                        <Text style={styles.selectText}>
-                          {entry.belt || "Selecionar"}
-                        </Text>
-                        <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
-                      </TouchableOpacity>
-                    </View>
+                  )}
+                </View>
 
-                    {showDegree && (
-                      <View style={styles.fieldSmall}>
-                        <Input label="Grau" value={String(entry.degree || "")}
-                          onChangeText={(v) => updateField(slug, "degree", parseInt(v) || 0)}
-                          keyboardType="numeric" maxLength={1} />
-                      </View>
-                    )}
-                    </View>
-                  </>
+                {(entry.status === "pending" || entry.status === "approved") && (
+                  <Text style={styles.editHint}>
+                    Alterar a faixa reabre a aprovação pela equipe.
+                  </Text>
                 )}
+
+                <View style={styles.fieldRow}>
+                  <View style={showDegree ? styles.fieldFlex : styles.fieldFull}>
+                    <Text style={styles.fieldLabel}>Faixa</Text>
+                    <TouchableOpacity style={styles.select}
+                      onPress={() => setPickerModal({ slug, name: mod })}>
+                      {selectedBelt && (
+                        <View style={[styles.beltDot, { backgroundColor: selectedBelt.color }]} />
+                      )}
+                      <Text style={styles.selectText}>
+                        {entry.belt || "Selecionar"}
+                      </Text>
+                      <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {showDegree && (
+                    <View style={styles.fieldSmall}>
+                      <Input label="Grau" value={String(entry.degree || "")}
+                        onChangeText={(v) => updateField(slug, "degree", parseInt(v) || 0)}
+                        keyboardType="numeric" maxLength={1} />
+                    </View>
+                  )}
+                </View>
               </View>
             );
           })
         )}
 
-        {modalities.some((m) => {
-          const e = graduation[modalitySlug(m)];
-          return !(e?.status === "pending" || e?.status === "approved");
-        }) && (
+        {modalities.length > 0 && (
           <Button label="Salvar" loading={saving} onPress={handleSave} style={styles.btn} />
         )}
       </ScrollView>
@@ -310,31 +324,26 @@ const styles = StyleSheet.create({
   btn: { marginTop: spacing.xl },
 
   section: { marginBottom: spacing.lg },
+  modalityHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
   modalityTitle: {
     color: colors.primary, fontFamily: typography.fontHeading,
-    fontSize: 14, letterSpacing: 1.5, marginBottom: spacing.sm,
+    fontSize: 14, letterSpacing: 1.5,
   },
-  lockedCard: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: colors.card ?? "rgba(255,255,255,0.03)",
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, padding: spacing.md,
-  },
-  lockedRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flex: 1 },
-  lockedBelt: { color: colors.foreground, fontSize: 15, fontFamily: typography.fontBodyMedium },
   statusPill: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm,
   },
   statusPending: { backgroundColor: colors.primaryMuted },
   statusApproved: { backgroundColor: "rgba(76,175,80,0.12)" },
+  statusRejected: { backgroundColor: "rgba(231,76,76,0.10)" },
   statusText: { fontSize: 11, fontFamily: typography.fontBodyMedium },
-  rejectedNote: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "rgba(231,76,76,0.10)",
-    borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.sm,
+  editHint: {
+    color: colors.mutedForeground, fontSize: 12,
+    fontFamily: typography.fontBody, marginBottom: spacing.sm,
   },
-  rejectedNoteText: { color: colors.error, fontSize: 12, flex: 1 },
   fieldRow: { flexDirection: "row", gap: spacing.sm },
   fieldFlex: { flex: 2 },
   fieldFull: { flex: 1 },
