@@ -20,8 +20,8 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; display: string } | null>(null);
 
-  const load = useCallback(async () => {
-    setScreen("loading");
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setScreen("loading");
     try {
       const res = await api.get<CommentsPage>(`/timeline/${entryId}/comments`);
       setComments(res?.items ?? []);
@@ -44,7 +44,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
     try {
       await api.post(`/timeline/${entryId}/comments`, { text, parentId, mentions });
       setReplyingTo(null);
-      await load();
+      await load(true);
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
         message: err instanceof Error ? err.message : "Não foi possível comentar.",
@@ -59,7 +59,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
     if (!ok) return;
     try {
       await api.delete(`/timeline/${entryId}/comments/${c.id}`);
-      await load();
+      await load(true);
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
         message: err instanceof Error ? err.message : "Não foi possível remover.",
@@ -82,7 +82,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
             <View style={styles.center}>
               <Text style={styles.errTxt}>Não foi possível carregar.</Text>
               <View style={{ marginTop: spacing.md }}>
-                <Button label="Tentar novamente" onPress={load} />
+                <Button label="Tentar novamente" onPress={() => load()} />
               </View>
             </View>
           ) : (
