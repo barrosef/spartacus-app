@@ -38,6 +38,7 @@ export interface TimelineEntry {
   reviewRequested?: boolean;
   reviewResolved?: boolean;
   likesCount: number;
+  commentsCount: number;
   userLiked: boolean;
   isPinned?: boolean;
   turmaName?: string | null;
