@@ -12,6 +12,10 @@ interface Props {
   onCancelReply?: () => void;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: Props) {
   const [text, setText] = useState("");
   const [mentions, setMentions] = useState<{ display: string; uid: string }[]>([]);
@@ -25,7 +29,7 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
   };
 
   const pick = (mn: Mentionable) => {
-    const replaced = text.replace(/@(\w*)$/, `@${mn.display} `);
+    const replaced = text.replace(/@(\w*)$/, () => `@${mn.display} `);
     setText(replaced);
     setMentions((prev) => [...prev, { display: mn.display, uid: mn.uid }]);
     setQuery("");
@@ -34,8 +38,21 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
   const submit = async () => {
     const clean = text.trim();
     if (!clean) return;
-    // só menções cujo @display ainda está presente no texto
-    const used = mentions.filter((mm) => clean.includes(`@${mm.display}`)).map((mm) => mm.uid);
+    // só menções cujo @display ainda está presente no texto — casa da mais longa
+    // para a mais curta e "consome" o trecho encontrado, evitando falso positivo
+    // quando um display é prefixo de outro (ex.: "Ana" vs "Ana Silva").
+    const used: string[] = [];
+    let working = clean;
+    const sortedMentions = [...mentions].sort((a, b) => b.display.length - a.display.length);
+    for (const mm of sortedMentions) {
+      const pattern = new RegExp(`(^|\\s)@${escapeRegExp(mm.display)}(?=$|\\s)`);
+      const match = pattern.exec(working);
+      if (!match) continue;
+      used.push(mm.uid);
+      const atStart = match.index + match[1].length;
+      const span = `@${mm.display}`.length;
+      working = working.slice(0, atStart) + " ".repeat(span) + working.slice(atStart + span);
+    }
     setSending(true);
     try {
       await onSubmit(clean, replyingTo?.commentId ?? null, [...new Set(used)]);
