@@ -102,6 +102,25 @@ jobs:
         # --platform android: o app só suporta [android, web]; sem isso o
         # eas update tenta exportar iOS (default = todas) e falha. Web é
         # servido pelo Firebase Hosting (job deploy-web), não por OTA.
+        #
+        # CRÍTICO: `eas update` roda `expo export` internamente, que NÃO lê o
+        # bloco `env` de eas.json (esse só vale para `eas build`). Sem estas
+        # vars aqui, o bundle OTA sai com EXPO_PUBLIC_FIREBASE_API_KEY=undefined
+        # e o app quebra no boot ("Bundle Load Error"). Valores idênticos a
+        # eas.json → build.production.env para o OTA casar com o build nativo
+        # (config pública do Firebase Web, não são segredos).
+        env:
+          EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyDGQG2D1GNFANFjaTHU8_y3TBbRYzBeFgU
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: spartacus-artes-marciais.firebaseapp.com
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: spartacus-artes-marciais
+          EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: spartacus-artes-marciais.appspot.com
+          EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "820921472402"
+          EXPO_PUBLIC_FIREBASE_APP_ID: "1:820921472402:web:43848ccaf9d112def65d4b"
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com
+          EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: 820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com
+          EXPO_PUBLIC_API_URL: https://api.spartacus.app.br
+          EXPO_PUBLIC_EAS_PROJECT_ID: 9c2a3ad1-2083-45e1-bb03-3d127b554099
+          EXPO_PUBLIC_USE_EMULATORS: "false"
         run: eas update --branch production --platform android --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
 
   # ─── Build Web PWA → Firebase Hosting ──────────────────────────────────────
