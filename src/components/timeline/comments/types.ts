@@ -1,0 +1,25 @@
+export interface Comment {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoUrl?: string | null;
+  text: string;
+  parentId?: string | null;
+  mentions: string[];
+  createdAt: string;
+  deleted: boolean;
+  deletedBy?: string | null;
+}
+
+export interface CommentsPage {
+  items: Comment[];
+  nextCursor?: string | null;
+}
+
+export interface Mentionable {
+  uid: string;
+  display: string;
+  subtitle?: string | null;
+  photoUrl?: string | null;
+  initials: string;
+}

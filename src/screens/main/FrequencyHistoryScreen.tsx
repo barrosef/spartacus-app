@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
+import { Button } from "../../components/ui/Button";
 
 // Enable LayoutAnimation on Android
 if (
@@ -52,7 +53,7 @@ interface AttendanceHistory {
 }
 
 type FilterTab = "all" | "confirmed" | "absent";
-type Screen = "loading" | "loaded" | "empty";
+type Screen = "loading" | "loaded" | "empty" | "error";
 
 /* ── Status config ─────────────────────────────────────────────── */
 
@@ -95,7 +96,8 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
       setData(res);
       setScreen(res.months.length > 0 ? "loaded" : "empty");
     } catch {
-      setScreen("empty");
+      // Falha de leitura é erro, não "sem registros" — não mascarar como vazio.
+      setScreen("error");
     }
   }, [actingAs]);
 
@@ -121,6 +123,27 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* ── Error ── (antes do empty: em erro, data é null e cairia no empty) */
+  if (screen === "error") {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <ScreenHeader onBack={onBack} />
+        <View style={styles.center}>
+          <View style={styles.emptyIcon}>
+            <Feather name="alert-triangle" size={28} color={colors.error} />
+          </View>
+          <Text style={styles.emptyTitle}>Não foi possível carregar</Text>
+          <Text style={styles.emptyMsg}>
+            Verifique sua conexão e tente novamente.
+          </Text>
+          <View style={styles.retryWrap}>
+            <Button label="Tentar novamente" onPress={fetchHistory} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -550,5 +573,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+  },
+  retryWrap: {
+    marginTop: spacing.lg,
+    alignSelf: "stretch",
   },
 });

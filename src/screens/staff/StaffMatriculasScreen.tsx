@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -83,6 +83,7 @@ export function StaffMatriculasScreen({
   onBack,
   userRoles,
 }: StaffMatriculasScreenProps) {
+  const dialog = useDialog();
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [accounts, setAccounts] = useState<AccountOut[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -117,41 +118,36 @@ export function StaffMatriculasScreen({
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao aprovar conta.";
-      Alert.alert("Erro", message);
+      dialog.alert({ title: "Erro", message, tone: "danger" });
     } finally {
       setActionLoading(null);
     }
-  }, []);
+  }, [dialog]);
 
-  const handleReject = useCallback((uid: string, name: string) => {
-    Alert.alert(
-      "Recusar matrícula",
-      `Tem certeza que deseja recusar a matrícula de ${name}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Recusar",
-          style: "destructive",
-          onPress: async () => {
-            setActionLoading(uid);
-            try {
-              await api.post(`/accounts/${uid}/transitions`, { action: "reject" });
-              setAccounts((prev) => {
-                const next = prev.filter((a) => a.uid !== uid);
-                if (next.length === 0) setScreenState("empty");
-                return next;
-              });
-            } catch (err) {
-              const message = err instanceof Error ? err.message : "Erro ao recusar conta.";
-              Alert.alert("Erro", message);
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ],
-    );
-  }, []);
+  const handleReject = useCallback(async (uid: string, name: string) => {
+    const ok = await dialog.confirm({
+      title: "Recusar matrícula",
+      message: `Tem certeza que deseja recusar a matrícula de ${name}?`,
+      confirmText: "Recusar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
+    if (!ok) return;
+    setActionLoading(uid);
+    try {
+      await api.post(`/accounts/${uid}/transitions`, { action: "reject" });
+      setAccounts((prev) => {
+        const next = prev.filter((a) => a.uid !== uid);
+        if (next.length === 0) setScreenState("empty");
+        return next;
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao recusar conta.";
+      dialog.alert({ title: "Erro", message, tone: "danger" });
+    } finally {
+      setActionLoading(null);
+    }
+  }, [dialog]);
 
   /* ── Loading ── */
   if (screenState === "loading") {

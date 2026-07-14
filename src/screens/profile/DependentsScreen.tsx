@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -14,6 +13,7 @@ import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 interface DependentData {
   uid: string;
@@ -54,6 +54,7 @@ interface DependentsScreenProps {
 
 export function DependentsScreen({ onBack }: DependentsScreenProps) {
   const { switchTo } = useProxy();
+  const dialog = useDialog();
   const [deps, setDeps] = useState<DependentData[]>([]);
   const [sub, setSub] = useState<SubScreen>("list");
 
@@ -75,15 +76,15 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
 
   const handleCreate = async () => {
     if (!name || name.trim().length < 3) {
-      Alert.alert("Nome deve ter ao menos 3 caracteres");
+      dialog.alert({ message: "Nome deve ter ao menos 3 caracteres" });
       return;
     }
     if (!birthDate) {
-      Alert.alert("Informe a data de nascimento");
+      dialog.alert({ message: "Informe a data de nascimento" });
       return;
     }
     if (!gender) {
-      Alert.alert("Selecione o sexo");
+      dialog.alert({ message: "Selecione o sexo" });
       return;
     }
 
@@ -98,7 +99,7 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
       setSub("success");
       fetchDeps();
     } catch (err: unknown) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao criar");
+      dialog.alert({ title: "Erro", message: err instanceof Error ? err.message : "Erro ao criar", tone: "danger" });
     } finally {
       setSaving(false);
     }

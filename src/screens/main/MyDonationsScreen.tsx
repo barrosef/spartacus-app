@@ -32,7 +32,7 @@ interface DonationHistory {
 }
 
 type FilterTab = "all" | "received" | "pending";
-type Screen = "loading" | "loaded" | "empty";
+type Screen = "loading" | "loaded" | "empty" | "error";
 
 const TYPE_LABEL: Record<string, string> = {
   donation: "Doação",
@@ -76,7 +76,8 @@ export function MyDonationsScreen({
       setDonations(res.items);
       setScreen(res.items.length > 0 ? "loaded" : "empty");
     } catch {
-      setScreen("empty");
+      // Falha de leitura é erro, não "sem apoios" — não mascarar como vazio.
+      setScreen("error");
     }
   }, [actingAs]);
 
@@ -117,6 +118,27 @@ export function MyDonationsScreen({
         </View>
         <View style={styles.footer}>
           <Button label="Registrar Apoio" onPress={onNewDonation} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /* ── Error ── */
+  if (screen === "error") {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <ScreenHeader onBack={onBack} />
+        <View style={styles.center}>
+          <View style={styles.emptyIcon}>
+            <Feather name="alert-triangle" size={28} color={colors.error} />
+          </View>
+          <Text style={styles.emptyTitle}>Não foi possível carregar</Text>
+          <Text style={styles.emptyMsg}>
+            Verifique sua conexão e tente novamente.
+          </Text>
+        </View>
+        <View style={styles.footer}>
+          <Button label="Tentar novamente" onPress={fetchHistory} />
         </View>
       </SafeAreaView>
     );

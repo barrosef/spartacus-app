@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { SafeScreen } from "../../components/ui/SafeScreen";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { WizardHeader } from "../../components/wizard/WizardHeader";
 import { Button } from "../../components/ui/Button";
 import {
@@ -23,6 +24,7 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
   const { state, userAge } = useAnamnese();
   const navigation = useAnamneseNavigation();
   const target = useAnamneseTarget();
+  const dialog = useDialog();
 
   const totalSteps = userAge >= 16 ? 5 : 4;
   const currentStep = totalSteps;
@@ -82,7 +84,7 @@ export function StepReview({ onSubmitted }: StepReviewProps) {
       onSubmitted?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro inesperado";
-      Alert.alert("Erro ao enviar", message);
+      dialog.alert({ title: "Erro ao enviar", message, tone: "danger" });
     } finally {
       setLoading(false);
     }

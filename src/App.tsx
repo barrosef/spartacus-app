@@ -5,6 +5,7 @@ import { Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/m
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { MediaViewerProvider } from "./components/timeline/MediaViewerContext";
+import { DialogProvider } from "./components/ui/DialogProvider";
 import { colors } from "./theme/tokens";
 
 interface ErrorBoundaryState {
@@ -60,9 +61,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <MediaViewerProvider>
-          <RootNavigator />
-        </MediaViewerProvider>
+        <DialogProvider>
+          <MediaViewerProvider>
+            <RootNavigator />
+          </MediaViewerProvider>
+        </DialogProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

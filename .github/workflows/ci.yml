@@ -99,7 +99,10 @@ jobs:
       # que compartilham o mesmo runtimeVersion (fingerprint nativo). Mudanças só
       # de JS chegam sem passar pela loja; mudanças nativas exigem novo build.
       - name: Publish OTA update (EAS Update)
-        run: eas update --branch production --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
+        # --platform android: o app só suporta [android, web]; sem isso o
+        # eas update tenta exportar iOS (default = todas) e falha. Web é
+        # servido pelo Firebase Hosting (job deploy-web), não por OTA.
+        run: eas update --branch production --platform android --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
 
   # ─── Build Web PWA → Firebase Hosting ──────────────────────────────────────
   deploy-web:

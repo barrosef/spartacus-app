@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api, getProjectId } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -67,6 +67,7 @@ interface StaffGraduacoesScreenProps {
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
+  const dialog = useDialog();
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [pendingItems, setPendingItems] = useState<PendingGraduation[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -127,47 +128,42 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao aprovar graduação.";
-      Alert.alert("Erro", message);
+      dialog.alert({ title: "Erro", message, tone: "danger" });
     } finally {
       setActionLoading(null);
     }
-  }, []);
+  }, [dialog]);
 
-  const handleReject = useCallback((item: PendingGraduation) => {
+  const handleReject = useCallback(async (item: PendingGraduation) => {
     const displayName = item.nickname ?? item.name;
-    Alert.alert(
-      "Reprovar graduação",
-      `Tem certeza que deseja reprovar a graduação de ${displayName} em ${item.modalityName}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Reprovar",
-          style: "destructive",
-          onPress: async () => {
-            const key = `${item.userId}_${item.modalitySlug}`;
-            setActionLoading(key);
-            try {
-              await api.post(`/graduations/${item.userId}/reject`, {
-                modality: item.modalitySlug,
-              });
-              setPendingItems((prev) => {
-                const next = prev.filter(
-                  (i) => !(i.userId === item.userId && i.modalitySlug === item.modalitySlug),
-                );
-                if (next.length === 0) setScreenState("empty");
-                return next;
-              });
-            } catch (err) {
-              const message = err instanceof Error ? err.message : "Erro ao reprovar graduação.";
-              Alert.alert("Erro", message);
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ],
-    );
-  }, []);
+    const ok = await dialog.confirm({
+      title: "Reprovar graduação",
+      message: `Tem certeza que deseja reprovar a graduação de ${displayName} em ${item.modalityName}?`,
+      confirmText: "Reprovar",
+      cancelText: "Cancelar",
+      tone: "danger",
+    });
+    if (!ok) return;
+    const key = `${item.userId}_${item.modalitySlug}`;
+    setActionLoading(key);
+    try {
+      await api.post(`/graduations/${item.userId}/reject`, {
+        modality: item.modalitySlug,
+      });
+      setPendingItems((prev) => {
+        const next = prev.filter(
+          (i) => !(i.userId === item.userId && i.modalitySlug === item.modalitySlug),
+        );
+        if (next.length === 0) setScreenState("empty");
+        return next;
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao reprovar graduação.";
+      dialog.alert({ title: "Erro", message, tone: "danger" });
+    } finally {
+      setActionLoading(null);
+    }
+  }, [dialog]);
 
   /* ── Loading ── */
   if (screenState === "loading") {

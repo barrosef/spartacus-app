@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +15,7 @@ import { Button } from "../../components/ui/Button";
 import { FilterPanel } from "../../components/staff/FilterPanel";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import { UserAvatar } from "../../components/ui/UserAvatar";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { useClasses } from "../../hooks/useClasses";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -87,6 +87,7 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
   const [selectedModalityId, setSelectedModalityId] = useState<string | null>(null);
 
   const { classes } = useClasses();
+  const dialog = useDialog();
 
   /* ── Derived data ── */
 
@@ -153,29 +154,30 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao registrar.";
       if (message.includes("Sem aula")) {
-        // Keep actionLoading set — cleared by Alert callback
-        Alert.alert("Sem aula hoje", "Registrar presença fora do dia agendado?", [
-          {
-            text: "Cancelar",
-            style: "cancel",
-            onPress: () => setActionLoading(null),
-          },
-          {
-            text: "Registrar mesmo assim",
-            onPress: async () => {
-              try {
-                await postAction(path, { ...body, force: true });
-                await loadDashboard(selectedClassId);
-              } catch (e) {
-                Alert.alert("Erro", e instanceof Error ? e.message : "Erro ao registrar.");
-              } finally {
-                setActionLoading(null);
-              }
-            },
-          },
-        ]);
+        const ok = await dialog.confirm({
+          title: "Sem aula hoje",
+          message: "Registrar presença fora do dia agendado?",
+          confirmText: "Registrar mesmo assim",
+          cancelText: "Cancelar",
+        });
+        if (!ok) {
+          setActionLoading(null);
+          return;
+        }
+        try {
+          await postAction(path, { ...body, force: true });
+          await loadDashboard(selectedClassId);
+        } catch (e) {
+          dialog.alert({
+            title: "Erro",
+            message: e instanceof Error ? e.message : "Erro ao registrar.",
+            tone: "danger",
+          });
+        } finally {
+          setActionLoading(null);
+        }
       } else {
-        Alert.alert("Erro", message);
+        dialog.alert({ title: "Erro", message, tone: "danger" });
         setActionLoading(null);
       }
     }
@@ -188,7 +190,11 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
       await api.post(`/attendance/${encodeURIComponent(student.attendanceId)}/undo-validation`, {});
       await loadDashboard(selectedClassId);
     } catch (err) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao desfazer.");
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Erro ao desfazer.",
+        tone: "danger",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -305,18 +311,16 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
                 loading={isActing}
                 disabled={busy}
                 onPress={() => {
-                  Alert.alert(
-                    "Desfazer confirmação",
-                    `Desfazer a presença confirmada de ${displayName}?`,
-                    [
-                      { text: "Cancelar", style: "cancel" },
-                      {
-                        text: "Desfazer",
-                        style: "destructive",
-                        onPress: () => { void undo(student); },
-                      },
-                    ],
-                  );
+                  void (async () => {
+                    const ok = await dialog.confirm({
+                      title: "Desfazer confirmação",
+                      message: `Desfazer a presença confirmada de ${displayName}?`,
+                      confirmText: "Desfazer",
+                      cancelText: "Cancelar",
+                      tone: "danger",
+                    });
+                    if (ok) void undo(student);
+                  })();
                 }}
                 style={styles.undoBtn}
               />

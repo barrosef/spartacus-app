@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
 import { AccountCard } from "./AccountCard";
+import { CommentsSheet } from "./comments/CommentsSheet";
+import { colors, typography, spacing } from "../../theme/tokens";
 import type { TimelineEntry } from "./types";
 
 interface TimelineCardProps {
@@ -30,11 +34,17 @@ export function TimelineCard({
   onRequestReview,
   onPin,
 }: TimelineCardProps) {
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(entry.commentsCount ?? 0);
+
+  useEffect(() => setCommentCount(entry.commentsCount ?? 0), [entry.commentsCount]);
+
+  let card: React.ReactNode;
   switch (entry.type) {
     case "post":
     case "event":
     case "championship":
-      return (
+      card = (
         <PostCard
           entry={entry}
           isSocial={isSocial}
@@ -43,9 +53,10 @@ export function TimelineCard({
           onPin={() => onPin?.(entry.id)}
         />
       );
+      break;
 
     case "attendance":
-      return (
+      card = (
         <AttendanceCard
           entry={entry}
           isStaff={isStaff}
@@ -55,9 +66,10 @@ export function TimelineCard({
           onRequestReview={() => onRequestReview(entry.id)}
         />
       );
+      break;
 
     case "donation":
-      return (
+      card = (
         <DonationCard
           entry={entry}
           isStaff={isStaff}
@@ -67,11 +79,55 @@ export function TimelineCard({
           onRequestReview={() => onRequestReview(entry.id)}
         />
       );
+      break;
 
     case "account_created":
-      return <AccountCard entry={entry} />;
+      card = <AccountCard entry={entry} />;
+      break;
 
     default:
-      return null;
+      card = null;
   }
+
+  if (card === null) return null;
+
+  return (
+    <View>
+      {card}
+      <TouchableOpacity
+        style={styles.commentsRow}
+        onPress={() => setShowComments(true)}
+        activeOpacity={0.7}
+      >
+        <Feather name="message-circle" size={18} color={colors.mutedForeground} />
+        <Text style={styles.commentsCount}>
+          {commentCount} comentário{commentCount === 1 ? "" : "s"}
+        </Text>
+      </TouchableOpacity>
+      <CommentsSheet
+        entryId={entry.id}
+        visible={showComments}
+        canModerate={isStaff}
+        onClose={() => setShowComments(false)}
+        onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
+      />
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  commentsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  commentsCount: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBodyMedium,
+    fontSize: 13,
+  },
+});

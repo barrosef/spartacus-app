@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, inputHeight } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { AnamneseSummary, type AnamneseSummaryData } from "../../components/anamnese/AnamneseSummary";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -60,6 +60,8 @@ interface StaffAnamnesesScreenProps {
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
+  const dialog = useDialog();
+
   // List mode
   const [listState, setListState] = useState<ListState>("loading");
   const [items, setItems] = useState<PendingItem[]>([]);
@@ -128,11 +130,11 @@ export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
       fetchList();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao aprovar anamnese.";
-      Alert.alert("Erro", message);
+      dialog.alert({ title: "Erro", message, tone: "danger" });
     } finally {
       setActionLoading(false);
     }
-  }, [selectedUid, backToList, fetchList]);
+  }, [selectedUid, backToList, fetchList, dialog]);
 
   /* ── Request revision ── */
 
@@ -140,7 +142,10 @@ export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
     if (!selectedUid) return;
     const note = revisionNote.trim();
     if (!note) {
-      Alert.alert("Campo obrigatório", "Informe o motivo da revisão antes de enviar.");
+      dialog.alert({
+        title: "Campo obrigatório",
+        message: "Informe o motivo da revisão antes de enviar.",
+      });
       return;
     }
     setActionLoading(true);
@@ -153,11 +158,11 @@ export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
       fetchList();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao solicitar revisão.";
-      Alert.alert("Erro", message);
+      dialog.alert({ title: "Erro", message, tone: "danger" });
     } finally {
       setActionLoading(false);
     }
-  }, [selectedUid, revisionNote, backToList, fetchList]);
+  }, [selectedUid, revisionNote, backToList, fetchList, dialog]);
 
   /* ── Detail mode ── */
 

@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -15,6 +14,7 @@ import { useClasses } from "../../hooks/useClasses";
 import { SelecaoTurmasScreen } from "../../components/wizard/SelecaoTurmasScreen";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+import { useDialog } from "../../components/ui/DialogProvider";
 import type { ClassOption } from "../../context/WizardContext";
 
 interface ProfileData {
@@ -32,13 +32,16 @@ interface ClassesScreenProps {
 
 export function ClassesScreen({ onBack }: ClassesScreenProps) {
   const { actingAs } = useProxy();
+  const dialog = useDialog();
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [sub, setSub] = useState<SubScreen>("view");
   const [newSelection, setNewSelection] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { classes, loading: classesLoading, error: classesError } = useClasses();
 
   const fetchProfile = useCallback(async () => {
+    setLoadError(false);
     try {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
@@ -47,12 +50,37 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
         { headers },
       );
       setProfile(data);
-    } catch { /* graceful */ }
+    } catch {
+      setLoadError(true);
+    }
   }, [actingAs]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   if (!profile) {
+    // Error state with retry — a failed read must not leave a blank screen forever.
+    if (loadError) {
+      return (
+        <SafeAreaView style={styles.safe} edges={["top"]}>
+          <View style={styles.header}>
+            <Feather name="chevron-left" size={24} color={colors.foreground}
+              onPress={onBack} />
+            <Text style={styles.headerTitle}>Turmas e modalidades</Text>
+            <View style={styles.spacer} />
+          </View>
+          <View style={styles.center}>
+            <View style={styles.errorIcon}>
+              <Feather name="alert-circle" size={28} color={colors.error} />
+            </View>
+            <Text style={styles.errorTitle}>Falha ao carregar</Text>
+            <Text style={styles.errorMsg}>
+              Não foi possível buscar suas turmas.
+            </Text>
+            <Button label="Tentar novamente" onPress={fetchProfile} style={styles.btn} />
+          </View>
+        </SafeAreaView>
+      );
+    }
     return <SafeAreaView style={styles.safe}><View style={styles.safe} /></SafeAreaView>;
   }
 
@@ -111,7 +139,7 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
         );
         setSub("success");
       } catch (err: unknown) {
-        Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
+        dialog.alert({ title: "Erro", message: err instanceof Error ? err.message : "Erro ao salvar", tone: "danger" });
       } finally {
         setSaving(false);
       }
@@ -248,6 +276,21 @@ const styles = StyleSheet.create({
   classSub: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 13 },
   empty: { alignItems: "center", paddingVertical: spacing.xxl },
   emptyText: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14 },
+
+  // Error state
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  errorIcon: {
+    width: 56, height: 56, borderRadius: 28, marginBottom: spacing.md,
+    backgroundColor: "rgba(231,76,76,0.10)", alignItems: "center", justifyContent: "center",
+  },
+  errorTitle: {
+    color: colors.foreground, fontFamily: typography.fontHeadingSemi,
+    fontSize: 17, marginBottom: spacing.xs,
+  },
+  errorMsg: {
+    color: colors.mutedForeground, fontFamily: typography.fontBody,
+    fontSize: 14, textAlign: "center", marginBottom: spacing.lg,
+  },
 
   // Confirm diff
   sectionLabel: {
