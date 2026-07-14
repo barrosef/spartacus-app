@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
@@ -66,6 +66,7 @@ interface DonationsScreenProps {
 
 export function DonationsScreen({ onDone }: DonationsScreenProps) {
   const { actingAs } = useProxy();
+  const dialog = useDialog();
   const [screen, setScreen] = useState<Screen>("loading");
   const [config, setConfig] = useState<SupportConfig | null>(null);
   const [supportType, setSupportType] = useState<SupportType>("donation");
@@ -113,12 +114,13 @@ export function DonationsScreen({ onDone }: DonationsScreenProps) {
     } catch (err: unknown) {
       // Surface the real failure — never leave the user on the confirmation
       // step with no feedback (previously an empty catch swallowed it).
-      Alert.alert(
-        "Erro",
-        err instanceof Error
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error
           ? err.message
           : "Não foi possível registrar seu apoio. Tente novamente.",
-      );
+        tone: "danger",
+      });
     } finally {
       setSubmitting(false);
     }

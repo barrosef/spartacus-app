@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
+  Text,
   Image as RNImage,
   ScrollView,
   StyleSheet,
-  Alert,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { Button } from "../../components/ui/Button";
+import { useDialog } from "../../components/ui/DialogProvider";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { signOut } from "firebase/auth";
-import { colors, spacing } from "../../theme/tokens";
+import { colors, spacing, typography } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
@@ -85,7 +87,9 @@ export function ProfileScreen({
   initialScreen = "profile",
 }: ProfileScreenProps) {
   const { actingAs, switchTo, clearProxy } = useProxy();
+  const dialog = useDialog();
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const { status: anamneseStatus } = useAnamneseStatus();
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
@@ -98,6 +102,7 @@ export function ProfileScreen({
   const [pendingDims, setPendingDims] = useState<{ w: number; h: number } | null>(null);
 
   const fetchProfile = useCallback(async () => {
+    setLoadError(false);
     try {
       const headers: Record<string, string> = {};
       if (actingAs) headers["X-Acting-As"] = actingAs;
@@ -107,7 +112,7 @@ export function ProfileScreen({
       );
       setProfile(data);
     } catch {
-      // graceful
+      setLoadError(true);
     }
   }, [actingAs]);
 
@@ -129,7 +134,7 @@ export function ProfileScreen({
     }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permissão necessária", "Habilite o acesso à câmera nas configurações.");
+      dialog.alert({ title: "Permissão necessária", message: "Habilite o acesso à câmera nas configurações." });
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -151,7 +156,7 @@ export function ProfileScreen({
     }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permissão necessária", "Habilite o acesso à galeria nas configurações.");
+      dialog.alert({ title: "Permissão necessária", message: "Habilite o acesso à galeria nas configurações." });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -218,8 +223,12 @@ export function ProfileScreen({
           headers: headersSnapshot,
         });
         fetchProfile();
-      } catch {
-        Alert.alert("Erro", "Não foi possível enviar a foto.");
+      } catch (err: unknown) {
+        dialog.alert({
+          title: "Erro",
+          message: err instanceof Error ? err.message : "Não foi possível enviar a foto.",
+          tone: "danger",
+        });
       }
       return;
     }
@@ -257,11 +266,12 @@ export function ProfileScreen({
         headers: headersSnapshot,
       });
       fetchProfile();
-    } catch {
-      Alert.alert(
-        "Erro",
-        "Não foi possível processar a foto. Tente novamente.",
-      );
+    } catch (err: unknown) {
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Não foi possível processar a foto. Tente novamente.",
+        tone: "danger",
+      });
     }
   };
 
@@ -313,12 +323,41 @@ export function ProfileScreen({
     try {
       await api.delete("/users/me/photo", { headers: proxyHeaders() });
       fetchProfile();
-    } catch {
-      Alert.alert("Erro", "Não foi possível remover a foto.");
+    } catch (err: unknown) {
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Não foi possível remover a foto.",
+        tone: "danger",
+      });
     }
   };
 
   if (!profile) {
+    // A failed profile read must not leave a permanently blank screen.
+    if (loadError) {
+      return (
+        <SafeAreaView style={styles.safe} edges={["top"]}>
+          <View style={styles.header}>
+            <Feather
+              name="chevron-left"
+              size={24}
+              color={colors.foreground}
+              onPress={onBack}
+            />
+          </View>
+          <View style={styles.errorCenter}>
+            <View style={styles.errorIcon}>
+              <Feather name="alert-circle" size={28} color={colors.error} />
+            </View>
+            <Text style={styles.errorTitle}>Falha ao carregar</Text>
+            <Text style={styles.errorMsg}>
+              Não foi possível carregar seu perfil.
+            </Text>
+            <Button label="Tentar novamente" onPress={fetchProfile} style={styles.errorBtn} />
+          </View>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.loading} />
@@ -620,5 +659,36 @@ const styles = StyleSheet.create({
   },
   menu: {
     marginTop: spacing.sm,
+  },
+  errorCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  errorIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginBottom: spacing.md,
+    backgroundColor: "rgba(231,76,76,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorTitle: {
+    color: colors.foreground,
+    fontFamily: typography.fontHeadingSemi,
+    fontSize: 17,
+    marginBottom: spacing.xs,
+  },
+  errorMsg: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  errorBtn: {
+    alignSelf: "stretch",
   },
 });

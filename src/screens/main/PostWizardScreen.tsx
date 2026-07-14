@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
-  Alert,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,6 +24,7 @@ import {
   buttonHeight,
 } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
 import { AudioPreview } from "../../components/post/AudioPreview";
 import { DateInput } from "../../components/ui/DateInput";
@@ -72,6 +72,7 @@ function combineDateTime(date: string, time: string): string | null {
 }
 
 export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
+  const dialog = useDialog();
   const [step, setStep] = useState<Step>("content");
   const [postType, setPostType] = useState<PostType>("post");
   const [title, setTitle] = useState("");
@@ -156,13 +157,13 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : "Erro ao enviar arquivo";
-        Alert.alert("Erro", msg);
+        dialog.alert({ title: "Erro", message: msg, tone: "danger" });
         return null;
       } finally {
         setUploading(false);
       }
     },
-    [],
+    [dialog],
   );
 
   // ── Pickers ─────────────────────────────────────────────────────
@@ -170,10 +171,10 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
   const pickMedia = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(
-        "Permissão necessária",
-        "Habilite o acesso à galeria nas configurações.",
-      );
+      dialog.alert({
+        title: "Permissão necessária",
+        message: "Habilite o acesso à galeria nas configurações.",
+      });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -201,7 +202,7 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
           { ...att, localUri: asset.uri },
         ]);
     }
-  }, [uploadFile]);
+  }, [uploadFile, dialog]);
 
   const pickDocument = useCallback(async () => {
     try {
@@ -221,9 +222,13 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
         if (att) setAttachments((prev) => [...prev, att]);
       }
     } catch {
-      Alert.alert("Erro", "Não foi possível selecionar o arquivo.");
+      dialog.alert({
+        title: "Erro",
+        message: "Não foi possível selecionar o arquivo.",
+        tone: "danger",
+      });
     }
-  }, [uploadFile]);
+  }, [uploadFile, dialog]);
 
   // ── Audio recording ─────────────────────────────────────────────
 
@@ -231,10 +236,10 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     try {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert(
-          "Permissão necessária",
-          "Habilite o acesso ao microfone nas configurações.",
-        );
+        dialog.alert({
+          title: "Permissão necessária",
+          message: "Habilite o acesso ao microfone nas configurações.",
+        });
         return;
       }
       await Audio.setAudioModeAsync({
@@ -251,9 +256,13 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
         1000,
       );
     } catch {
-      Alert.alert("Erro", "Não foi possível iniciar a gravação.");
+      dialog.alert({
+        title: "Erro",
+        message: "Não foi possível iniciar a gravação.",
+        tone: "danger",
+      });
     }
-  }, []);
+  }, [dialog]);
 
   const stopRecording = useCallback(async () => {
     if (!recording) return;

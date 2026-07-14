@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 interface AddressData {
   postalCode?: string | null;
@@ -38,6 +38,7 @@ interface AddressScreenProps {
 
 export function AddressScreen({ onBack }: AddressScreenProps) {
   const { actingAs } = useProxy();  // needed to check read-only mode
+  const dialog = useDialog();
   const [isDependent, setIsDependent] = useState(false);
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -103,7 +104,7 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
 
   const handleSave = async () => {
     if (!cep || !street || !number || !neighborhood || !city || !state) {
-      Alert.alert("Preencha todos os campos obrigatórios");
+      dialog.alert({ message: "Preencha todos os campos obrigatórios" });
       return;
     }
 
@@ -122,7 +123,7 @@ export function AddressScreen({ onBack }: AddressScreenProps) {
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Erro ao salvar";
-      Alert.alert("Erro", msg);
+      dialog.alert({ title: "Erro", message: msg, tone: "danger" });
     } finally {
       setSaving(false);
     }

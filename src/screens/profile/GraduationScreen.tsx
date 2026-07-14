@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -17,6 +16,7 @@ import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 interface GraduationEntry {
   belt: string;
@@ -86,6 +86,7 @@ interface GraduationScreenProps {
 
 export function GraduationScreen({ onBack }: GraduationScreenProps) {
   const { actingAs } = useProxy();
+  const dialog = useDialog();
   const [modalities, setModalities] = useState<string[]>([]);
   const [graduation, setGraduation] = useState<Record<string, GraduationEntry>>({});
   const [saving, setSaving] = useState(false);
@@ -140,13 +141,13 @@ export function GraduationScreen({ onBack }: GraduationScreenProps) {
       if (res?.changed) {
         setShowSuccess(true);
       } else {
-        Alert.alert(
-          "Nenhuma alteração",
-          "Não havia mudanças para salvar na sua graduação.",
-        );
+        dialog.alert({
+          title: "Nenhuma alteração",
+          message: "Não havia mudanças para salvar na sua graduação.",
+        });
       }
     } catch (err: unknown) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao salvar");
+      dialog.alert({ title: "Erro", message: err instanceof Error ? err.message : "Erro ao salvar", tone: "danger" });
     } finally {
       setSaving(false);
     }

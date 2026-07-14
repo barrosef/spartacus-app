@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
   Modal,
   TextInput,
@@ -20,6 +19,7 @@ import { Button } from "../../components/ui/Button";
 import { FilterPanel } from "../../components/staff/FilterPanel";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import { UserAvatar } from "../../components/ui/UserAvatar";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -92,6 +92,8 @@ interface DonationApprovalScreenProps {
 /* ── Component ─────────────────────────────────────────────────── */
 
 export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) {
+  const dialog = useDialog();
+
   /* ── Core state ── */
   const [monthKey, setMonthKey] = useState<string>(currentMonthKey);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -145,7 +147,11 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
       await api.patch(`/support/${encodeURIComponent(it.id)}/validate`, { status });
       await loadDashboard();
     } catch (err) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao validar apoio.");
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Erro ao validar apoio.",
+        tone: "danger",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -157,7 +163,11 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
       await api.post(`/support/${encodeURIComponent(it.id)}/undo-validation`, {});
       await loadDashboard();
     } catch (err) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao desfazer.");
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Erro ao desfazer.",
+        tone: "danger",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -190,7 +200,11 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
       const cfg = await api.get<SupportConfig>(`/projects/${getProjectId()}/support-config`);
       setRegConfig(cfg);
     } catch (err) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao carregar configuração.");
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Erro ao carregar configuração.",
+        tone: "danger",
+      });
       setRegisterVisible(false);
     } finally {
       setRegConfigLoading(false);
@@ -222,11 +236,11 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
 
   async function handleRegSubmit() {
     if (!regSelectedUser) {
-      Alert.alert("Atenção", "Selecione um aluno.");
+      dialog.alert({ title: "Atenção", message: "Selecione um aluno." });
       return;
     }
     if (!regItem) {
-      Alert.alert("Atenção", "Selecione um item de apoio.");
+      dialog.alert({ title: "Atenção", message: "Selecione um item de apoio." });
       return;
     }
     setRegSubmitting(true);
@@ -240,7 +254,11 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
       setRegisterVisible(false);
       await loadDashboard();
     } catch (err) {
-      Alert.alert("Erro", err instanceof Error ? err.message : "Erro ao registrar apoio.");
+      dialog.alert({
+        title: "Erro",
+        message: err instanceof Error ? err.message : "Erro ao registrar apoio.",
+        tone: "danger",
+      });
     } finally {
       setRegSubmitting(false);
     }
@@ -336,20 +354,16 @@ export function DonationApprovalScreen({ onBack }: DonationApprovalScreenProps) 
                 loading={isActing}
                 disabled={busy}
                 onPress={() => {
-                  Alert.alert(
-                    "Desfazer aprovação",
-                    `Desfazer a aprovação de ${displayName}?`,
-                    [
-                      { text: "Cancelar", style: "cancel" },
-                      {
-                        text: "Desfazer",
-                        style: "destructive",
-                        onPress: () => {
-                          void undo(item);
-                        },
-                      },
-                    ],
-                  );
+                  void (async () => {
+                    const ok = await dialog.confirm({
+                      title: "Desfazer aprovação",
+                      message: `Desfazer a aprovação de ${displayName}?`,
+                      confirmText: "Desfazer",
+                      cancelText: "Cancelar",
+                      tone: "danger",
+                    });
+                    if (ok) void undo(item);
+                  })();
                 }}
                 style={styles.undoBtn}
               />

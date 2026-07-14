@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import { useProxy } from "../../context/ProxyContext";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
+import { useDialog } from "../../components/ui/DialogProvider";
 
 interface ProfileData {
   name: string;
@@ -33,6 +33,7 @@ interface PersonalDataScreenProps {
 
 export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
   const { actingAs } = useProxy();
+  const dialog = useDialog();
   const [data, setData] = useState<ProfileData | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [name, setName] = useState("");
@@ -107,7 +108,7 @@ export function PersonalDataScreen({ onBack }: PersonalDataScreenProps) {
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Erro ao salvar";
-      Alert.alert("Erro", msg);
+      dialog.alert({ title: "Erro", message: msg, tone: "danger" });
     } finally {
       setSaving(false);
     }

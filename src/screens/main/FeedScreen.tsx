@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
+import { useDialog } from "../../components/ui/DialogProvider";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
 import { PinnedRow } from "../../components/timeline/PinnedRow";
 import { FilterModal } from "../../components/timeline/FilterModal";
@@ -81,6 +81,7 @@ export function FeedScreen({
   const isSocial = userRoles.includes("social");
   const currentUid = auth.currentUser?.uid ?? "";
   const { actingAs } = useProxy();
+  const dialog = useDialog();
   const { status: anamneseStatus } = useAnamneseStatus();
 
   const fetchFeed = useCallback(
@@ -219,15 +220,16 @@ export function FeedScreen({
       } catch (err: unknown) {
         // Surface the real failure instead of swallowing it — the card kept
         // its previous state, so the staff member must know it didn't apply.
-        Alert.alert(
-          "Erro",
-          err instanceof Error
+        dialog.alert({
+          title: "Erro",
+          message: err instanceof Error
             ? err.message
             : "Não foi possível validar. Tente novamente.",
-        );
+          tone: "danger",
+        });
       }
     },
-    []
+    [dialog]
   );
 
   const handleRequestReview = useCallback(
@@ -240,11 +242,19 @@ export function FeedScreen({
             e.id === entryId ? { ...e, reviewRequested: true } : e
           )
         );
-      } catch {
-        // Silent fail
+      } catch (err: unknown) {
+        // Surface the failure — the review request did not go through, so the
+        // user must know it wasn't recorded.
+        dialog.alert({
+          title: "Erro",
+          message: err instanceof Error
+            ? err.message
+            : "Não foi possível solicitar a revisão. Tente novamente.",
+          tone: "danger",
+        });
       }
     },
-    []
+    [dialog]
   );
 
   const handlePin = useCallback(
@@ -254,11 +264,19 @@ export function FeedScreen({
         // pinned item jumps to the top of the feed.
         await api.patch(`/timeline/${entryId}/pin`, {});
         await loadFeed();
-      } catch {
-        // Silent fail — next poll reconciles state
+      } catch (err: unknown) {
+        // Surface the failure — the pin toggle didn't apply, so the user must
+        // know instead of assuming the action succeeded.
+        dialog.alert({
+          title: "Erro",
+          message: err instanceof Error
+            ? err.message
+            : "Não foi possível fixar a publicação. Tente novamente.",
+          tone: "danger",
+        });
       }
     },
-    [loadFeed]
+    [loadFeed, dialog]
   );
 
   const scrollToPinned = useCallback(() => {
