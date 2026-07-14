@@ -96,6 +96,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose, onCountC
           ) : (
             <FlatList
               data={rows}
+              keyboardShouldPersistTaps="handled"
               keyExtractor={(r) => r.comment.id}
               renderItem={({ item }) => (
                 <CommentItem comment={item.comment} isReply={item.isReply}
