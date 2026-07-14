@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { PostCard } from "./PostCard";
@@ -35,6 +35,9 @@ export function TimelineCard({
   onPin,
 }: TimelineCardProps) {
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(entry.commentsCount ?? 0);
+
+  useEffect(() => setCommentCount(entry.commentsCount ?? 0), [entry.commentsCount]);
 
   let card: React.ReactNode;
   switch (entry.type) {
@@ -98,7 +101,7 @@ export function TimelineCard({
       >
         <Feather name="message-circle" size={18} color={colors.mutedForeground} />
         <Text style={styles.commentsCount}>
-          {entry.commentsCount ?? 0} comentário{entry.commentsCount === 1 ? "" : "s"}
+          {commentCount} comentário{commentCount === 1 ? "" : "s"}
         </Text>
       </TouchableOpacity>
       <CommentsSheet
@@ -106,6 +109,7 @@ export function TimelineCard({
         visible={showComments}
         canModerate={isStaff}
         onClose={() => setShowComments(false)}
+        onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
       />
     </View>
   );

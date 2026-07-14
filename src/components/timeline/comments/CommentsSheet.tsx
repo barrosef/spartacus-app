@@ -10,11 +10,17 @@ import { CommentItem } from "./CommentItem";
 import { CommentInput } from "./CommentInput";
 import type { Comment, CommentsPage } from "./types";
 
-interface Props { entryId: string; visible: boolean; canModerate: boolean; onClose: () => void; }
+interface Props {
+  entryId: string;
+  visible: boolean;
+  canModerate: boolean;
+  onClose: () => void;
+  onCountChange?: (delta: number) => void;
+}
 type Row = { comment: Comment; isReply: boolean };
 type Screen = "loading" | "loaded" | "error";
 
-export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props) {
+export function CommentsSheet({ entryId, visible, canModerate, onClose, onCountChange }: Props) {
   const dialog = useDialog();
   const [screen, setScreen] = useState<Screen>("loading");
   const [comments, setComments] = useState<Comment[]>([]);
@@ -43,6 +49,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
   const submit = async (text: string, parentId: string | null, mentions: string[]) => {
     try {
       await api.post(`/timeline/${entryId}/comments`, { text, parentId, mentions });
+      onCountChange?.(1);
       setReplyingTo(null);
       await load(true);
     } catch (err: unknown) {
@@ -59,6 +66,7 @@ export function CommentsSheet({ entryId, visible, canModerate, onClose }: Props)
     if (!ok) return;
     try {
       await api.delete(`/timeline/${entryId}/comments/${c.id}`);
+      onCountChange?.(-1);
       await load(true);
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
