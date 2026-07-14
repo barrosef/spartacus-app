@@ -12,11 +12,23 @@ interface Props {
   onDelete: (c: Comment) => void;
 }
 
-function renderText(text: string) {
-  // destaca tokens @palavra em dourado
-  const parts = text.split(/(@[\p{L}\d]+)/u);
-  return parts.map((p, i) =>
-    p.startsWith("@")
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderText(text: string, mentionDisplays: string[] = []) {
+  // Destaca menções em dourado. Primeiro casa os displays conhecidos (podem
+  // ter espaços, ex.: "@João da Silva Sauro"), do mais longo ao mais curto;
+  // depois um token "@palavra" como fallback (comentários legados sem
+  // mentionDisplays). Sem os displays, um "@" seguido de nome composto só
+  // destacaria o primeiro nome.
+  const tokens = [...mentionDisplays]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map((d) => `@${escapeRegExp(d)}`);
+  const re = new RegExp(`(${[...tokens, "@[\\p{L}\\d]+"].join("|")})`, "u");
+  return text.split(re).map((p, i) =>
+    p && p.startsWith("@")
       ? <Text key={i} style={styles.mention}>{p}</Text>
       : <Text key={i}>{p}</Text>);
 }
@@ -37,7 +49,7 @@ export function CommentItem({ comment, isReply, canModerate, onReply, onDelete }
         : <View style={styles.initials}><Text style={styles.initialsTxt}>{initials}</Text></View>}
       <View style={{ flex: 1 }}>
         <Text style={styles.author}>{comment.authorName}</Text>
-        <Text style={styles.text}>{renderText(comment.text)}</Text>
+        <Text style={styles.text}>{renderText(comment.text, comment.mentionDisplays)}</Text>
         <View style={styles.actions}>
           <TouchableOpacity onPress={() => onReply(comment)}>
             <Text style={styles.action}>Responder</Text>
