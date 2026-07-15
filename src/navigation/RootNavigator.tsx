@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { Platform, View, Text, StyleSheet } from "react-native";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { Platform, View, Text, Image, StyleSheet } from "react-native";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import {
@@ -10,8 +10,13 @@ import {
 import { AuthNavigator } from "./AuthNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
-import { colors, typography } from "../theme/tokens";
+import { SafeScreen } from "../components/ui/SafeScreen";
+import { Button } from "../components/ui/Button";
+import { colors, typography, spacing } from "../theme/tokens";
 import { MainNavigator } from "./MainNavigator";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const logo = require("../../assets/logo.png");
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
 interface SignupGuard {
@@ -47,6 +52,7 @@ export function RootNavigator() {
   // ResetPassword screen can handle the oobCode.
   const resetLanding = isPasswordResetLanding();
   const [accountStatus, setAccountStatus] = useState("");
+  const [moderationReason, setModerationReason] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
@@ -55,7 +61,17 @@ export function RootNavigator() {
       const res = await api.get<{
         approvalStatus: string;
         birthDate?: string;
+        appBanned?: boolean;
+        moderationReason?: string;
       }>("/auth/me");
+
+      if (res.appBanned) {
+        setAccountStatus("app_banned");
+        setModerationReason(res.moderationReason ?? "");
+        setAppState("blocked");
+        return;
+      }
+
       const status = res.approvalStatus;
       setAccountStatus(status);
 
@@ -138,7 +154,30 @@ export function RootNavigator() {
           }}
         />
       ) : appState === "blocked" ? (
-        <BlockedStatusScreen status={accountStatus} />
+        accountStatus === "app_banned" ? (
+          <SafeScreen>
+            <View style={styles.bannedContainer}>
+              <Image source={logo} style={styles.bannedLogo} resizeMode="contain" />
+
+              <Text style={styles.bannedIcon}>🚫</Text>
+              <Text style={styles.bannedTitle}>Acesso bloqueado</Text>
+              <Text style={styles.bannedMessage}>
+                Seu acesso foi bloqueado pela equipe.
+                {moderationReason ? `\n\nMotivo: ${moderationReason}` : ""}
+              </Text>
+
+              <View style={styles.bannedFooter}>
+                <Button
+                  label="Voltar ao login"
+                  variant="outline"
+                  onPress={() => signOut(auth)}
+                />
+              </View>
+            </View>
+          </SafeScreen>
+        ) : (
+          <BlockedStatusScreen status={accountStatus} />
+        )
       ) : (
         <MainNavigator />
       )}
@@ -167,5 +206,44 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: "center",
     paddingHorizontal: 32,
+  },
+  bannedContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  bannedLogo: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: "rgba(198,163,78,0.3)",
+    marginBottom: spacing.lg,
+  },
+  bannedIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  bannedTitle: {
+    fontSize: 22,
+    fontFamily: typography.fontHeading,
+    color: colors.foreground,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+  bannedMessage: {
+    fontSize: 14,
+    fontFamily: typography.fontBody,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+  },
+  bannedFooter: {
+    width: "100%",
   },
 });
