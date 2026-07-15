@@ -12,6 +12,7 @@ import type { TimelineEntry } from "./types";
 interface TimelineCardProps {
   entry: TimelineEntry;
   isStaff: boolean;
+  viewerRoles?: string[];
   isTarget: boolean;
   isSocial?: boolean;
   onLike: (entryId: string) => void;
@@ -25,6 +26,7 @@ interface TimelineCardProps {
 export function TimelineCard({
   entry,
   isStaff,
+  viewerRoles = [],
   isTarget,
   isSocial = false,
   onLike,
@@ -108,6 +110,7 @@ export function TimelineCard({
         entryId={entry.id}
         visible={showComments}
         canModerate={isStaff}
+        viewerRoles={viewerRoles}
         onClose={() => setShowComments(false)}
         onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
       />
