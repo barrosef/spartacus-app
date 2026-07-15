@@ -6,6 +6,8 @@ export interface Comment {
   text: string;
   parentId?: string | null;
   mentions: string[];
+  /** Display strings (nickname→name) of the mentions, for full-span highlight. */
+  mentionDisplays: string[];
   createdAt: string;
   deleted: boolean;
   deletedBy?: string | null;

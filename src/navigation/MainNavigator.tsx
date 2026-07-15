@@ -23,6 +23,7 @@ import { StaffAnamnesesScreen } from "../screens/staff/StaffAnamnesesScreen";
 import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
 import { AttendanceApprovalScreen } from "../screens/staff/AttendanceApprovalScreen";
 import { DonationApprovalScreen } from "../screens/staff/DonationApprovalScreen";
+import { ModerationScreen } from "../screens/staff/ModerationScreen";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
@@ -75,7 +76,7 @@ function MainContent() {
   const [showFrequency, setShowFrequency] = useState(false);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
-  const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes">(null);
+  const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes" | "moderacao">(null);
   const [showAttendanceApproval, setShowAttendanceApproval] = useState(false);
   const [showDonationApproval, setShowDonationApproval] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -145,6 +146,7 @@ function MainContent() {
     if (key === "staff_graduacoes") setStaffScreen("graduacoes");
     if (key === "staff_frequencia") setShowAttendanceApproval(true);
     if (key === "staff_doacoes") setShowDonationApproval(true);
+    if (key === "staff_moderacao") setStaffScreen("moderacao");
   };
 
   if (showProfile) {
@@ -210,6 +212,10 @@ function MainContent() {
 
   if (staffScreen === "graduacoes") {
     return <StaffGraduacoesScreen onBack={() => setStaffScreen(null)} />;
+  }
+
+  if (staffScreen === "moderacao") {
+    return <ModerationScreen onBack={() => setStaffScreen(null)} viewerRoles={profile?.roles ?? []} />;
   }
 
   if (showAttendanceApproval) {

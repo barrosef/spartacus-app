@@ -384,6 +384,7 @@ export function FeedScreen({
             key={entry.id}
             entry={entry}
             isStaff={isStaff}
+            viewerRoles={userRoles}
             isTarget={entry.targetUid === currentUid}
             isSocial={isSocial}
             onLike={() => handleLike(entry.id, entry.userLiked)}

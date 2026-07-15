@@ -47,6 +47,7 @@ export function RootNavigator() {
   // ResetPassword screen can handle the oobCode.
   const resetLanding = isPasswordResetLanding();
   const [accountStatus, setAccountStatus] = useState("");
+  const [moderationReason, setModerationReason] = useState("");
   const [timedOut, setTimedOut] = useState(false);
   const [signupInProgress, setSignupInProgress] = useState(false);
 
@@ -55,7 +56,17 @@ export function RootNavigator() {
       const res = await api.get<{
         approvalStatus: string;
         birthDate?: string;
+        appBanned?: boolean;
+        moderationReason?: string;
       }>("/auth/me");
+
+      if (res.appBanned) {
+        setAccountStatus("app_banned");
+        setModerationReason(res.moderationReason ?? "");
+        setAppState("blocked");
+        return;
+      }
+
       const status = res.approvalStatus;
       setAccountStatus(status);
 
@@ -138,7 +149,7 @@ export function RootNavigator() {
           }}
         />
       ) : appState === "blocked" ? (
-        <BlockedStatusScreen status={accountStatus} />
+        <BlockedStatusScreen status={accountStatus} reason={moderationReason} />
       ) : (
         <MainNavigator />
       )}

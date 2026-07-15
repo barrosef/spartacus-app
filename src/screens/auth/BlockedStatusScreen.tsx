@@ -50,6 +50,11 @@ const STATUS_CONFIG: Record<string, { icon: string; title: string; message: stri
     title: "Conta arquivada",
     message: "Sua conta foi arquivada. Entre em contato para reativar.",
   },
+  app_banned: {
+    icon: "🚫",
+    title: "Acesso bloqueado",
+    message: "Seu acesso foi bloqueado pela equipe.",
+  },
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -62,14 +67,20 @@ const STATUS_LABELS: Record<string, string> = {
   expelled: "Conta suspensa",
   archived: "Conta arquivada",
   approved: "Aprovado",
+  app_banned: "Acesso bloqueado",
 };
 
 interface Props {
   status: string;
+  reason?: string;
 }
 
-export function BlockedStatusScreen({ status }: Props) {
+export function BlockedStatusScreen({ status, reason }: Props) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending_approval;
+  const message =
+    status === "app_banned" && reason
+      ? `${config.message}\n\nMotivo: ${reason}`
+      : config.message;
 
   return (
     <SafeScreen>
@@ -78,7 +89,7 @@ export function BlockedStatusScreen({ status }: Props) {
 
         <Text style={styles.icon}>{config.icon}</Text>
         <Text style={styles.title}>{config.title}</Text>
-        <Text style={styles.message}>{config.message}</Text>
+        <Text style={styles.message}>{message}</Text>
 
         <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>Status atual</Text>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { api } from "../../../lib/api";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 import type { Mentionable } from "./types";
@@ -29,7 +29,14 @@ export function MentionAutocomplete({ entryId, query, onPick }: Props) {
 
   if (!items.length) return null;
   return (
-    <View style={styles.box}>
+    // keyboardShouldPersistTaps="handled": com o teclado aberto, sem isto o
+    // primeiro toque numa sugestão é consumido para fechar o teclado, exigindo
+    // dois cliques para selecionar a menção.
+    <ScrollView
+      style={styles.box}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+    >
       {items.slice(0, 6).map((m) => (
         <TouchableOpacity key={m.uid} style={styles.row} onPress={() => onPick(m)}>
           {m.photoUrl
@@ -41,7 +48,7 @@ export function MentionAutocomplete({ entryId, query, onPick }: Props) {
           </View>
         </TouchableOpacity>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 

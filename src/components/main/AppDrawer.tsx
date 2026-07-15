@@ -36,6 +36,7 @@ const STAFF_MENU_ITEMS: DrawerItem[] = [
   { key: "staff_graduacoes", label: "Graduações", icon: "award" },
   { key: "staff_frequencia", label: "Frequência (gestão)", icon: "check-square" },
   { key: "staff_doacoes", label: "Apoio (gestão)", icon: "heart" },
+  { key: "staff_moderacao", label: "Moderação", icon: "shield" },
 ];
 
 interface AppDrawerProps {
