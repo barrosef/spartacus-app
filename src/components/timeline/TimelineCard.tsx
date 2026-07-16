@@ -4,7 +4,7 @@ import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
 import { AccountCard } from "./AccountCard";
-import { CommentsSheet } from "./comments/CommentsSheet";
+import { CommentsSection } from "./comments/CommentsSection";
 import type { TimelineEntry } from "./types";
 
 interface TimelineCardProps {
@@ -112,14 +112,14 @@ export function TimelineCard({
   return (
     <View>
       {card}
-      <CommentsSheet
-        entryId={entry.id}
-        visible={showComments}
-        canModerate={isStaff}
-        viewerRoles={viewerRoles}
-        onClose={() => setShowComments(false)}
-        onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
-      />
+      {showComments ? (
+        <CommentsSection
+          entryId={entry.id}
+          canModerate={isStaff}
+          viewerRoles={viewerRoles}
+          onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
+        />
+      ) : null}
     </View>
   );
 }
