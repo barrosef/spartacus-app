@@ -120,8 +120,9 @@ export function CommentItem({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md },
+  // Sem padding horizontal próprio — a seção vive dentro do card, que já
+  // aplica padding: spacing.md.
+  row: { flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.sm },
   reply: { paddingLeft: spacing.xl },
   avatar: { width: 34, height: 34, borderRadius: 17 },
   initials: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primaryMuted,

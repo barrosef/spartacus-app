@@ -5,7 +5,7 @@ import { api } from "../../../lib/api";
 import { auth } from "../../../lib/firebase";
 import { useDialog } from "../../ui/DialogProvider";
 import { Button } from "../../ui/Button";
-import { colors, typography, spacing, radius } from "../../../theme/tokens";
+import { colors, typography, spacing } from "../../../theme/tokens";
 import { CommentItem } from "./CommentItem";
 import { CommentInput } from "./CommentInput";
 import { RemoveCommentDialog, type ModerationLevel } from "./RemoveCommentDialog";
@@ -200,16 +200,12 @@ export function CommentsSection({
 }
 
 const styles = StyleSheet.create({
-  // Painel colado ao card (que tem marginBottom: spacing.md) — o marginTop
-  // negativo aproxima a seção para ler como extensão do card expandido.
+  // Renderizada DENTRO do card (estilo Instagram) — sem fundo/borda próprios;
+  // só um separador no topo. O padding horizontal vem do card.
   container: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-    overflow: "hidden",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
   },
   center: { alignItems: "center", justifyContent: "center", padding: spacing.lg },
   errTxt: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14 },

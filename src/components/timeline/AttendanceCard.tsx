@@ -13,6 +13,7 @@ interface AttendanceCardProps {
   isTarget: boolean;
   commentsCount: number;
   commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
   onConfirm: () => void;
   onAbsent: () => void;
   onRequestReview: () => void;
@@ -25,6 +26,7 @@ export function AttendanceCard({
   isTarget,
   commentsCount,
   commentsOpen,
+  commentsSection,
   onConfirm,
   onAbsent,
   onRequestReview,
@@ -141,6 +143,9 @@ export function AttendanceCard({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }

@@ -10,6 +10,7 @@ interface AccountCardProps {
   entry: TimelineEntry;
   commentsCount: number;
   commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
   onToggleComments: () => void;
 }
 
@@ -17,6 +18,7 @@ export function AccountCard({
   entry,
   commentsCount,
   commentsOpen,
+  commentsSection,
   onToggleComments,
 }: AccountCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
@@ -102,6 +104,9 @@ export function AccountCard({
           ) : null}
         </TouchableOpacity>
       </View>
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }

@@ -27,6 +27,7 @@ interface PostCardProps {
   isSocial?: boolean;
   commentsCount: number;
   commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
   onLike: () => void;
   onViewLikes: () => void;
   onToggleComments: () => void;
@@ -38,6 +39,7 @@ export function PostCard({
   isSocial = false,
   commentsCount,
   commentsOpen,
+  commentsSection,
   onLike,
   onViewLikes,
   onToggleComments,
@@ -180,6 +182,9 @@ export function PostCard({
           </TouchableOpacity>
         ) : null}
       </View>
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }

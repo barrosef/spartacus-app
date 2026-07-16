@@ -14,6 +14,7 @@ interface DonationCardProps {
   isTarget: boolean;
   commentsCount: number;
   commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
   onConfirm: () => void;
   onAbsent: () => void;
   onRequestReview: () => void;
@@ -33,6 +34,7 @@ export function DonationCard({
   isTarget,
   commentsCount,
   commentsOpen,
+  commentsSection,
   onConfirm,
   onAbsent,
   onRequestReview,
@@ -147,6 +149,9 @@ export function DonationCard({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }

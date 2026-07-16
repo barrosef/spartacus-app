@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
 import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
@@ -41,85 +40,79 @@ export function TimelineCard({
 
   const toggleComments = () => setShowComments((v) => !v);
 
-  let card: React.ReactNode;
+  // Seção inline renderizada DENTRO do card (estilo Instagram) — cada card
+  // a recebe como nó e a posiciona como último filho do seu container.
+  const commentsSection = showComments ? (
+    <CommentsSection
+      entryId={entry.id}
+      canModerate={isStaff}
+      viewerRoles={viewerRoles}
+      onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
+    />
+  ) : null;
+
   switch (entry.type) {
     case "post":
     case "event":
     case "championship":
-      card = (
+      return (
         <PostCard
           entry={entry}
           isSocial={isSocial}
           commentsCount={commentCount}
           commentsOpen={showComments}
+          commentsSection={commentsSection}
           onLike={() => onLike(entry.id)}
           onViewLikes={() => onViewLikes(entry.id)}
           onToggleComments={toggleComments}
           onPin={() => onPin?.(entry.id)}
         />
       );
-      break;
 
     case "attendance":
-      card = (
+      return (
         <AttendanceCard
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
           commentsCount={commentCount}
           commentsOpen={showComments}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
           onToggleComments={toggleComments}
         />
       );
-      break;
 
     case "donation":
-      card = (
+      return (
         <DonationCard
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
           commentsCount={commentCount}
           commentsOpen={showComments}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
           onToggleComments={toggleComments}
         />
       );
-      break;
 
     case "account_created":
-      card = (
+      return (
         <AccountCard
           entry={entry}
           commentsCount={commentCount}
           commentsOpen={showComments}
+          commentsSection={commentsSection}
           onToggleComments={toggleComments}
         />
       );
-      break;
 
     default:
-      card = null;
+      return null;
   }
-
-  if (card === null) return null;
-
-  return (
-    <View>
-      {card}
-      {showComments ? (
-        <CommentsSection
-          entryId={entry.id}
-          canModerate={isStaff}
-          viewerRoles={viewerRoles}
-          onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
-        />
-      ) : null}
-    </View>
-  );
 }

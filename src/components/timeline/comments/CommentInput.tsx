@@ -82,13 +82,15 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
 }
 
 const styles = StyleSheet.create({
+  // Sem padding horizontal — o card em volta já aplica padding: spacing.md.
   row: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,
-    padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+    paddingVertical: spacing.sm },
   input: { flex: 1, minHeight: 40, maxHeight: 120, color: colors.foreground,
     fontFamily: typography.fontBody, fontSize: 15, backgroundColor: colors.card,
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   send: { padding: spacing.sm },
   replyBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: spacing.md, paddingVertical: 6, backgroundColor: colors.primaryMuted },
+    paddingHorizontal: spacing.sm, paddingVertical: 6, backgroundColor: colors.primaryMuted,
+    borderRadius: radius.sm },
   replyTxt: { color: colors.primary, fontFamily: typography.fontBody, fontSize: 12 },
 });
