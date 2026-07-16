@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { View } from "react-native";
 import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
 import { AccountCard } from "./AccountCard";
 import { CommentsSheet } from "./comments/CommentsSheet";
-import { colors, typography, spacing } from "../../theme/tokens";
 import type { TimelineEntry } from "./types";
 
 interface TimelineCardProps {
@@ -41,6 +39,8 @@ export function TimelineCard({
 
   useEffect(() => setCommentCount(entry.commentsCount ?? 0), [entry.commentsCount]);
 
+  const toggleComments = () => setShowComments((v) => !v);
+
   let card: React.ReactNode;
   switch (entry.type) {
     case "post":
@@ -50,8 +50,11 @@ export function TimelineCard({
         <PostCard
           entry={entry}
           isSocial={isSocial}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
           onLike={() => onLike(entry.id)}
           onViewLikes={() => onViewLikes(entry.id)}
+          onToggleComments={toggleComments}
           onPin={() => onPin?.(entry.id)}
         />
       );
@@ -63,9 +66,12 @@ export function TimelineCard({
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
+          onToggleComments={toggleComments}
         />
       );
       break;
@@ -76,15 +82,25 @@ export function TimelineCard({
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
+          onToggleComments={toggleComments}
         />
       );
       break;
 
     case "account_created":
-      card = <AccountCard entry={entry} />;
+      card = (
+        <AccountCard
+          entry={entry}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
+          onToggleComments={toggleComments}
+        />
+      );
       break;
 
     default:
@@ -96,16 +112,6 @@ export function TimelineCard({
   return (
     <View>
       {card}
-      <TouchableOpacity
-        style={styles.commentsRow}
-        onPress={() => setShowComments(true)}
-        activeOpacity={0.7}
-      >
-        <Feather name="message-circle" size={18} color={colors.mutedForeground} />
-        <Text style={styles.commentsCount}>
-          {commentCount} comentário{commentCount === 1 ? "" : "s"}
-        </Text>
-      </TouchableOpacity>
       <CommentsSheet
         entryId={entry.id}
         visible={showComments}
@@ -117,20 +123,3 @@ export function TimelineCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  commentsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  commentsCount: {
-    color: colors.mutedForeground,
-    fontFamily: typography.fontBodyMedium,
-    fontSize: 13,
-  },
-});

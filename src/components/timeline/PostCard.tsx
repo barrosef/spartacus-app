@@ -25,16 +25,22 @@ function formatEventDate(raw?: string | null): string {
 interface PostCardProps {
   entry: TimelineEntry;
   isSocial?: boolean;
+  commentsCount: number;
+  commentsOpen: boolean;
   onLike: () => void;
   onViewLikes: () => void;
+  onToggleComments: () => void;
   onPin?: () => void;
 }
 
 export function PostCard({
   entry,
   isSocial = false,
+  commentsCount,
+  commentsOpen,
   onLike,
   onViewLikes,
+  onToggleComments,
   onPin,
 }: PostCardProps) {
   const isEvent = entry.type === "event" || entry.type === "championship";
@@ -144,6 +150,20 @@ export function PostCard({
                 {entry.likesCount}
               </Text>
             </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={onToggleComments}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="message-circle"
+              size={20}
+              color={commentsOpen ? colors.primary : colors.mutedForeground}
+            />
+          </TouchableOpacity>
+          {commentsCount > 0 ? (
+            <Text style={styles.likesCount}>{commentsCount}</Text>
           ) : null}
         </View>
         {isSocial ? (

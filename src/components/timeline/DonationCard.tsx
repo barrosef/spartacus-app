@@ -12,9 +12,12 @@ interface DonationCardProps {
   entry: TimelineEntry;
   isStaff: boolean;
   isTarget: boolean;
+  commentsCount: number;
+  commentsOpen: boolean;
   onConfirm: () => void;
   onAbsent: () => void;
   onRequestReview: () => void;
+  onToggleComments: () => void;
 }
 
 function formatReference(isoDate: string): string {
@@ -28,9 +31,12 @@ export function DonationCard({
   entry,
   isStaff,
   isTarget,
+  commentsCount,
+  commentsOpen,
   onConfirm,
   onAbsent,
   onRequestReview,
+  onToggleComments,
 }: DonationCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
   const targetRoles = entry.targetName ? ["supporter"] : entry.authorRoles;
@@ -118,12 +124,28 @@ export function DonationCard({
           </TouchableOpacity>
         ) : null}
 
-        {entry.likesCount > 0 ? (
-          <View style={styles.likesRow}>
-            <Feather name="heart" size={14} color={colors.mutedForeground} />
-            <Text style={styles.likesCount}>{entry.likesCount}</Text>
-          </View>
-        ) : null}
+        <View style={styles.likesRow}>
+          {entry.likesCount > 0 ? (
+            <>
+              <Feather name="heart" size={14} color={colors.mutedForeground} />
+              <Text style={styles.likesCount}>{entry.likesCount}</Text>
+            </>
+          ) : null}
+          <TouchableOpacity
+            style={styles.commentsButton}
+            onPress={onToggleComments}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="message-circle"
+              size={14}
+              color={commentsOpen ? colors.primary : colors.mutedForeground}
+            />
+            {commentsCount > 0 ? (
+              <Text style={styles.likesCount}>{commentsCount}</Text>
+            ) : null}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -234,6 +256,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
     marginLeft: "auto",
+  },
+  commentsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    padding: spacing.xs,
   },
   likesCount: {
     color: colors.mutedForeground,
