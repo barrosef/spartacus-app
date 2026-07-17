@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { SuccessScreen } from "../../components/ui/SuccessScreen";
 import { AudioPreview } from "../../components/post/AudioPreview";
 import { DateInput } from "../../components/ui/DateInput";
 import { TimeInput } from "../../components/ui/TimeInput";
+import type { IncomingMedia } from "../../lib/share/decideShareRouting";
 
 type PostType = "post" | "event" | "championship";
 type Step = "content" | "media" | "schedule" | "success";
@@ -44,6 +45,7 @@ interface Attachment {
 
 interface PostWizardScreenProps {
   onClose: () => void;
+  initialMedia?: IncomingMedia[];
 }
 
 const TYPE_OPTIONS: {
@@ -71,7 +73,7 @@ function combineDateTime(date: string, time: string): string | null {
   return `${iso}T${timePart}:00`;
 }
 
-export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
+export function PostWizardScreen({ onClose, initialMedia }: PostWizardScreenProps) {
   const dialog = useDialog();
   const [step, setStep] = useState<Step>("content");
   const [postType, setPostType] = useState<PostType>("post");
@@ -165,6 +167,29 @@ export function PostWizardScreen({ onClose }: PostWizardScreenProps) {
     },
     [dialog],
   );
+
+  // Mídia vinda do share-target: abre direto no passo "media" e sobe cada
+  // arquivo pelo mesmo caminho de upload da galeria. Roda uma única vez.
+  const initialMediaRef = useRef(false);
+  useEffect(() => {
+    if (initialMediaRef.current) return;
+    if (!initialMedia || initialMedia.length === 0) return;
+    initialMediaRef.current = true;
+    setStep("media");
+    (async () => {
+      for (const item of initialMedia) {
+        const ext = (item.localUri.split(".").pop() ?? "jpg").toLowerCase();
+        const name = `shared_${ext}_${initialMedia.indexOf(item)}.${ext}`;
+        const att = await uploadFile(item.localUri, name, item.mimeType);
+        if (att) {
+          setAttachments((prev) => [
+            ...prev,
+            { ...att, localUri: item.localUri },
+          ]);
+        }
+      }
+    })();
+  }, [initialMedia, uploadFile]);
 
   // ── Pickers ─────────────────────────────────────────────────────
 
