@@ -24,6 +24,10 @@ import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
 import { AttendanceApprovalScreen } from "../screens/staff/AttendanceApprovalScreen";
 import { DonationApprovalScreen } from "../screens/staff/DonationApprovalScreen";
 import { ModerationScreen } from "../screens/staff/ModerationScreen";
+import { useIncomingShare } from "../hooks/useIncomingShare";
+import { decideShareRouting, type IncomingMedia } from "../lib/share/decideShareRouting";
+import { useDialog } from "../components/ui/DialogProvider";
+import { consumeSharedWhileLoggedOut } from "../lib/share/loggedOutShareFlag";
 
 const TAB_SUBTITLES: Record<TabKey, string> = {
   feed: "Timeline de Avisos",
@@ -85,11 +89,23 @@ function MainContent() {
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [dependents, setDependents] = useState<DependentData[]>([]);
+  const [pendingShareMedia, setPendingShareMedia] = useState<IncomingMedia[] | null>(null);
+  const dialog = useDialog();
   const { actingAs, actingAsName } = useProxy();
   const notifs = useNotifications();
 
   const isGuardian = profile?.roles.includes("guardian") ?? false;
   const hasSocialRole = profile?.roles.includes("social") ?? false;
+
+  const screenBusy =
+    showProfile ||
+    showFrequency ||
+    showMyDonations ||
+    showPostWizard ||
+    showAttendanceApproval ||
+    showDonationApproval ||
+    staffScreen !== null ||
+    pendingShareMedia !== null;
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -118,6 +134,55 @@ function MainContent() {
       fetchDependents();
     }
   }, [isGuardian, fetchDependents]);
+
+  const { pendingMedia, clear: clearShareIntent } = useIncomingShare(
+    profile !== null,
+  );
+
+  useEffect(() => {
+    if (!pendingMedia) return;
+    const { action, media } = decideShareRouting({
+      hasSocialRole,
+      screenBusy,
+      media: pendingMedia,
+    });
+    // Consome o intent em todos os ramos, para não reprocessar a mesma mídia.
+    clearShareIntent();
+    if (action === "blocked-not-social") {
+      dialog.alert({
+        title: "Publicação restrita",
+        message: "Só a equipe publica no mural do Spartacus.",
+      });
+      return;
+    }
+    if (action === "blocked-busy") {
+      dialog.alert({
+        title: "Uma coisa de cada vez",
+        message: "Termine o post atual primeiro.",
+      });
+      return;
+    }
+    if (action === "truncated") {
+      dialog.alert({
+        title: "Muitas imagens",
+        message: "Anexamos as 5 primeiras imagens.",
+      });
+    }
+    setPendingShareMedia(media);
+    setShowPostWizard(true);
+  }, [pendingMedia, hasSocialRole, screenBusy, clearShareIntent, dialog]);
+
+  // Mídia compartilhada enquanto deslogado foi descartada pelo RootNavigator;
+  // avisa uma única vez ao entrar no app.
+  useEffect(() => {
+    if (consumeSharedWhileLoggedOut()) {
+      dialog.alert({
+        title: "Compartilhamento cancelado",
+        message:
+          "Por segurança, entre na sua conta antes de compartilhar imagens com o Spartacus.",
+      });
+    }
+  }, [dialog]);
 
   // When acting as dependent, show their info in the header
   const activeDep = actingAs
@@ -177,8 +242,10 @@ function MainContent() {
   if (showPostWizard) {
     return (
       <PostWizardScreen
+        initialMedia={pendingShareMedia ?? undefined}
         onClose={() => {
           setShowPostWizard(false);
+          setPendingShareMedia(null);
           setActiveTab("feed");
         }}
       />
