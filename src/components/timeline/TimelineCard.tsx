@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
 import { AccountCard } from "./AccountCard";
-import { CommentsSheet } from "./comments/CommentsSheet";
-import { colors, typography, spacing } from "../../theme/tokens";
+import { CommentsSection } from "./comments/CommentsSection";
 import type { TimelineEntry } from "./types";
 
 interface TimelineCardProps {
@@ -41,96 +38,81 @@ export function TimelineCard({
 
   useEffect(() => setCommentCount(entry.commentsCount ?? 0), [entry.commentsCount]);
 
-  let card: React.ReactNode;
+  const toggleComments = () => setShowComments((v) => !v);
+
+  // Seção inline renderizada DENTRO do card (estilo Instagram) — cada card
+  // a recebe como nó e a posiciona como último filho do seu container.
+  const commentsSection = showComments ? (
+    <CommentsSection
+      entryId={entry.id}
+      canModerate={isStaff}
+      viewerRoles={viewerRoles}
+      onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
+    />
+  ) : null;
+
   switch (entry.type) {
     case "post":
     case "event":
     case "championship":
-      card = (
+      return (
         <PostCard
           entry={entry}
           isSocial={isSocial}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
+          commentsSection={commentsSection}
           onLike={() => onLike(entry.id)}
           onViewLikes={() => onViewLikes(entry.id)}
+          onToggleComments={toggleComments}
           onPin={() => onPin?.(entry.id)}
         />
       );
-      break;
 
     case "attendance":
-      card = (
+      return (
         <AttendanceCard
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
+          onToggleComments={toggleComments}
         />
       );
-      break;
 
     case "donation":
-      card = (
+      return (
         <DonationCard
           entry={entry}
           isStaff={isStaff}
           isTarget={isTarget}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
+          onToggleComments={toggleComments}
         />
       );
-      break;
 
     case "account_created":
-      card = <AccountCard entry={entry} />;
-      break;
+      return (
+        <AccountCard
+          entry={entry}
+          commentsCount={commentCount}
+          commentsOpen={showComments}
+          commentsSection={commentsSection}
+          onToggleComments={toggleComments}
+        />
+      );
 
     default:
-      card = null;
+      return null;
   }
-
-  if (card === null) return null;
-
-  return (
-    <View>
-      {card}
-      <TouchableOpacity
-        style={styles.commentsRow}
-        onPress={() => setShowComments(true)}
-        activeOpacity={0.7}
-      >
-        <Feather name="message-circle" size={18} color={colors.mutedForeground} />
-        <Text style={styles.commentsCount}>
-          {commentCount} comentário{commentCount === 1 ? "" : "s"}
-        </Text>
-      </TouchableOpacity>
-      <CommentsSheet
-        entryId={entry.id}
-        visible={showComments}
-        canModerate={isStaff}
-        viewerRoles={viewerRoles}
-        onClose={() => setShowComments(false)}
-        onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
-      />
-    </View>
-  );
 }
-
-const styles = StyleSheet.create({
-  commentsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  commentsCount: {
-    color: colors.mutedForeground,
-    fontFamily: typography.fontBodyMedium,
-    fontSize: 13,
-  },
-});

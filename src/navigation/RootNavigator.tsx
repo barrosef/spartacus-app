@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Platform, View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { useShareIntentContext } from "expo-share-intent";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import {
@@ -11,6 +12,7 @@ import { AuthNavigator } from "./AuthNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
 import { colors, typography } from "../theme/tokens";
+import { markSharedWhileLoggedOut } from "../lib/share/loggedOutShareFlag";
 import { MainNavigator } from "./MainNavigator";
 
 // ── Signup guard ─────────────────────────────────────────────────────────────
@@ -120,6 +122,22 @@ export function RootNavigator() {
     const cleanup = setupNotificationListeners();
     return cleanup;
   }, [user, signupInProgress]);
+
+  const { hasShareIntent: rawHasShareIntent, resetShareIntent } =
+    useShareIntentContext();
+
+  // Enquanto a UI de login está visível, qualquer mídia compartilhada é
+  // descartada (não atravessa a autenticação na v1) e sinalizada para o
+  // MainNavigator avisar após o login. Cold-start já autenticado nunca passa
+  // por "auth", então não descarta a mídia.
+  const authScreenVisible =
+    resetLanding || appState === "auth" || signupInProgress;
+  useEffect(() => {
+    if (authScreenVisible && rawHasShareIntent) {
+      markSharedWhileLoggedOut();
+      resetShareIntent();
+    }
+  }, [authScreenVisible, rawHasShareIntent, resetShareIntent]);
 
   if (appState === "loading" && !resetLanding) {
     return (

@@ -15,12 +15,17 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import type { TimelineAttachment } from "./types";
+import type { ShareContext } from "./MediaViewerContext";
+import { canShareExternally } from "../../lib/share/platform";
+import { shareMedia } from "../../lib/share/shareMedia";
+import { useDialog } from "../ui/DialogProvider";
 
 interface MediaViewerProps {
   images: TimelineAttachment[];
   initialIndex: number;
   visible: boolean;
   onClose: () => void;
+  share?: ShareContext;
 }
 
 /**
@@ -34,10 +39,29 @@ export function MediaViewer({
   initialIndex,
   visible,
   onClose,
+  share,
 }: MediaViewerProps) {
   const { width, height } = useWindowDimensions();
   const listRef = useRef<FlatList<TimelineAttachment>>(null);
   const [index, setIndex] = useState(initialIndex);
+
+  const dialog = useDialog();
+  const showShare = canShareExternally && !!share;
+
+  const handleShare = async () => {
+    if (!share) return;
+    const url = images[index]?.url;
+    if (!url) return;
+    try {
+      await shareMedia({ urls: [url], caption: share.caption });
+    } catch {
+      await dialog.alert({
+        title: "Não foi possível preparar a imagem",
+        message: "Verifique sua conexão e tente novamente.",
+        tone: "danger",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -126,13 +150,24 @@ export function MediaViewer({
         ) : (
           <View />
         )}
-        <TouchableOpacity
-          style={styles.closeBtn}
-          onPress={onClose}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Feather name="x" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.topRight}>
+          {showShare ? (
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={handleShare}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Feather name="share-2" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Feather name="x" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Prev/next arrows — left from the 2nd image, right until the last but
@@ -206,6 +241,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  topRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   navBtn: {
     position: "absolute",

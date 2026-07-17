@@ -52,6 +52,14 @@
     "plugins": [
       "expo-font",
       [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": ["image/*"],
+          "disableAndroid": false,
+          "disableIOS": true
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

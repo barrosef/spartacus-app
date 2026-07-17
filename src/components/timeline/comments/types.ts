@@ -9,6 +9,8 @@ export interface Comment {
   /** Display strings (nickname→name) of the mentions, for full-span highlight. */
   mentionDisplays: string[];
   createdAt: string;
+  /** ISO timestamp da última edição pelo autor; ausente = nunca editado. */
+  editedAt?: string | null;
   deleted: boolean;
   deletedBy?: string | null;
 }

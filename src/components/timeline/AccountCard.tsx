@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { timeAgo } from "../../utils/timeAgo";
@@ -8,9 +8,19 @@ import type { TimelineEntry } from "./types";
 
 interface AccountCardProps {
   entry: TimelineEntry;
+  commentsCount: number;
+  commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
+  onToggleComments: () => void;
 }
 
-export function AccountCard({ entry }: AccountCardProps) {
+export function AccountCard({
+  entry,
+  commentsCount,
+  commentsOpen,
+  commentsSection,
+  onToggleComments,
+}: AccountCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
   const classes = entry.classes ?? [];
 
@@ -76,6 +86,27 @@ export function AccountCard({ entry }: AccountCardProps) {
           <Text style={styles.time}>{timeAgo(entry.createdAt)}</Text>
         </View>
       </View>
+
+      {/* Footer mínimo — só o balão de comentários */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.commentsButton}
+          onPress={onToggleComments}
+          activeOpacity={0.7}
+        >
+          <Feather
+            name="message-circle"
+            size={14}
+            color={commentsOpen ? colors.primary : colors.mutedForeground}
+          />
+          {commentsCount > 0 ? (
+            <Text style={styles.commentsCount}>{commentsCount}</Text>
+          ) : null}
+        </TouchableOpacity>
+      </View>
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }
@@ -154,5 +185,24 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     fontFamily: typography.fontBody,
     fontSize: 11,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: spacing.sm,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  commentsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    padding: spacing.xs,
+  },
+  commentsCount: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBodyMedium,
+    fontSize: 13,
   },
 });

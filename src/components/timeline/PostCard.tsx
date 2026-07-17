@@ -7,6 +7,12 @@ import { formatRoles } from "./helpers";
 import { AttachmentList } from "./AttachmentList";
 import { UserAvatar } from "../ui/UserAvatar";
 import type { TimelineEntry } from "./types";
+import { useMemo, useState } from "react";
+import { canShareExternally } from "../../lib/share/platform";
+import { buildCaption } from "../../lib/share/buildCaption";
+import { shareMedia } from "../../lib/share/shareMedia";
+import { ShareSheet } from "./ShareSheet";
+import { useDialog } from "../ui/DialogProvider";
 
 const LIKE_COLOR = "#ef4444";
 
@@ -25,19 +31,60 @@ function formatEventDate(raw?: string | null): string {
 interface PostCardProps {
   entry: TimelineEntry;
   isSocial?: boolean;
+  commentsCount: number;
+  commentsOpen: boolean;
+  commentsSection?: React.ReactNode;
   onLike: () => void;
   onViewLikes: () => void;
+  onToggleComments: () => void;
   onPin?: () => void;
 }
 
 export function PostCard({
   entry,
   isSocial = false,
+  commentsCount,
+  commentsOpen,
+  commentsSection,
   onLike,
   onViewLikes,
+  onToggleComments,
   onPin,
 }: PostCardProps) {
   const isEvent = entry.type === "event" || entry.type === "championship";
+
+  const dialog = useDialog();
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  // Memoized so a re-render of the card (e.g. comment/like state) doesn't hand
+  // the ShareSheet a new array identity mid-selection — which would reset its
+  // marks. Stable as long as entry.attachments is stable.
+  const images = useMemo(
+    () => (entry.attachments ?? []).filter((a) => a.type === "image"),
+    [entry.attachments],
+  );
+  const canShare = canShareExternally && images.length > 0;
+
+  const runShare = async (urls: string[]) => {
+    try {
+      await shareMedia({ urls, caption: buildCaption(entry) });
+    } catch {
+      const retry = await dialog.confirm({
+        title: "Não foi possível preparar a imagem",
+        message: "Verifique sua conexão e tente novamente.",
+        confirmText: "Tentar de novo",
+        tone: "danger",
+      });
+      if (retry) await runShare(urls);
+    }
+  };
+
+  const handleSharePress = () => {
+    if (images.length === 1) {
+      runShare([images[0].url]);
+    } else {
+      setShareSheetOpen(true);
+    }
+  };
 
   return (
     <View style={[styles.card, entry.isPinned && styles.cardPinned]}>
@@ -90,7 +137,10 @@ export function PostCard({
 
       {/* Attachments: image / audio / file — rendered per type */}
       {entry.attachments && entry.attachments.length > 0 ? (
-        <AttachmentList attachments={entry.attachments} />
+        <AttachmentList
+          attachments={entry.attachments}
+          shareContext={canShare ? { caption: buildCaption(entry) } : undefined}
+        />
       ) : null}
 
       {/* Link preview */}
@@ -145,6 +195,29 @@ export function PostCard({
               </Text>
             </TouchableOpacity>
           ) : null}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={onToggleComments}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name="message-circle"
+              size={20}
+              color={commentsOpen ? colors.primary : colors.mutedForeground}
+            />
+          </TouchableOpacity>
+          {commentsCount > 0 ? (
+            <Text style={styles.likesCount}>{commentsCount}</Text>
+          ) : null}
+          {canShare ? (
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleSharePress}
+              activeOpacity={0.7}
+            >
+              <Feather name="share-2" size={20} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          ) : null}
         </View>
         {isSocial ? (
           <TouchableOpacity
@@ -160,6 +233,21 @@ export function PostCard({
           </TouchableOpacity>
         ) : null}
       </View>
+
+      {canShare ? (
+        <ShareSheet
+          images={images}
+          visible={shareSheetOpen}
+          onClose={() => setShareSheetOpen(false)}
+          onConfirm={(urls) => {
+            setShareSheetOpen(false);
+            runShare(urls);
+          }}
+        />
+      ) : null}
+
+      {/* Comentários inline — parte do próprio card */}
+      {commentsSection}
     </View>
   );
 }
