@@ -11,9 +11,11 @@ import { Feather } from "@expo/vector-icons";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { MediaGallery } from "./MediaGallery";
 import type { TimelineAttachment } from "./types";
+import type { ShareContext } from "./MediaViewerContext";
 
 interface AttachmentListProps {
   attachments: TimelineAttachment[];
+  shareContext?: ShareContext;
 }
 
 /**
@@ -22,14 +24,16 @@ interface AttachmentListProps {
  *  - voice/audio: inline player with play/pause + time
  *  - file/other: icon + filename
  */
-export function AttachmentList({ attachments }: AttachmentListProps) {
+export function AttachmentList({ attachments, shareContext }: AttachmentListProps) {
   if (!attachments?.length) return null;
   // Images collapse into a single mosaic gallery; audio/files render inline.
   const images = attachments.filter((a) => a.type === "image");
   const rest = attachments.filter((a) => a.type !== "image");
   return (
     <View style={styles.list}>
-      {images.length > 0 ? <MediaGallery images={images} /> : null}
+      {images.length > 0 ? (
+        <MediaGallery images={images} shareContext={shareContext} />
+      ) : null}
       {rest.map((att, i) => {
         const key = `${att.url}-${i}`;
         if (att.type === "voice" || att.type.startsWith("audio")) {

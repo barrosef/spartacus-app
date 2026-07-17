@@ -8,8 +8,17 @@ import React, {
 import { MediaViewer } from "./MediaViewer";
 import type { TimelineAttachment } from "./types";
 
+/** Contexto de compartilhamento do visor: só a legenda de crédito. */
+export interface ShareContext {
+  caption: string;
+}
+
 interface MediaViewerContextValue {
-  open: (images: TimelineAttachment[], index: number) => void;
+  open: (
+    images: TimelineAttachment[],
+    index: number,
+    share?: ShareContext,
+  ) => void;
 }
 
 const MediaViewerContext = createContext<MediaViewerContextValue>({
@@ -35,11 +44,16 @@ export function MediaViewerProvider({
   const [state, setState] = useState<{
     images: TimelineAttachment[];
     index: number;
+    share?: ShareContext;
   } | null>(null);
 
   const open = useCallback(
-    (images: TimelineAttachment[], index: number) => {
-      setState({ images, index });
+    (
+      images: TimelineAttachment[],
+      index: number,
+      share?: ShareContext,
+    ) => {
+      setState({ images, index, share });
     },
     [],
   );
@@ -53,6 +67,7 @@ export function MediaViewerProvider({
         <MediaViewer
           images={state.images}
           initialIndex={state.index}
+          share={state.share}
           visible
           onClose={close}
         />

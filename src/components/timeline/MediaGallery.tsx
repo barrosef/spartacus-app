@@ -10,6 +10,7 @@ import {
 import { colors, radius, typography } from "../../theme/tokens";
 import type { TimelineAttachment } from "./types";
 import { useMediaViewer } from "./MediaViewerContext";
+import type { ShareContext } from "./MediaViewerContext";
 
 const GAP = 3;
 const TALL = 240;
@@ -17,6 +18,7 @@ const WIDE = 180;
 
 interface MediaGalleryProps {
   images: TimelineAttachment[];
+  shareContext?: ShareContext;
 }
 
 /**
@@ -24,13 +26,13 @@ interface MediaGalleryProps {
  * rounded mosaic sized by count (1, 2, 3, 4, "+N"). Tapping any tile opens the
  * fullscreen swipeable viewer at that image.
  */
-export function MediaGallery({ images }: MediaGalleryProps) {
+export function MediaGallery({ images, shareContext }: MediaGalleryProps) {
   const { open } = useMediaViewer();
   if (!images.length) return null;
 
   return (
     <View style={styles.wrap}>
-      {renderGrid(images, (index) => open(images, index))}
+      {renderGrid(images, (index) => open(images, index, shareContext))}
     </View>
   );
 }

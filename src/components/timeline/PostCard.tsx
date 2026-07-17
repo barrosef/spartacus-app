@@ -137,7 +137,10 @@ export function PostCard({
 
       {/* Attachments: image / audio / file — rendered per type */}
       {entry.attachments && entry.attachments.length > 0 ? (
-        <AttachmentList attachments={entry.attachments} />
+        <AttachmentList
+          attachments={entry.attachments}
+          shareContext={canShare ? { caption: buildCaption(entry) } : undefined}
+        />
       ) : null}
 
       {/* Link preview */}
