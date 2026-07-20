@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
-import { useShareIntentContext } from "expo-share-intent";
-import type { ShareIntentFile } from "expo-share-intent";
+import { useShareIntentContext } from "../lib/shareIntent";
+import type { ShareIntentFile } from "../lib/shareIntent";
 import { canShareExternally } from "../lib/share/platform";
 import type { IncomingMedia } from "../lib/share/decideShareRouting";
 

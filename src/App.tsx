@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-nat
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { Montserrat_600SemiBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ShareIntentProvider } from "expo-share-intent";
+import { ShareIntentProvider } from "./lib/shareIntent";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { MediaViewerProvider } from "./components/timeline/MediaViewerContext";
 import { DialogProvider } from "./components/ui/DialogProvider";
