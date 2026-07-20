@@ -17,6 +17,7 @@ interface TimelineCardProps {
   onConfirm: (entryId: string) => void;
   onAbsent: (entryId: string) => void;
   onRequestReview: (entryId: string) => void;
+  onJustify: (entryId: string) => void;
   onPin?: (entryId: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function TimelineCard({
   onConfirm,
   onAbsent,
   onRequestReview,
+  onJustify,
   onPin,
 }: TimelineCardProps) {
   const [showComments, setShowComments] = useState(false);
@@ -80,7 +82,7 @@ export function TimelineCard({
           commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
-          onRequestReview={() => onRequestReview(entry.id)}
+          onJustify={() => onJustify(entry.id)}
           onToggleComments={toggleComments}
         />
       );

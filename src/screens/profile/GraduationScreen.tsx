@@ -17,6 +17,7 @@ import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
 import { useDialog } from "../../components/ui/DialogProvider";
+import { BELT_OPTIONS, getDefaultBelts, normalizeModalityKey } from "../../lib/belts";
 
 interface GraduationEntry {
   belt: string;
@@ -37,48 +38,10 @@ interface ClassOut {
 }
 
 /** Modality name → slug (mirrors backend normalization). */
-function modalitySlug(name: string): string {
-  return (name || "").trim().toLowerCase().replace(/\s+/g, "-");
-}
+const modalitySlug = normalizeModalityKey;
 
 /** Modalities that graduate by belt/cord only (no degree, no prajied). */
 const BELT_ONLY = new Set(["muay-thai", "capoeira"]);
-
-const BELT_OPTIONS: Record<string, { label: string; color: string }[]> = {
-  "Jiu-Jitsu": [
-    { label: "Branca", color: "#FFFFFF" },
-    { label: "Azul", color: "#2563EB" },
-    { label: "Roxa", color: "#7C3AED" },
-    { label: "Marrom", color: "#92400E" },
-    { label: "Preta", color: "#222222" },
-  ],
-  "Muay Thai": [
-    { label: "Branca", color: "#FFFFFF" },
-    { label: "Amarela", color: "#EAB308" },
-    { label: "Laranja", color: "#EA580C" },
-    { label: "Verde", color: "#16A34A" },
-    { label: "Azul", color: "#2563EB" },
-    { label: "Roxa", color: "#7C3AED" },
-    { label: "Marrom", color: "#92400E" },
-    { label: "Vermelha", color: "#DC2626" },
-    { label: "Preta", color: "#222222" },
-  ],
-  "Capoeira": [
-    { label: "Crua", color: "#D4C5A9" },
-    { label: "Amarela", color: "#EAB308" },
-    { label: "Laranja", color: "#EA580C" },
-    { label: "Azul", color: "#2563EB" },
-    { label: "Verde", color: "#16A34A" },
-    { label: "Roxa", color: "#7C3AED" },
-    { label: "Marrom", color: "#92400E" },
-    { label: "Vermelha", color: "#DC2626" },
-    { label: "Branca", color: "#FFFFFF" },
-  ],
-};
-
-function getDefaultBelts() {
-  return BELT_OPTIONS["Jiu-Jitsu"]!;
-}
 
 interface GraduationScreenProps {
   onBack: () => void;

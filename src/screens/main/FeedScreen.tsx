@@ -23,6 +23,7 @@ import type { TimelineEntry } from "../../components/timeline/types";
 import { AnamneseReminderBanner } from "../../components/profile/AnamneseReminderBanner";
 import { useAnamneseStatus } from "../../hooks/useAnamneseStatus";
 import { STAFF_ROLES } from "../../constants/roles";
+import type { JustifiableRecord } from "./JustifyAbsenceScreen";
 
 interface FeedResponse {
   entries: TimelineEntry[];
@@ -36,6 +37,9 @@ interface FeedScreenProps {
   onFilterClose?: () => void;
   onFilterChange?: (type: string | null) => void;
   onOpenAnamnese?: () => void;
+  /** Task B8: opens the B7 JustifyAbsenceScreen flow for an absent
+   * attendance record surfaced on the timeline's AttendanceCard. */
+  onJustify?: (record: JustifiableRecord) => void;
 }
 
 const POLL_INTERVAL = 30_000;
@@ -47,6 +51,7 @@ export function FeedScreen({
   onFilterClose,
   onFilterChange,
   onOpenAnamnese,
+  onJustify,
 }: FeedScreenProps) {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [screen, setScreen] = useState<
@@ -430,6 +435,15 @@ export function FeedScreen({
               const entityType =
                 entry.type === "attendance" ? "attendance" : "donations";
               handleRequestReview(entityType, entityId, entry.id);
+            }}
+            onJustify={() => {
+              const ref = entry.id.split("_");
+              const entityId = ref.slice(1).join("_");
+              onJustify?.({
+                id: entityId,
+                date: (entry.classDate ?? "").split(" ")[0],
+                modalityName: entry.modalidadeName ?? entry.turmaName ?? "",
+              });
             }}
           />
           );

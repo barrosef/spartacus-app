@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -24,6 +23,7 @@ import {
   buttonHeight,
 } from "../../theme/tokens";
 import { api } from "../../lib/api";
+import { uploadFile as uploadFileToEndpoint } from "../../lib/uploadFile";
 import { useDialog } from "../../components/ui/DialogProvider";
 import { SuccessScreen } from "../../components/ui/SuccessScreen";
 import { AudioPreview } from "../../components/post/AudioPreview";
@@ -135,27 +135,12 @@ export function PostWizardScreen({ onClose, initialMedia }: PostWizardScreenProp
     ): Promise<Attachment | null> => {
       setUploading(true);
       try {
-        const formData = new FormData();
-        if (Platform.OS === "web") {
-          const resp = await fetch(uri);
-          const blob = await resp.blob();
-          (formData as unknown as globalThis.FormData).append(
-            "file",
-            blob,
-            fileName,
-          );
-        } else {
-          formData.append("file", {
-            uri,
-            name: fileName,
-            type: mimeType,
-          } as unknown as Blob);
-        }
-        const result = await api.upload<Attachment>(
+        return await uploadFileToEndpoint(
           "/posts/upload",
-          formData,
+          uri,
+          fileName,
+          mimeType,
         );
-        return result;
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : "Erro ao enviar arquivo";
