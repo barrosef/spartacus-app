@@ -45,13 +45,16 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [menuCard, setMenuCard] = useState<GradCard | null>(null);
 
-  const fetchRoster = useCallback(async () => {
-    setScreenState("loading");
+  const fetchRoster = useCallback(async (opts?: { silent?: boolean }) => {
+    // silent: refetch pós-ação — mantém a lista montada para preservar o scroll
+    const silent = opts?.silent === true;
+    if (!silent) setScreenState("loading");
     try {
       const data = await api.get<RosterOut>("/graduations/dashboard?view=roster");
       setRoster(data);
       setScreenState("loaded");
-    } catch {
+    } catch (err) {
+      if (silent) throw err;
       setScreenState("error");
     }
   }, []);
@@ -83,7 +86,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
           await api.post(`/graduations/${uid}/promote`, { ...body, kind: "degree" });
         else if (action === "belt")
           await api.post(`/graduations/${uid}/promote`, { ...body, kind: "belt" });
-        await fetchRoster();
+        await fetchRoster({ silent: true });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Erro ao processar graduação.";
         dialog.alert({ title: "Erro", message, tone: "danger" });
@@ -132,7 +135,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
           <Text style={styles.emptyMsg}>Não foi possível buscar as graduações.</Text>
         </View>
         <View style={styles.footer}>
-          <Button label="Tentar novamente" onPress={fetchRoster} />
+          <Button label="Tentar novamente" onPress={() => fetchRoster()} />
         </View>
       </SafeAreaView>
     );
