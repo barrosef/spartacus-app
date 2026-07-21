@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Platform, View, Text, StyleSheet } from "react-native";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { useShareIntentContext } from "expo-share-intent";
+import { useShareIntentContext } from "../lib/shareIntent";
 import { auth } from "../lib/firebase";
 import { api } from "../lib/api";
 import {

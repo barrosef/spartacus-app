@@ -1,5 +1,4 @@
 import * as FileSystem from "expo-file-system";
-import Share from "react-native-share";
 
 interface ShareMediaInput {
   urls: string[];
@@ -17,6 +16,11 @@ interface ShareMediaInput {
  * - Falha de download / nenhum app receptor: rejeita (o chamador exibe diálogo).
  */
 export async function shareMedia({ urls, caption }: ShareMediaInput): Promise<void> {
+  // Lazy import: react-native-share is an Android-only native module; a
+  // top-level import pulls it into the web bundle and crashes it at load. This
+  // function only runs on Android (canShareExternally gate at the call site),
+  // so load it on demand here.
+  const Share = (await import("react-native-share")).default;
   const localUris: string[] = [];
   try {
     for (let i = 0; i < urls.length; i++) {

@@ -7,6 +7,39 @@ import { UserAvatar } from "../ui/UserAvatar";
 import { ValidationBadge } from "./ValidationBadge";
 import type { TimelineEntry } from "./types";
 
+/** Days after the aula's date during which "Justificar" is offered — must
+ * mirror the backend's `_JUSTIFY_PRAZO_DAYS` (app/routers/attendance.py) and
+ * FrequencyHistoryScreen's client-side mirror (Task B7). `entry.classDate`
+ * here is formatted "dd/mm/yyyy HH:mm" (see
+ * app/services/checkin_service.py) rather than the ISO `dateSort` used
+ * there. Display-only heuristic — the server is authoritative and
+ * re-validates on submit. */
+const JUSTIFY_PRAZO_DAYS = 7;
+
+function withinJustifyPrazo(classDate?: string | null): boolean {
+  if (!classDate) return false;
+  const match = classDate.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!match) return false;
+  const [, d, m, y] = match;
+  const deadline = new Date(Number(y), Number(m) - 1, Number(d));
+  deadline.setDate(deadline.getDate() + JUSTIFY_PRAZO_DAYS + 1); // exclusive end-of-day
+  return new Date() < deadline;
+}
+
+/** `entry.id` is a composite feed-entry key shaped "{type}_{entityId}" (see
+ * FeedScreen.tsx, which derives the same way for onConfirm/onAbsent). A
+ * synthetic placeholder id (`absent_{dateSort}`, from the history screen's
+ * `_build_month_records`) never actually reaches the timeline feed — there's
+ * no check-in doc to base an entry on — but this mirrors
+ * FrequencyHistoryScreen's `isRealRecordId` guard defensively, since the
+ * shape here is derived rather than typed. */
+function isRealRecordId(entryId: string): boolean {
+  const recordId = entryId.includes("_")
+    ? entryId.split("_").slice(1).join("_")
+    : entryId;
+  return !recordId.startsWith("absent_");
+}
+
 interface AttendanceCardProps {
   entry: TimelineEntry;
   isStaff: boolean;
@@ -16,7 +49,7 @@ interface AttendanceCardProps {
   commentsSection?: React.ReactNode;
   onConfirm: () => void;
   onAbsent: () => void;
-  onRequestReview: () => void;
+  onJustify: () => void;
   onToggleComments: () => void;
 }
 
@@ -29,15 +62,18 @@ export function AttendanceCard({
   commentsSection,
   onConfirm,
   onAbsent,
-  onRequestReview,
+  onJustify,
   onToggleComments,
 }: AttendanceCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
 
-  const canRequestReview =
+  // Task B8: "Justificar" substitui o antigo "Solicitar revisão" nas faltas
+  // (ver docs/superpowers/specs/2026-07-18-justificativa-faltas-design.md).
+  const canJustify =
     isTarget &&
     entry.validationStatus === "absent" &&
-    !entry.reviewRequested;
+    isRealRecordId(entry.id) &&
+    withinJustifyPrazo(entry.classDate);
 
   return (
     <View style={styles.card}>
@@ -105,18 +141,18 @@ export function AttendanceCard({
               </Text>
             </TouchableOpacity>
           </View>
-        ) : canRequestReview ? (
+        ) : canJustify ? (
           <TouchableOpacity
             style={styles.reviewButton}
-            onPress={onRequestReview}
+            onPress={onJustify}
             activeOpacity={0.7}
           >
             <Feather
-              name="alert-circle"
+              name="edit-3"
               size={14}
               color={colors.primary}
             />
-            <Text style={styles.reviewText}>Solicitar revisao</Text>
+            <Text style={styles.reviewText}>Justificar</Text>
           </TouchableOpacity>
         ) : null}
 

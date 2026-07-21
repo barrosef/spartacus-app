@@ -71,11 +71,14 @@ function formatDate(iso: string): string {
 
 interface AttendanceApprovalScreenProps {
   onBack: () => void;
+  /** Rendered below the header, above every screen state (e.g. the
+   * Aprovar|Análise segmented control in Gestão → Frequência). */
+  headerExtra?: React.ReactNode;
 }
 
 /* ── Component ─────────────────────────────────────────────────── */
 
-export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenProps) {
+export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceApprovalScreenProps) {
   const [screenState, setScreenState] = useState<ScreenState>("idle");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<AttendanceDashboard | null>(null);
@@ -415,6 +418,8 @@ export function AttendanceApprovalScreen({ onBack }: AttendanceApprovalScreenPro
         </TouchableOpacity>
       </View>
 
+      {headerExtra && <View style={styles.headerExtra}>{headerExtra}</View>}
+
       {/* Body */}
       {screenState === "idle" && (
         <View style={styles.center}>
@@ -563,6 +568,10 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.primary,
+  },
+  headerExtra: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
 
   // Scroll

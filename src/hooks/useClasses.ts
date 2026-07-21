@@ -12,6 +12,8 @@ interface ClassOut {
   teacher?: string;
   location?: string;
   age_range?: { min: number; max?: number };
+  attendanceEngineEnabled?: boolean;
+  attendanceStartDate?: string | null;
 }
 
 interface ClassesResponse {
@@ -29,6 +31,8 @@ function mapClass(c: ClassOut): ClassOption {
     teacher: c.teacher,
     location: c.location,
     ageRange: c.age_range ? { min: c.age_range.min, max: c.age_range.max ?? 99 } : undefined,
+    attendanceEngineEnabled: c.attendanceEngineEnabled ?? false,
+    attendanceStartDate: c.attendanceStartDate ?? null,
   };
 }
 

@@ -12,6 +12,10 @@ export interface ClassOption {
   teacher?: string;
   location?: string;
   ageRange?: { min: number; max: number };
+  // Attendance engine (RFC "Frequência Analítica") — drives the engine
+  // state shown when staff pick a turma in Gestão → Frequência → Análise.
+  attendanceEngineEnabled?: boolean;
+  attendanceStartDate?: string | null;
 }
 
 export interface Dependent {

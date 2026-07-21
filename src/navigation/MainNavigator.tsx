@@ -16,12 +16,13 @@ import { CheckinScreen } from "../screens/main/CheckinScreen";
 import { CalendarScreen } from "../screens/main/CalendarScreen";
 import { DonationsScreen } from "../screens/main/DonationsScreen";
 import { FrequencyHistoryScreen } from "../screens/main/FrequencyHistoryScreen";
+import { JustifyAbsenceScreen, type JustifiableRecord } from "../screens/main/JustifyAbsenceScreen";
 import { MyDonationsScreen } from "../screens/main/MyDonationsScreen";
 import { PostWizardScreen } from "../screens/main/PostWizardScreen";
 import { StaffMatriculasScreen } from "../screens/staff/StaffMatriculasScreen";
 import { StaffAnamnesesScreen } from "../screens/staff/StaffAnamnesesScreen";
 import { StaffGraduacoesScreen } from "../screens/staff/StaffGraduacoesScreen";
-import { AttendanceApprovalScreen } from "../screens/staff/AttendanceApprovalScreen";
+import { AttendanceAnalyticsScreen } from "../screens/staff/AttendanceAnalyticsScreen";
 import { DonationApprovalScreen } from "../screens/staff/DonationApprovalScreen";
 import { ModerationScreen } from "../screens/staff/ModerationScreen";
 import { useIncomingShare } from "../hooks/useIncomingShare";
@@ -78,6 +79,7 @@ function MainContent() {
   const [showProfile, setShowProfile] = useState(false);
   const [profileInitialScreen, setProfileInitialScreen] = useState<"profile" | "anamnese">("profile");
   const [showFrequency, setShowFrequency] = useState(false);
+  const [justifyTarget, setJustifyTarget] = useState<JustifiableRecord | null>(null);
   const [showMyDonations, setShowMyDonations] = useState(false);
   const [showPostWizard, setShowPostWizard] = useState(false);
   const [staffScreen, setStaffScreen] = useState<null | "matriculas" | "anamneses" | "graduacoes" | "moderacao">(null);
@@ -100,6 +102,7 @@ function MainContent() {
   const screenBusy =
     showProfile ||
     showFrequency ||
+    justifyTarget !== null ||
     showMyDonations ||
     showPostWizard ||
     showAttendanceApproval ||
@@ -239,6 +242,16 @@ function MainContent() {
     );
   }
 
+  if (justifyTarget) {
+    return (
+      <JustifyAbsenceScreen
+        record={justifyTarget}
+        onClose={() => setJustifyTarget(null)}
+        onJustified={() => setJustifyTarget(null)}
+      />
+    );
+  }
+
   if (showPostWizard) {
     return (
       <PostWizardScreen
@@ -286,7 +299,7 @@ function MainContent() {
   }
 
   if (showAttendanceApproval) {
-    return <AttendanceApprovalScreen onBack={() => setShowAttendanceApproval(false)} />;
+    return <AttendanceAnalyticsScreen onBack={() => setShowAttendanceApproval(false)} />;
   }
 
   if (showDonationApproval) {
@@ -304,6 +317,7 @@ function MainContent() {
             onFilterClose={() => setFeedFilterVisible(false)}
             onFilterChange={(t) => setFeedTypeFilter(t)}
             onOpenAnamnese={handleOpenAnamnese}
+            onJustify={setJustifyTarget}
           />
         );
       case "checkin":

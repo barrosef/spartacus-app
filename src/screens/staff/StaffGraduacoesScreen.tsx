@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,162 +10,108 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
-import { api, getProjectId } from "../../lib/api";
+import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useDialog } from "../../components/ui/DialogProvider";
+import { FamilyCard } from "../../components/graduation/FamilyCard";
+import { GraduationActionSheet } from "../../components/graduation/GraduationActionSheet";
+import type {
+  GradAction,
+  GradCard,
+  RosterFamily,
+  RosterOut,
+} from "../../components/graduation/types";
 
-/* ── Types ─────────────────────────────────────────────────────── */
-
-interface ModalityOut {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface ModalitiesResponse {
-  modalities: ModalityOut[];
-}
-
-interface NextBelt {
-  slug: string;
-  name: string;
-  color: string;
-  maxDegree: number;
-}
-
-interface GraduationStudentCard {
-  userId: string;
-  name: string;
-  nickname?: string | null;
-  belt?: string | null;
-  beltName?: string | null;
-  degree: number;
-  status: string;
-  nextBelt?: NextBelt | null;
-}
-
-interface GraduationDashboardOut {
-  modalitySlug: string;
-  modalityName: string;
-  hasSystem: boolean;
-  students: GraduationStudentCard[];
-}
-
-interface PendingGraduation extends GraduationStudentCard {
-  modalitySlug: string;
-  modalityName: string;
-}
-
-type ScreenState = "loading" | "loaded" | "empty" | "error";
-
-/* ── Props ──────────────────────────────────────────────────────── */
+type ScreenState = "loading" | "loaded" | "error";
+type Filter = "pending" | "all";
 
 interface StaffGraduacoesScreenProps {
   onBack: () => void;
 }
 
-/* ── Component ─────────────────────────────────────────────────── */
+function familyNeedsAttention(family: RosterFamily): boolean {
+  const people = [family.guardian, ...family.dependents];
+  return people.some((p) =>
+    p.graduations.some((g) => g.status === "pending" || g.status === "rejected"),
+  );
+}
 
 export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
   const dialog = useDialog();
   const [screenState, setScreenState] = useState<ScreenState>("loading");
-  const [pendingItems, setPendingItems] = useState<PendingGraduation[]>([]);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [roster, setRoster] = useState<RosterOut | null>(null);
+  const [filter, setFilter] = useState<Filter>("pending");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [menuCard, setMenuCard] = useState<GradCard | null>(null);
 
-  const fetchPending = useCallback(async () => {
-    setScreenState("loading");
+  const fetchRoster = useCallback(async (opts?: { silent?: boolean }) => {
+    // silent: refetch pós-ação — mantém a lista montada para preservar o scroll
+    const silent = opts?.silent === true;
+    if (!silent) setScreenState("loading");
     try {
-      const projectId = getProjectId();
-      const modalitiesRes = await api.get<ModalitiesResponse>(
-        `/projects/${projectId}/modalities`,
-      );
-
-      const results = await Promise.all(
-        modalitiesRes.modalities.map(async (modality) => {
-          try {
-            const dashboard = await api.get<GraduationDashboardOut>(
-              `/graduations/dashboard?modality=${encodeURIComponent(modality.slug)}`,
-            );
-            return dashboard.students
-              .filter((s) => s.status === "pending")
-              .map<PendingGraduation>((s) => ({
-                ...s,
-                modalitySlug: modality.slug,
-                modalityName: dashboard.modalityName,
-              }));
-          } catch {
-            // Non-fatal: modality may lack a graduation system — skip it
-            return [];
-          }
-        }),
-      );
-
-      const allPending = results.flat();
-      setPendingItems(allPending);
-      setScreenState(allPending.length > 0 ? "loaded" : "empty");
-    } catch {
+      const data = await api.get<RosterOut>("/graduations/dashboard?view=roster");
+      setRoster(data);
+      setScreenState("loaded");
+    } catch (err) {
+      if (silent) throw err;
       setScreenState("error");
     }
   }, []);
 
   useEffect(() => {
-    fetchPending();
-  }, [fetchPending]);
+    fetchRoster();
+  }, [fetchRoster]);
 
-  const handleApprove = useCallback(async (item: PendingGraduation) => {
-    const key = `${item.userId}_${item.modalitySlug}`;
-    setActionLoading(key);
-    try {
-      await api.post(`/graduations/${item.userId}/approve`, {
-        modality: item.modalitySlug,
-      });
-      setPendingItems((prev) => {
-        const next = prev.filter(
-          (i) => !(i.userId === item.userId && i.modalitySlug === item.modalitySlug),
-        );
-        if (next.length === 0) setScreenState("empty");
-        return next;
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao aprovar graduação.";
-      dialog.alert({ title: "Erro", message, tone: "danger" });
-    } finally {
-      setActionLoading(null);
-    }
-  }, [dialog]);
+  const runAction = useCallback(
+    async (action: GradAction, card: GradCard) => {
+      if (action === "reject") {
+        const ok = await dialog.confirm({
+          title: "Reprovar graduação",
+          message: `Reprovar a graduação de ${card.nickname ?? card.name} em ${card.modalityName}? O aluno poderá corrigir e reenviar.`,
+          confirmText: "Reprovar",
+          cancelText: "Cancelar",
+          tone: "danger",
+        });
+        if (!ok) return;
+      }
+      setBusy(`${card.userId}_${card.modalitySlug}`);
+      try {
+        const uid = card.userId;
+        const body = { modality: card.modalitySlug } as Record<string, unknown>;
+        if (action === "approve") await api.post(`/graduations/${uid}/approve`, body);
+        else if (action === "reject") await api.post(`/graduations/${uid}/reject`, body);
+        else if (action === "undo") await api.post(`/graduations/${uid}/undo`, body);
+        else if (action === "degree")
+          await api.post(`/graduations/${uid}/promote`, { ...body, kind: "degree" });
+        else if (action === "belt")
+          await api.post(`/graduations/${uid}/promote`, { ...body, kind: "belt" });
+        await fetchRoster({ silent: true });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Erro ao processar graduação.";
+        dialog.alert({ title: "Erro", message, tone: "danger" });
+      } finally {
+        setBusy(null);
+      }
+    },
+    [dialog, fetchRoster],
+  );
 
-  const handleReject = useCallback(async (item: PendingGraduation) => {
-    const displayName = item.nickname ?? item.name;
-    const ok = await dialog.confirm({
-      title: "Reprovar graduação",
-      message: `Tem certeza que deseja reprovar a graduação de ${displayName} em ${item.modalityName}?`,
-      confirmText: "Reprovar",
-      cancelText: "Cancelar",
-      tone: "danger",
-    });
-    if (!ok) return;
-    const key = `${item.userId}_${item.modalitySlug}`;
-    setActionLoading(key);
-    try {
-      await api.post(`/graduations/${item.userId}/reject`, {
-        modality: item.modalitySlug,
-      });
-      setPendingItems((prev) => {
-        const next = prev.filter(
-          (i) => !(i.userId === item.userId && i.modalitySlug === item.modalitySlug),
-        );
-        if (next.length === 0) setScreenState("empty");
-        return next;
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao reprovar graduação.";
-      dialog.alert({ title: "Erro", message, tone: "danger" });
-    } finally {
-      setActionLoading(null);
-    }
-  }, [dialog]);
+  const openMenu = useCallback((card: GradCard) => setMenuCard(card), []);
+  const closeMenu = useCallback(() => setMenuCard(null), []);
+  const handleMenuAction = useCallback(
+    (action: GradAction, card: GradCard) => {
+      setMenuCard(null);
+      runAction(action, card);
+    },
+    [runAction],
+  );
 
-  /* ── Loading ── */
+  const families = useMemo(() => {
+    const all = roster?.families ?? [];
+    return filter === "pending" ? all.filter(familyNeedsAttention) : all;
+  }, [roster, filter]);
+
   if (screenState === "loading") {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -177,7 +123,6 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
     );
   }
 
-  /* ── Error ── */
   if (screenState === "error") {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -187,116 +132,82 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
             <Feather name="alert-circle" size={28} color={colors.error} />
           </View>
           <Text style={styles.emptyTitle}>Falha ao carregar</Text>
-          <Text style={styles.emptyMsg}>
-            Não foi possível buscar as graduações pendentes.
-          </Text>
+          <Text style={styles.emptyMsg}>Não foi possível buscar as graduações.</Text>
         </View>
         <View style={styles.footer}>
-          <Button label="Tentar novamente" onPress={fetchPending} />
+          <Button label="Tentar novamente" onPress={() => fetchRoster()} />
         </View>
       </SafeAreaView>
     );
   }
 
-  /* ── Empty ── */
-  if (screenState === "empty") {
-    return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
-        <ScreenHeader onBack={onBack} />
-        <View style={styles.center}>
-          <View style={styles.emptyIcon}>
-            <Feather name="award" size={28} color={colors.mutedForeground} />
-          </View>
-          <Text style={styles.emptyTitle}>Nenhuma graduação pendente</Text>
-          <Text style={styles.emptyMsg}>
-            Todas as graduações foram processadas.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const pendingCount = roster?.pendingCount ?? 0;
 
-  /* ── Loaded ── */
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScreenHeader onBack={onBack} />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.countLabel}>
-          {pendingItems.length} graduação{pendingItems.length !== 1 ? "ões" : ""} pendente{pendingItems.length !== 1 ? "s" : ""}
-        </Text>
-
-        {pendingItems.map((item) => {
-          const key = `${item.userId}_${item.modalitySlug}`;
-          const displayName = item.nickname ?? item.name;
-          const isActing = actionLoading === key;
-          const currentBelt = item.beltName ?? item.belt ?? "Sem faixa";
-          const nextBelt = item.nextBelt?.name ?? null;
-
-          return (
-            <View key={key} style={styles.card}>
-              {/* Name row */}
-              <View style={styles.cardHeader}>
-                <View style={styles.avatarPlaceholder}>
-                  <Feather name="award" size={20} color={colors.primary} />
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardName}>{displayName}</Text>
-                  {item.nickname && item.nickname !== item.name && (
-                    <Text style={styles.cardSubName}>{item.name}</Text>
-                  )}
-                  <Text style={styles.cardMeta}>{item.modalityName}</Text>
-                </View>
-              </View>
-
-              {/* Belt progression row */}
-              <View style={styles.beltRow}>
-                <View style={styles.beltBadge}>
-                  <Text style={styles.beltBadgeText}>{currentBelt}</Text>
-                </View>
-                {nextBelt !== null && (
-                  <>
-                    <Feather name="arrow-right" size={14} color={colors.mutedForeground} />
-                    <View style={[styles.beltBadge, styles.nextBeltBadge]}>
-                      <Text style={[styles.beltBadgeText, styles.nextBeltText]}>
-                        {nextBelt}
-                      </Text>
-                    </View>
-                  </>
-                )}
-              </View>
-
-              {/* Action buttons */}
-              <View style={styles.cardActions}>
-                <Button
-                  label="Aprovar"
-                  variant="primary"
-                  loading={isActing}
-                  disabled={actionLoading !== null}
-                  onPress={() => handleApprove(item)}
-                  style={styles.actionBtn}
-                />
-                <Button
-                  label="Reprovar"
-                  variant="outline"
-                  loading={false}
-                  disabled={actionLoading !== null}
-                  onPress={() => handleReject(item)}
-                  style={[styles.actionBtn, styles.rejectBtn]}
-                  textStyle={styles.rejectBtnText}
-                />
-              </View>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {pendingCount > 0 && (
+          <View style={styles.hero}>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>{pendingCount}</Text>
             </View>
-          );
-        })}
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroBig}>
+                {pendingCount} graduaç{pendingCount === 1 ? "ão" : "ões"} aguardando aprovação
+              </Text>
+              <Text style={styles.heroSub}>Toque em Aprovar ou Reprovar para revisar.</Text>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.filter}>
+          <SegmentedControl<Filter>
+            options={[
+              { value: "pending", label: "Pendentes" },
+              { value: "all", label: "Todos" },
+            ]}
+            value={filter}
+            onChange={setFilter}
+          />
+        </View>
+
+        {families.length === 0 ? (
+          <View style={styles.centerInline}>
+            <View style={styles.emptyIcon}>
+              <Feather name="award" size={28} color={colors.mutedForeground} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {filter === "pending" ? "Nenhuma graduação pendente" : "Nenhum aluno no roster"}
+            </Text>
+            <Text style={styles.emptyMsg}>
+              {filter === "pending"
+                ? "Todas as graduações foram processadas."
+                : "Ainda não há alunos cadastrados neste projeto."}
+            </Text>
+          </View>
+        ) : (
+          families.map((family) => (
+            <FamilyCard
+              key={family.guardian.userId}
+              family={family}
+              busy={busy}
+              onAction={runAction}
+              onOpenMenu={openMenu}
+            />
+          ))
+        )}
       </ScrollView>
+
+      <GraduationActionSheet
+        card={menuCard}
+        visible={menuCard !== null}
+        onClose={closeMenu}
+        onAction={handleMenuAction}
+      />
     </SafeAreaView>
   );
 }
-
-/* ── Header ────────────────────────────────────────────────────── */
 
 function ScreenHeader({ onBack }: { onBack: () => void }) {
   return (
@@ -310,19 +221,10 @@ function ScreenHeader({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* ── Styles ────────────────────────────────────────────────────── */
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl },
+  centerInline: { alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -338,112 +240,48 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontHeadingSemi,
     fontSize: 18,
   },
-  headerSpacer: {
-    width: 24,
-  },
+  headerSpacer: { width: 24 },
+  scroll: { padding: spacing.md, paddingBottom: spacing.xl },
+  footer: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
 
-  scroll: {
-    padding: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  footer: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-
-  countLabel: {
-    color: colors.mutedForeground,
-    fontFamily: typography.fontBody,
-    fontSize: 13,
-    marginBottom: spacing.md,
-  },
-
-  // Card
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm + 4,
-    gap: spacing.sm,
-  },
-  cardHeader: {
+  hero: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm + 4,
+    backgroundColor: "rgba(198,163,78,0.10)",
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryMuted,
+  heroBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  cardInfo: {
-    flex: 1,
-    gap: spacing.xs,
+  heroBadgeText: {
+    color: colors.primaryForeground,
+    fontFamily: typography.fontHeading,
+    fontSize: 18,
   },
-  cardName: {
+  heroTextWrap: { flex: 1 },
+  heroBig: {
     color: colors.foreground,
-    fontFamily: typography.fontHeadingSemi,
-    fontSize: 16,
-  },
-  cardSubName: {
-    color: colors.mutedForeground,
-    fontFamily: typography.fontBody,
-    fontSize: 13,
-  },
-  cardMeta: {
-    color: colors.mutedForeground,
-    fontFamily: typography.fontBody,
-    fontSize: 12,
-  },
-
-  // Belt row
-  beltRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    flexWrap: "wrap",
-  },
-  beltBadge: {
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm + 4,
-    paddingVertical: spacing.xs,
-  },
-  beltBadgeText: {
-    color: colors.primary,
     fontFamily: typography.fontBodySemiBold,
+    fontSize: 14,
+  },
+  heroSub: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
     fontSize: 12,
+    marginTop: 2,
   },
-  nextBeltBadge: {
-    backgroundColor: "rgba(76,175,80,0.1)",
-  },
-  nextBeltText: {
-    color: colors.success,
-  },
+  filter: { marginBottom: spacing.md },
 
-  // Actions
-  cardActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  actionBtn: {
-    flex: 1,
-    height: 44,
-  },
-  rejectBtn: {
-    borderColor: colors.error,
-  },
-  rejectBtnText: {
-    color: colors.error,
-  },
-
-  // Empty/error state
   emptyIcon: {
     width: 64,
     height: 64,
