@@ -6,8 +6,10 @@ import { auth } from "./firebase";
 // IDs de cliente OAuth — configure em .env:
 //   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
 //   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+//   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? "";
+const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 
 // ── Web: uses Firebase signInWithPopup directly ──────────────────────────────
 function useGoogleSignInWeb(onSuccess?: () => void) {
@@ -34,7 +36,7 @@ function useGoogleSignInWeb(onSuccess?: () => void) {
 
 // ── Native: uses expo-auth-session + expo-web-browser ────────────────────────
 // Lazy-load to avoid crash when native modules are not available
-let useAuthRequestFn: ((config: { webClientId: string; androidClientId: string }) =>
+let useAuthRequestFn: ((config: { webClientId: string; androidClientId: string; iosClientId: string }) =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [any, any, () => Promise<any>]) | null = null;
 
@@ -49,7 +51,7 @@ try {
   // Native modules not available — Google Sign-In disabled
 }
 
-function useAuthRequestStub(_config: { webClientId: string; androidClientId: string }): [null, null, () => Promise<never>] {
+function useAuthRequestStub(_config: { webClientId: string; androidClientId: string; iosClientId: string }): [null, null, () => Promise<never>] {
   return [null, null, () => Promise.reject(new Error("unavailable"))] as const;
 }
 
@@ -65,6 +67,7 @@ function useGoogleSignInNative(onSuccess?: () => void) {
   const [request, response, promptAsync] = useAuthRequest({
     webClientId: WEB_CLIENT_ID,
     androidClientId: ANDROID_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
   });
 
   useEffect(() => {
@@ -117,12 +120,15 @@ function useGoogleSignInNative(onSuccess?: () => void) {
   function signIn() {
     setError(null);
     setLoading(true);
-    if (!WEB_CLIENT_ID || !ANDROID_CLIENT_ID) {
+    const platformClientId = Platform.OS === "ios" ? IOS_CLIENT_ID : ANDROID_CLIENT_ID;
+    if (!WEB_CLIENT_ID || !platformClientId) {
       console.error(
         "[GoogleAuth] Missing client IDs. WEB:",
         !!WEB_CLIENT_ID,
         "ANDROID:",
         !!ANDROID_CLIENT_ID,
+        "IOS:",
+        !!IOS_CLIENT_ID,
       );
       setError("Configuracao do Google incompleta no app.");
       setLoading(false);

@@ -14,6 +14,7 @@
     },
     "platforms": [
       "android",
+      "ios",
       "web"
     ],
     "icon": "./assets/logo.png",
@@ -43,6 +44,28 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "googleServicesFile": "./google-services.json"
+    },
+    "ios": {
+      "bundleIdentifier": "br.com.spartacus.app",
+      "buildNumber": "1",
+      "icon": "./assets/icon-ios.png",
+      "supportsTablet": false,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "O Spartacus usa a câmera para você enviar foto de perfil e registros das aulas.",
+        "NSPhotoLibraryUsageDescription": "O Spartacus acessa suas fotos para você enviar imagens de perfil e documentos.",
+        "NSPhotoLibraryAddUsageDescription": "O Spartacus salva imagens na sua galeria ao baixar um comprovante ou foto.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "REPLACE_WITH_REVERSED_CLIENT_ID"
+            ]
+          }
+        ]
+      }
     },
     "extra": {
       "eas": {
