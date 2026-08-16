@@ -13,7 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api, ApiError } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { FilterPanel } from "../../components/staff/FilterPanel";
+import { FilterPanel } from "../../components/ui/FilterPanel";
 import { ReasonPrompt } from "../../components/staff/ReasonPrompt";
 import { UserAvatar } from "../../components/ui/UserAvatar";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";

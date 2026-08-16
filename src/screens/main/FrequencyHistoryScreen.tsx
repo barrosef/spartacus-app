@@ -13,6 +13,8 @@ import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api, getProjectId } from "../../lib/api";
 import { useProxy } from "../../context/ProxyContext";
 import { Button } from "../../components/ui/Button";
+import { FilterPanel } from "../../components/ui/FilterPanel";
+import { SelectBox } from "../../components/ui/SelectBox";
 import { getBeltColor, normalizeModalityKey, NO_GRADUATION_COLOR } from "../../lib/belts";
 import { JustifyAbsenceScreen } from "./JustifyAbsenceScreen";
 
@@ -188,6 +190,7 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   const [selectedModality, setSelectedModality] = useState<ModalityOption | null>(null);
   const [selectedGraduation, setSelectedGraduation] = useState<GraduationFilter | null>(null);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [justifyTarget, setJustifyTarget] = useState<AttendanceRecord | null>(null);
 
   const authHeaders = useCallback((): Record<string, string> => {
@@ -224,8 +227,11 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
       const hasRecords = history.months.some((m) => m.records.length > 0);
       setScreen(hasRecords ? "ready" : "empty");
 
+      // Default dos filtros: mês mais recente disponível (o backend já corta
+      // pela data-base da turma), modalidade e graduação em "Todas" — é o
+      // estado que o ícone de filtro considera "sem filtro aplicado".
       setSelectedMonth(history.months[0]?.month ?? null);
-      setSelectedModality(options[0] ?? null);
+      setSelectedModality(null);
       setSelectedGraduation(null);
       setFiltersReady(true);
     } catch {
@@ -374,9 +380,21 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   if (!currentGroup && gradedGroups.length === 1) currentGroup = gradedGroups[0];
   const archivedGroups = gradedGroups.filter((g) => g.key !== currentGroup?.key);
 
+  // Ponto dourado no ícone: algum filtro fora do default (mês mais recente,
+  // modalidade e graduação em "Todas").
+  const filterActive =
+    !!selectedModality ||
+    !!selectedGraduation ||
+    (!!selectedMonth && selectedMonth !== monthOptions[0]?.month);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScreenHeader onBack={onBack} subtitle={actingAsName ? `Frequência de ${actingAsName}` : undefined} />
+      <ScreenHeader
+        onBack={onBack}
+        subtitle={actingAsName ? `Frequência de ${actingAsName}` : undefined}
+        onFilter={() => setFiltersOpen(true)}
+        filterActive={filterActive}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -399,48 +417,6 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
         {refreshing && (
           <ActivityIndicator size="small" color={colors.primary} style={styles.refreshSpinner} />
         )}
-
-        {/* Filtros encadeados: período → modalidade → graduação */}
-        <View style={styles.filters}>
-          <FilterRow label="Período">
-            {monthOptions.map((m) => (
-              <Chip
-                key={m.month}
-                label={m.monthLabel}
-                active={m.month === selectedMonth}
-                onPress={() => setSelectedMonth(m.month)}
-              />
-            ))}
-          </FilterRow>
-
-          {modalityOptions.length > 0 && (
-            <FilterRow label="Modalidade">
-              <Chip label="Todas" active={!selectedModality} onPress={() => setSelectedModality(null)} />
-              {modalityOptions.map((mod) => (
-                <Chip
-                  key={mod.slug}
-                  label={mod.name}
-                  active={selectedModality?.slug === mod.slug}
-                  onPress={() => { setSelectedModality(mod); setSelectedGraduation(null); }}
-                />
-              ))}
-            </FilterRow>
-          )}
-
-          {selectedModality && gradedGroups.length > 0 && (
-            <FilterRow label="Graduação">
-              <Chip label="Todas" active={!selectedGraduation} onPress={() => setSelectedGraduation(null)} />
-              {gradedGroups.map((g) => (
-                <Chip
-                  key={g.key}
-                  label={graduationLabel(g)}
-                  active={selectedGraduation?.key === g.key}
-                  onPress={() => setSelectedGraduation({ key: g.key, belt: g.belt!, degree: g.degree })}
-                />
-              ))}
-            </FilterRow>
-          )}
-        </View>
 
         {/* Resumo do mês */}
         <Text style={styles.sectionTitle}>RESUMO DO MÊS</Text>
@@ -508,19 +484,94 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
                   isRealRecordId(r.id) &&
                   withinJustifyPrazo(r.dateSort)
                 }
+                // Falta real fora do prazo: em vez de simplesmente não ter
+                // botão (que lê como "a função não existe"), diz o motivo.
+                prazoExpired={
+                  r.status === "absent" &&
+                  isRealRecordId(r.id) &&
+                  !withinJustifyPrazo(r.dateSort)
+                }
                 onJustify={() => setJustifyTarget(r)}
               />
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* Filtros — padrão do app: ícone no header, painel pela direita */}
+      <FilterPanel
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtros"
+      >
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Período</Text>
+          <SelectBox
+            value={selectedMonth}
+            placeholder="Selecione o mês"
+            options={monthOptions.map((m) => ({
+              value: m.month,
+              label: m.monthLabel,
+            }))}
+            onChange={setSelectedMonth}
+          />
+        </View>
+
+        {modalityOptions.length > 0 && (
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Modalidade</Text>
+            <View style={styles.chipsWrap}>
+              <Chip
+                label="Todas"
+                active={!selectedModality}
+                onPress={() => { setSelectedModality(null); setSelectedGraduation(null); }}
+              />
+              {modalityOptions.map((mod) => (
+                <Chip
+                  key={mod.slug}
+                  label={mod.name}
+                  active={selectedModality?.slug === mod.slug}
+                  onPress={() => { setSelectedModality(mod); setSelectedGraduation(null); }}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {selectedModality && gradedGroups.length > 0 && (
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Graduação</Text>
+            <View style={styles.chipsWrap}>
+              <Chip label="Todas" active={!selectedGraduation} onPress={() => setSelectedGraduation(null)} />
+              {gradedGroups.map((g) => (
+                <Chip
+                  key={g.key}
+                  label={graduationLabel(g)}
+                  active={selectedGraduation?.key === g.key}
+                  onPress={() => setSelectedGraduation({ key: g.key, belt: g.belt!, degree: g.degree })}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+      </FilterPanel>
     </SafeAreaView>
   );
 }
 
 /* ── Subcomponents ─────────────────────────────────────────────────────── */
 
-function ScreenHeader({ onBack, subtitle }: { onBack: () => void; subtitle?: string }) {
+function ScreenHeader({
+  onBack,
+  subtitle,
+  onFilter,
+  filterActive = false,
+}: {
+  onBack: () => void;
+  subtitle?: string;
+  onFilter?: () => void;
+  filterActive?: boolean;
+}) {
   return (
     <View style={styles.header}>
       <Feather
@@ -533,16 +584,24 @@ function ScreenHeader({ onBack, subtitle }: { onBack: () => void; subtitle?: str
         <Text style={styles.headerTitle}>Minha Frequência</Text>
         {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
       </View>
-      <View style={styles.headerSpacer} />
-    </View>
-  );
-}
-
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.filterRow}>
-      <Text style={styles.filterLabel}>{label}</Text>
-      <View style={styles.chipsWrap}>{children}</View>
+      {onFilter ? (
+        <TouchableOpacity
+          style={styles.headerAction}
+          activeOpacity={0.7}
+          onPress={onFilter}
+          accessibilityRole="button"
+          accessibilityLabel="Filtros"
+        >
+          <Feather
+            name="sliders"
+            size={22}
+            color={filterActive ? colors.primary : colors.foreground}
+          />
+          {filterActive && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
     </View>
   );
 }
@@ -627,10 +686,12 @@ function GradStat({ value, label, color }: { value: number | string; label: stri
 function RecordRow({
   record,
   canJustify,
+  prazoExpired = false,
   onJustify,
 }: {
   record: AttendanceRecord;
   canJustify: boolean;
+  prazoExpired?: boolean;
   onJustify: () => void;
 }) {
   const meta = STATUS_META[record.status] ?? STATUS_META.absent;
@@ -656,6 +717,9 @@ function RecordRow({
             <Feather name="edit-3" size={11} color={colors.primary} />
             <Text style={styles.justifyBtnText}>Justificar</Text>
           </TouchableOpacity>
+        )}
+        {!canJustify && prazoExpired && (
+          <Text style={styles.prazoExpired}>Prazo para justificar encerrado</Text>
         )}
       </View>
     </View>
@@ -700,6 +764,22 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 24,
+  },
+  headerAction: {
+    width: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.background,
   },
   scroll: {
     padding: spacing.md,
@@ -748,26 +828,20 @@ const styles = StyleSheet.create({
   },
 
   // Filters
-  filters: {
-    marginTop: spacing.lg,
-    gap: spacing.sm + 2,
-  },
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  // Seções do painel de filtros — mesma convenção das telas de staff.
+  filterSection: {
     gap: spacing.sm,
+    marginTop: spacing.md,
   },
-  filterLabel: {
-    width: 78,
-    marginTop: 9,
+  filterSectionTitle: {
     color: colors.mutedForeground,
     fontFamily: typography.fontBodyMedium,
-    fontSize: 11,
+    fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
   },
   chipsWrap: {
-    flex: 1,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs + 2,
@@ -995,6 +1069,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontFamily: typography.fontBodySemiBold,
     fontSize: 10.5,
+  },
+  prazoExpired: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 10,
+    textAlign: "right",
   },
   recordDate: {
     color: colors.foreground,

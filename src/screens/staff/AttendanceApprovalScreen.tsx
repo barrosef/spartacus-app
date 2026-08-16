@@ -12,7 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { FilterPanel } from "../../components/staff/FilterPanel";
+import { FilterPanel } from "../../components/ui/FilterPanel";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import { UserAvatar } from "../../components/ui/UserAvatar";
 import { useDialog } from "../../components/ui/DialogProvider";
