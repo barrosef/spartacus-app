@@ -28,9 +28,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-  # ─── Build Android → Expo EAS ───────────────────────────────────────────────
+  # ─── Build Android + iOS → Expo EAS ─────────────────────────────────────────
   build-mobile:
-    name: Build Android → EAS
+    name: Build Android + iOS → EAS
     needs: test
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -50,12 +50,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Auto-increment version + versionCode
+      - name: Auto-increment version + versionCode + iOS buildNumber
         run: |
           # versionCode (Android build number): +1
           CURRENT=$(grep -o '"versionCode": *[0-9]*' app.json | grep -o '[0-9]*')
           NEW=$((CURRENT + 1))
           sed -i "s/\"versionCode\": *$CURRENT/\"versionCode\": $NEW/" app.json
+
+          # buildNumber (iOS build number): string "N", mantida em paridade com o versionCode
+          IOS_CURRENT=$(grep -o '"buildNumber": *"[0-9]*"' app.json | grep -o '[0-9]*')
+          sed -i "s/\"buildNumber\": *\"$IOS_CURRENT\"/\"buildNumber\": \"$NEW\"/" app.json
 
           # versionName (semver exibido): bump do patch — major/minor continuam manuais
           VER=$(grep -o '"version": *"[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*"' app.json | grep -o '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*')
@@ -63,7 +67,7 @@ jobs:
           NEWVER="$MA.$MI.$((PA + 1))"
           sed -i "s/\"version\": *\"$VER\"/\"version\": \"$NEWVER\"/" app.json
 
-          echo "version: $VER → $NEWVER | versionCode: $CURRENT → $NEW"
+          echo "version: $VER → $NEWVER | versionCode/buildNumber: $CURRENT → $NEW"
           echo "VERSION_CODE=$NEW" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$NEWVER" >> "$GITHUB_ENV"
 
@@ -95,13 +99,26 @@ jobs:
       - name: Submit to Play Store (internal track)
         run: eas submit --platform android --profile production --latest --non-interactive
 
+      - name: Build iOS (EAS)
+        run: eas build --platform ios --profile production --non-interactive
+
+      # eas.json submit.production.ios.ascApiKeyPath points at this file; it is
+      # gitignored (*.p8), so materialize it from the secret before submit.
+      - name: Write App Store Connect API key
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: printf '%s' "$ASC_API_KEY_P8" > asc-api-key.p8
+
+      - name: Submit to App Store Connect
+        run: eas submit --platform ios --profile production --latest --non-interactive
+
       # OTA: publica o bundle JS no canal 'production'. Alcança apps já instalados
       # que compartilham o mesmo runtimeVersion (fingerprint nativo). Mudanças só
       # de JS chegam sem passar pela loja; mudanças nativas exigem novo build.
       - name: Publish OTA update (EAS Update)
-        # --platform android: o app só suporta [android, web]; sem isso o
-        # eas update tenta exportar iOS (default = todas) e falha. Web é
-        # servido pelo Firebase Hosting (job deploy-web), não por OTA.
+        # --platform all: publica OTA para android e ios (ambos têm build nativo
+        # neste pipeline). Web é servido pelo Firebase Hosting (job deploy-web),
+        # não por OTA — `all` aqui = android + ios, não inclui web no export OTA.
         #
         # CRÍTICO: `eas update` roda `expo export` internamente, que NÃO lê o
         # bloco `env` de eas.json (esse só vale para `eas build`). Sem estas
@@ -118,10 +135,11 @@ jobs:
           EXPO_PUBLIC_FIREBASE_APP_ID: "1:820921472402:web:43848ccaf9d112def65d4b"
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 820921472402-lnnfintlbq4k4imhrt63rpplf2lp6ven.apps.googleusercontent.com
           EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: 820921472402-v9s5hgia6vhkjggrtsildr7tk7p91cm7.apps.googleusercontent.com
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: REPLACE_WITH_IOS_OAUTH_CLIENT_ID.apps.googleusercontent.com
           EXPO_PUBLIC_API_URL: https://api.spartacus.app.br
           EXPO_PUBLIC_EAS_PROJECT_ID: 9c2a3ad1-2083-45e1-bb03-3d127b554099
           EXPO_PUBLIC_USE_EMULATORS: "false"
-        run: eas update --branch production --platform android --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
+        run: eas update --branch production --platform all --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
 
   # ─── Build Web PWA → Firebase Hosting ──────────────────────────────────────
   deploy-web:
