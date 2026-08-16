@@ -7,7 +7,11 @@ import { auth, firebaseApp } from "./firebase";
 // How notifications behave when the app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // shouldShowAlert virou deprecated no expo-notifications do SDK 54:
+    // banner (alerta flutuante) e list (central de notificações) agora são
+    // controlados separadamente.
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
