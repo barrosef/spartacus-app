@@ -97,6 +97,7 @@ Além dos passos previstos, foram necessários estes ajustes (nenhum estava no p
 | `npm install` falhava por peer conflict (react 18 no lock antigo vs `react-native@0.81` que exige react ^19.1) | Regenerar `package-lock.json` do zero (`rm -rf node_modules package-lock.json && npm install`) |
 | `expo-share-intent@3.2.3` só aceita expo ^52 | Subir para `^5.1.1` (faixa que peer-depende de expo ^54) |
 | `@expo/vector-icons` deixou de vir junto do pacote `expo` | Declarar como dependência direta (`npx expo install @expo/vector-icons`) |
+| `babel-preset-expo` idem — `typecheck`/`lint` passam sem ele, mas **todo bundle** quebra (`Cannot find module 'babel-preset-expo'`, via `babel.config.js`); só apareceu no CI, derrubando build Android e PWA | Declarar como dependência direta. Validar upgrade com `npx expo export --platform android` **e** `--platform web` antes de mergear — typecheck não cobre bundle |
 | `tsconfig.json` sobrescrevia `module`/`moduleResolution` com CommonJS/node → TS5098 contra o `customConditions` do `expo/tsconfig.base` do SDK 54 | Remover os overrides e herdar da base |
 | `expo-notifications`: `shouldShowAlert` deprecated | `shouldShowBanner` + `shouldShowList` em `src/lib/pushNotifications.ts` |
 | `expo-file-system@19` promoveu a API nova no entrypoint padrão (`cacheDirectory` sumiu) | `import * as FileSystem from "expo-file-system/legacy"` em `src/lib/share/shareMedia.ts` |
