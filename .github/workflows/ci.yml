@@ -37,6 +37,13 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    # A trilha iOS só liga quando a chave da App Store Connect existir nos
+    # secrets. Enquanto os passos manuais da Apple não estiverem concluídos
+    # (App ID, ASC API key, GoogleService-Info.plist, OAuth iOS), build/submit
+    # iOS ficam desligados e a release Android segue normal — sem esse gate um
+    # erro no iOS abortaria o job antes do `eas update` e o OTA não publicaria.
+    env:
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,25 +107,27 @@ jobs:
         run: eas submit --platform android --profile production --latest --non-interactive
 
       - name: Build iOS (EAS)
+        if: env.ASC_API_KEY_P8 != ''
         run: eas build --platform ios --profile production --non-interactive
 
       # eas.json submit.production.ios.ascApiKeyPath points at this file; it is
       # gitignored (*.p8), so materialize it from the secret before submit.
       - name: Write App Store Connect API key
-        env:
-          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        if: env.ASC_API_KEY_P8 != ''
         run: printf '%s' "$ASC_API_KEY_P8" > asc-api-key.p8
 
       - name: Submit to App Store Connect
+        if: env.ASC_API_KEY_P8 != ''
         run: eas submit --platform ios --profile production --latest --non-interactive
 
       # OTA: publica o bundle JS no canal 'production'. Alcança apps já instalados
       # que compartilham o mesmo runtimeVersion (fingerprint nativo). Mudanças só
       # de JS chegam sem passar pela loja; mudanças nativas exigem novo build.
       - name: Publish OTA update (EAS Update)
-        # --platform all: publica OTA para android e ios (ambos têm build nativo
-        # neste pipeline). Web é servido pelo Firebase Hosting (job deploy-web),
-        # não por OTA — `all` aqui = android + ios, não inclui web no export OTA.
+        # --platform: `all` (android + ios) quando a trilha iOS está ligada;
+        # `android` enquanto ela não está — sem build nativo iOS não há o que
+        # atualizar, e o export iOS falharia por falta de GoogleService-Info.plist.
+        # Web é servido pelo Firebase Hosting (job deploy-web), não por OTA.
         #
         # CRÍTICO: `eas update` roda `expo export` internamente, que NÃO lê o
         # bloco `env` de eas.json (esse só vale para `eas build`). Sem estas
@@ -139,7 +148,7 @@ jobs:
           EXPO_PUBLIC_API_URL: https://api.spartacus.app.br
           EXPO_PUBLIC_EAS_PROJECT_ID: 9c2a3ad1-2083-45e1-bb03-3d127b554099
           EXPO_PUBLIC_USE_EMULATORS: "false"
-        run: eas update --branch production --platform all --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
+        run: eas update --branch production --platform ${{ env.ASC_API_KEY_P8 != '' && 'all' || 'android' }} --message "v${{ env.VERSION_NAME }} (build ${{ env.VERSION_CODE }})" --non-interactive
 
   # ─── Build Web PWA → Firebase Hosting ──────────────────────────────────────
   deploy-web:
