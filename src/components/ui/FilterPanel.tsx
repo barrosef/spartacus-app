@@ -33,7 +33,8 @@ export function FilterPanel({
   onReset,
   title = "Filtros",
   children,
-}: FilterPanelProps): JSX.Element {
+// React 19 removeu o namespace global JSX — passa a ser React.JSX.
+}: FilterPanelProps): React.JSX.Element {
   const slideAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 

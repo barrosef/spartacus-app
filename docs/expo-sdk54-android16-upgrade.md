@@ -87,6 +87,29 @@ npx expo install --fix          # alinha todos os expo-* e libs conhecidas ao SD
 - Publicar em **track internal** (Play) primeiro; validar em device Android 16; depois promover.
 - **Após o upgrade, re-testar o app iOS** (decisão iOS-primeiro implica re-teste do iOS no SDK novo).
 
+## Execução (2026-08-16) — o que o upgrade realmente exigiu
+
+Executado com `expo@54.0.36` · `react-native@0.81.5` · `react@19.1.0`, **New Arch OFF** no primeiro build.
+Além dos passos previstos, foram necessários estes ajustes (nenhum estava no plano original):
+
+| Achado | Correção |
+|---|---|
+| `npm install` falhava por peer conflict (react 18 no lock antigo vs `react-native@0.81` que exige react ^19.1) | Regenerar `package-lock.json` do zero (`rm -rf node_modules package-lock.json && npm install`) |
+| `expo-share-intent@3.2.3` só aceita expo ^52 | Subir para `^5.1.1` (faixa que peer-depende de expo ^54) |
+| `@expo/vector-icons` deixou de vir junto do pacote `expo` | Declarar como dependência direta (`npx expo install @expo/vector-icons`) |
+| `tsconfig.json` sobrescrevia `module`/`moduleResolution` com CommonJS/node → TS5098 contra o `customConditions` do `expo/tsconfig.base` do SDK 54 | Remover os overrides e herdar da base |
+| `expo-notifications`: `shouldShowAlert` deprecated | `shouldShowBanner` + `shouldShowList` em `src/lib/pushNotifications.ts` |
+| `expo-file-system@19` promoveu a API nova no entrypoint padrão (`cacheDirectory` sumiu) | `import * as FileSystem from "expo-file-system/legacy"` em `src/lib/share/shareMedia.ts` |
+| React 19 removeu o namespace global `JSX` | `React.JSX.Element` em `src/components/staff/FilterPanel.tsx` |
+| `react-native-share@12.3.1` | Mantido — é a última versão e não declara peers restritivos |
+
+Config nativa: `compileSdkVersion`/`targetSdkVersion` **36** + `buildToolsVersion 36.0.0` (fixados
+explicitamente, não removidos) e `newArchEnabled: false` no `app.json`. `npx expo prebuild -p android`
+gera `android.targetSdkVersion=36` e `edgeToEdgeEnabled=true` — requisito da Play confirmado.
+
+Validação local: `typecheck` ✅ · `lint` ✅ (1 warning pré-existente) · `expo-doctor` 18/18 ✅ · prebuild android ✅.
+**Pendente:** teste em device/emulador Android 16 e o segundo build com New Arch ON.
+
 ## Verification
 
 ```bash

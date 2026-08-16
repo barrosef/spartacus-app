@@ -1,5 +1,9 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, SafeAreaView, type ScrollViewProps } from "react-native";
+import { View, StyleSheet, ScrollView, type ScrollViewProps } from "react-native";
+// SafeAreaView vem do safe-area-context (não do react-native): o do core é
+// iOS-only e ignora os insets no Android — com o edge-to-edge obrigatório da
+// API 36 isso deixaria conteúdo atrás das barras de status e de navegação.
+import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { colors, spacing } from "../../theme/tokens";
 
 interface SafeScreenProps {
@@ -7,6 +11,7 @@ interface SafeScreenProps {
   scrollable?: boolean;
   scrollProps?: ScrollViewProps;
   noPadding?: boolean;
+  edges?: readonly Edge[];
 }
 
 export function SafeScreen({
@@ -14,6 +19,7 @@ export function SafeScreen({
   scrollable = false,
   scrollProps,
   noPadding = false,
+  edges = ["top", "bottom"],
 }: SafeScreenProps) {
   const content = scrollable ? (
     <ScrollView
@@ -29,7 +35,7 @@ export function SafeScreen({
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={edges}>
       {content}
     </SafeAreaView>
   );

@@ -1,4 +1,7 @@
-import * as FileSystem from "expo-file-system";
+// expo-file-system 19 (SDK 54) promoveu a API nova (File/Directory/Paths) para
+// o entrypoint padrão; cacheDirectory/downloadAsync/deleteAsync continuam
+// disponíveis, sem mudança de comportamento, em /legacy.
+import * as FileSystem from "expo-file-system/legacy";
 
 interface ShareMediaInput {
   urls: string[];

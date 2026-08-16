@@ -5,13 +5,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "lib": [
-      "ES2020",
-      "DOM"
-    ],
+    // target/module/moduleResolution/lib vêm do expo/tsconfig.base (SDK 54:
+    // module "preserve" + moduleResolution "bundler" + customConditions).
+    // Sobrescrever com CommonJS/node quebra o customConditions (TS5098).
     "jsx": "react-native",
     "noEmit": true
   },
