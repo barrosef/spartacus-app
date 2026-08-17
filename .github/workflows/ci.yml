@@ -28,6 +28,29 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Nem lint nem typecheck montam bundle: no upgrade para o SDK 54 o
+      # `babel-preset-expo` deixou de vir transitivo pelo pacote `expo` e os
+      # dois passaram verdes, mas TODO bundle quebrava — a falha só apareceu
+      # depois do bump de versão, no meio do build EAS (que reporta apenas
+      # "Unknown error" na fase Bundle JavaScript) e no deploy do PWA.
+      # Este passo roda o Metro de verdade e gate os dois jobs de deploy
+      # (ambos têm `needs: test`), custando ~1 min. iOS fica de fora: o
+      # export exigiria o GoogleService-Info.plist, ainda pendente.
+      - name: Bundle smoke test (Metro)
+        run: |
+          npx expo export --platform android --clear --dump-sourcemap --output-dir /tmp/bundle-android
+          npx expo export --platform web --clear --dump-sourcemap --output-dir /tmp/bundle-web
+
+      # Duas cópias de @firebase/app no bundle = dois registros de componente:
+      # o app quebrou no boot com "Component auth has not been registered yet"
+      # depois do SDK 54 ligar a resolução por `exports`. O bundle compila e o
+      # typecheck passa — só o grafo de módulos denuncia.
+      - name: Singletons do bundle (Firebase)
+        run: |
+          for map in $(find /tmp/bundle-android /tmp/bundle-web -name "*.map"); do
+            node scripts/check-bundle-singletons.mjs "$map"
+          done
+
   # ─── Build Android + iOS → Expo EAS ─────────────────────────────────────────
   build-mobile:
     name: Build Android + iOS → EAS
