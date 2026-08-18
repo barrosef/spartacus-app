@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
+import { FilterPanel } from "../../components/ui/FilterPanel";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useDialog } from "../../components/ui/DialogProvider";
 import { FamilyCard } from "../../components/graduation/FamilyCard";
@@ -44,6 +45,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
   const [filter, setFilter] = useState<Filter>("pending");
   const [busy, setBusy] = useState<string | null>(null);
   const [menuCard, setMenuCard] = useState<GradCard | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const fetchRoster = useCallback(async (opts?: { silent?: boolean }) => {
     // silent: refetch pós-ação — mantém a lista montada para preservar o scroll
@@ -145,7 +147,11 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScreenHeader onBack={onBack} />
+      <ScreenHeader
+        onBack={onBack}
+        onFilter={() => setFiltersOpen(true)}
+        filterActive={filter !== "pending"}
+      />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {pendingCount > 0 && (
           <View style={styles.hero}>
@@ -160,17 +166,6 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
             </View>
           </View>
         )}
-
-        <View style={styles.filter}>
-          <SegmentedControl<Filter>
-            options={[
-              { value: "pending", label: "Pendentes" },
-              { value: "all", label: "Todos" },
-            ]}
-            value={filter}
-            onChange={setFilter}
-          />
-        </View>
 
         {families.length === 0 ? (
           <View style={styles.centerInline}>
@@ -199,6 +194,25 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
         )}
       </ScrollView>
 
+      {/* Filtros — padrão do app: só no painel lateral, nunca no corpo da tela */}
+      <FilterPanel
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtros"
+      >
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Situação</Text>
+          <SegmentedControl<Filter>
+            options={[
+              { value: "pending", label: "Pendentes" },
+              { value: "all", label: "Todos" },
+            ]}
+            value={filter}
+            onChange={setFilter}
+          />
+        </View>
+      </FilterPanel>
+
       <GraduationActionSheet
         card={menuCard}
         visible={menuCard !== null}
@@ -209,14 +223,39 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
   );
 }
 
-function ScreenHeader({ onBack }: { onBack: () => void }) {
+function ScreenHeader({
+  onBack,
+  onFilter,
+  filterActive = false,
+}: {
+  onBack: () => void;
+  onFilter?: () => void;
+  filterActive?: boolean;
+}) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} hitSlop={8}>
         <Feather name="chevron-left" size={24} color={colors.foreground} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Graduações</Text>
-      <View style={styles.headerSpacer} />
+      {onFilter ? (
+        <TouchableOpacity
+          style={styles.headerAction}
+          onPress={onFilter}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Filtros"
+        >
+          <Feather
+            name="sliders"
+            size={22}
+            color={filterActive ? colors.primary : colors.foreground}
+          />
+          {filterActive && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.headerSpacer} />
+      )}
     </View>
   );
 }
@@ -241,6 +280,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   headerSpacer: { width: 24 },
+  headerAction: { width: 24, alignItems: "center", justifyContent: "center" },
+  filterDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
   scroll: { padding: spacing.md, paddingBottom: spacing.xl },
   footer: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
 
@@ -280,7 +331,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  filter: { marginBottom: spacing.md },
+  filterSection: { gap: spacing.sm, marginTop: spacing.md },
+  filterSectionTitle: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBodyMedium,
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+  },
 
   emptyIcon: {
     width: 64,

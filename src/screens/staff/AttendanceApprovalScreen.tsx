@@ -1,22 +1,19 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 import { api } from "../../lib/api";
 import { Button } from "../../components/ui/Button";
-import { FilterPanel } from "../../components/ui/FilterPanel";
 import { ConfirmationModal } from "../../components/timeline/ConfirmationModal";
 import { UserAvatar } from "../../components/ui/UserAvatar";
 import { useDialog } from "../../components/ui/DialogProvider";
-import { useClasses } from "../../hooks/useClasses";
+import type { ClassOption } from "../../context/WizardContext";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -70,45 +67,27 @@ function formatDate(iso: string): string {
 /* ── Props ──────────────────────────────────────────────────────── */
 
 interface AttendanceApprovalScreenProps {
-  onBack: () => void;
-  /** Rendered below the header, above every screen state (e.g. the
-   * Aprovar|Análise segmented control in Gestão → Frequência). */
-  headerExtra?: React.ReactNode;
+  /** Turma escolhida no contexto da tela (dono: AttendanceAnalyticsScreen). */
+  selectedClass: ClassOption | undefined;
+  /** Abre o painel de filtros, que também é do pai — uma tela, um painel. */
+  onOpenFilters: () => void;
 }
 
-/* ── Component ─────────────────────────────────────────────────── */
+/* ── Component: só o corpo da aba; header, contexto e filtros são do pai ── */
 
-export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceApprovalScreenProps) {
+export function AttendanceApprovalScreen({
+  selectedClass,
+  onOpenFilters,
+}: AttendanceApprovalScreenProps) {
   const [screenState, setScreenState] = useState<ScreenState>("idle");
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<AttendanceDashboard | null>(null);
-  const [filterVisible, setFilterVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
-  // Filter local state (within panel)
-  const [selectedModalityId, setSelectedModalityId] = useState<string | null>(null);
-
-  const { classes } = useClasses();
+  const selectedClassId = selectedClass?.id ?? null;
   const dialog = useDialog();
 
   /* ── Derived data ── */
-
-  const modalities = useMemo(() => {
-    const seen = new Set<string>();
-    const result: { id: string; name: string }[] = [];
-    for (const c of classes) {
-      if (c.modalityId && !seen.has(c.modalityId)) {
-        seen.add(c.modalityId);
-        result.push({ id: c.modalityId, name: c.modality });
-      }
-    }
-    return result;
-  }, [classes]);
-
-  const filteredClasses = selectedModalityId
-    ? classes.filter((c) => c.modalityId === selectedModalityId)
-    : classes;
 
   const sorted = [...(dashboard?.students ?? [])].sort(
     (a, b) => ORDER[a.status] - ORDER[b.status] || a.name.localeCompare(b.name),
@@ -129,11 +108,16 @@ export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceAppr
     }
   }, []);
 
-  function onSelectClass(classId: string) {
-    setSelectedClassId(classId);
-    setFilterVisible(false);
-    void loadDashboard(classId);
-  }
+  // Recarrega quando a turma do contexto muda (inclusive ao voltar da aba
+  // Análise com outra turma escolhida).
+  useEffect(() => {
+    if (!selectedClassId) {
+      setDashboard(null);
+      setScreenState("idle");
+      return;
+    }
+    void loadDashboard(selectedClassId);
+  }, [selectedClassId, loadDashboard]);
 
   /* ── Actions ── */
 
@@ -334,93 +318,10 @@ export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceAppr
     );
   }
 
-  /* ── Filter panel content ── */
-
-  function renderFilterContent() {
-    return (
-      <>
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Modalidade</Text>
-          <View style={styles.chipRow}>
-            {modalities.map((mod) => {
-              const active = selectedModalityId === mod.id;
-              return (
-                <TouchableOpacity
-                  key={mod.id}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => {
-                    setSelectedModalityId(active ? null : mod.id);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {mod.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Turma</Text>
-          <View style={styles.chipRow}>
-            {filteredClasses.map((cls) => {
-              const active = selectedClassId === cls.id;
-              return (
-                <TouchableOpacity
-                  key={cls.id}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => onSelectClass(cls.id)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {cls.name}
-                  </Text>
-                  <Text style={[styles.chipSubText, active && styles.chipTextActive]}>
-                    {cls.schedule}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            {filteredClasses.length === 0 && (
-              <Text style={styles.filterEmpty}>
-                {selectedModalityId
-                  ? "Nenhuma turma nesta modalidade."
-                  : "Nenhuma turma disponível."}
-              </Text>
-            )}
-          </View>
-        </View>
-      </>
-    );
-  }
-
   /* ── States ── */
 
-  const selectedClass = classes.find((c) => c.id === selectedClassId);
-
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} hitSlop={8}>
-          <Feather name="chevron-left" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Frequência</Text>
-        <TouchableOpacity
-          onPress={() => setFilterVisible(true)}
-          hitSlop={8}
-          style={styles.filterBtn}
-        >
-          <Feather name="sliders" size={22} color={colors.foreground} />
-          {selectedClassId !== null && <View style={styles.filterDot} />}
-        </TouchableOpacity>
-      </View>
-
-      {headerExtra && <View style={styles.headerExtra}>{headerExtra}</View>}
-
-      {/* Body */}
+    <>
       {screenState === "idle" && (
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -431,10 +332,7 @@ export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceAppr
             Escolha uma turma para ver e aprovar a frequência de hoje.
           </Text>
           <View style={styles.idleAction}>
-            <Button
-              label="Selecionar turma"
-              onPress={() => setFilterVisible(true)}
-            />
+            <Button label="Selecionar turma" onPress={onOpenFilters} />
           </View>
         </View>
       )}
@@ -501,15 +399,6 @@ export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceAppr
         </ScrollView>
       )}
 
-      {/* Filter panel */}
-      <FilterPanel
-        visible={filterVisible}
-        onClose={() => setFilterVisible(false)}
-        title="Selecionar turma"
-      >
-        {renderFilterContent()}
-      </FilterPanel>
-
       {/* Confirmation modal */}
       {confirmState !== null && (
         <ConfirmationModal
@@ -521,7 +410,7 @@ export function AttendanceApprovalScreen({ onBack, headerExtra }: AttendanceAppr
           onCancel={() => setConfirmState(null)}
         />
       )}
-    </SafeAreaView>
+    </>
   );
 }
 

@@ -34,78 +34,83 @@ export function GraduationBlock({ card, busy, onAction, onOpenMenu }: Graduation
         card.status === "rejected" && styles.blockRejected,
       ]}
     >
-      <BeltRibbon
-        modalityName={card.modalityName}
-        color={card.color}
-        degree={card.degree}
-        empty={isNone}
-      />
+      <View style={styles.top}>
+        <BeltRibbon
+          modalityName={card.modalityName}
+          color={card.color}
+          degree={card.degree}
+          empty={isNone}
+        />
 
-      <View style={styles.main}>
-        <Text style={styles.modality}>{card.modalityName}</Text>
-        {isNone ? (
-          <Text style={styles.empty}>Graduação não preenchida</Text>
-        ) : (
-          <Text style={styles.belt}>
-            {beltLabel}
-            {showDegree && <Text style={styles.degree}>{`  ·  ${card.degree}º grau`}</Text>}
-          </Text>
-        )}
+        <View style={styles.main}>
+          <Text style={styles.modality}>{card.modalityName}</Text>
+          {isNone ? (
+            <Text style={styles.empty}>Graduação não preenchida</Text>
+          ) : (
+            <Text style={styles.belt}>
+              {beltLabel}
+              {showDegree && <Text style={styles.degree}>{`  ·  ${card.degree}º grau`}</Text>}
+            </Text>
+          )}
 
-        {card.outOfBand ? (
-          <Text style={styles.warn}>⚠ faixa fora da faixa etária atual</Text>
-        ) : (
-          card.nextBelt && (
-            <View style={styles.next}>
-              <Text style={styles.nextLabel}>PRÓXIMA</Text>
-              <View style={[styles.nextDot, { backgroundColor: card.nextBelt.color }]} />
-              <Text style={styles.nextName}>{card.nextBelt.name}</Text>
-            </View>
-          )
-        )}
-      </View>
-
-      <View style={styles.side}>
-        <View style={[styles.pill, pillStyle(card.status)]}>
-          <Text style={[styles.pillText, pillTextStyle(card.status)]}>
-            {STATUS_LABEL[card.status] ?? card.status}
-          </Text>
+          {card.outOfBand ? (
+            <Text style={styles.warn}>⚠ faixa fora da faixa etária atual</Text>
+          ) : (
+            card.nextBelt && (
+              <View style={styles.next}>
+                <Text style={styles.nextLabel}>PRÓXIMA</Text>
+                <View style={[styles.nextDot, { backgroundColor: card.nextBelt.color }]} />
+                <Text style={styles.nextName}>{card.nextBelt.name}</Text>
+              </View>
+            )
+          )}
         </View>
 
-        {(card.status === "pending" || card.status === "rejected") && (
-          <View style={styles.actions}>
-            {card.status === "pending" && (
-              <Button
-                label="Reprovar"
-                variant="outline"
-                disabled={busy}
-                onPress={() => onAction("reject", card)}
-                style={styles.smallBtn}
-                textStyle={styles.rejectText}
-              />
-            )}
-            <Button
-              label="Aprovar"
-              variant="primary"
-              loading={busy}
-              disabled={busy}
-              onPress={() => onAction("approve", card)}
-              style={styles.smallBtn}
-            />
+        <View style={styles.side}>
+          <View style={[styles.pill, pillStyle(card.status)]}>
+            <Text style={[styles.pillText, pillTextStyle(card.status)]}>
+              {STATUS_LABEL[card.status] ?? card.status}
+            </Text>
           </View>
-        )}
 
-        {card.status === "approved" && hasMenu && (
-          <TouchableOpacity
-            style={styles.kebab}
-            onPress={() => onOpenMenu(card)}
-            hitSlop={8}
-            disabled={busy}
-          >
-            <Feather name="more-vertical" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        )}
+          {card.status === "approved" && hasMenu && (
+            <TouchableOpacity
+              style={styles.kebab}
+              onPress={() => onOpenMenu(card)}
+              hitSlop={8}
+              disabled={busy}
+            >
+              <Feather name="more-vertical" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
+      {/* Ações em linha própria, largura cheia: dentro da coluna lateral elas
+          disputavam espaço com o texto, que sobrava com ~60px e quebrava letra
+          a letra, com os botões por cima da linha "PRÓXIMA". */}
+      {(card.status === "pending" || card.status === "rejected") && (
+        <View style={styles.actions}>
+          {card.status === "pending" && (
+            <Button
+              label="Reprovar"
+              variant="outline"
+              disabled={busy}
+              onPress={() => onAction("reject", card)}
+              style={styles.actionBtn}
+              textStyle={styles.rejectText}
+            />
+          )}
+          <Button
+            label="Aprovar"
+            variant="primary"
+            loading={busy}
+            disabled={busy}
+            onPress={() => onAction("approve", card)}
+            style={styles.actionBtn}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -125,7 +130,6 @@ function pillTextStyle(status: string) {
 
 const styles = StyleSheet.create({
   block: {
-    flexDirection: "row",
     gap: spacing.sm + 4,
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -140,8 +144,14 @@ const styles = StyleSheet.create({
   blockRejected: {
     borderColor: "rgba(239,68,68,0.35)",
   },
+  top: {
+    flexDirection: "row",
+    gap: spacing.sm + 4,
+  },
   main: {
     flex: 1,
+    // minWidth 0 deixa o texto encolher de verdade em vez de empurrar o irmão
+    minWidth: 0,
     justifyContent: "center",
     gap: 3,
   },
@@ -202,6 +212,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: spacing.sm,
+    flexShrink: 0,
   },
   pill: {
     borderRadius: radius.sm,
@@ -221,11 +232,11 @@ const styles = StyleSheet.create({
   pillNeutral: { backgroundColor: colors.card, borderColor: colors.border },
   actions: {
     flexDirection: "row",
-    gap: spacing.xs + 2,
+    gap: spacing.sm,
   },
-  smallBtn: {
-    height: 36,
-    paddingHorizontal: spacing.sm + 4,
+  actionBtn: {
+    flex: 1,
+    height: 42,
   },
   rejectText: {
     color: colors.error,

@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import type { GradAction, GradCard } from "./types";
 
@@ -37,6 +38,11 @@ export function GraduationActionSheet({
   onClose,
   onAction,
 }: GraduationActionSheetProps) {
+  // Com o edge-to-edge obrigatório da API 36 o sheet desenha por baixo da
+  // barra de navegação: sem o inset o "Cancelar" encosta nos botões do
+  // sistema. Hook antes do early return (regras de hooks).
+  const insets = useSafeAreaInsets();
+
   if (!card) return null;
 
   const rows: Row[] = [];
@@ -61,7 +67,12 @@ export function GraduationActionSheet({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
-            <View style={styles.sheet}>
+            <View
+              style={[
+                styles.sheet,
+                { paddingBottom: insets.bottom + spacing.md },
+              ]}
+            >
               <View style={styles.grabber} />
               <Text style={styles.title}>
                 {card.modalityName} · {card.beltName ?? card.belt ?? "Graduação"}
@@ -111,7 +122,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     padding: spacing.md,
-    paddingBottom: spacing.xl,
     gap: spacing.xs,
   },
   grabber: {
