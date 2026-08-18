@@ -41,6 +41,12 @@ jobs:
           npx expo export --platform android --clear --dump-sourcemap --output-dir /tmp/bundle-android
           npx expo export --platform web --clear --dump-sourcemap --output-dir /tmp/bundle-web
 
+      # O SDK 54 parou de injetar o applicationId como scheme no manifesto e o
+      # retorno do login Google ficou sem handler — o Google concluía e o
+      # Chrome caía no google.com. Config-only, nenhum outro passo pega.
+      - name: Scheme do retorno OAuth
+        run: node scripts/check-oauth-scheme.mjs
+
       # Duas cópias de @firebase/app no bundle = dois registros de componente:
       # o app quebrou no boot com "Component auth has not been registered yet"
       # depois do SDK 54 ligar a resolução por `exports`. O bundle compila e o

@@ -5,7 +5,10 @@
     "owner": "digital-business-one",
     "version": "1.0.12",
     "orientation": "portrait",
-    "scheme": "spartacus",
+    "scheme": [
+      "spartacus",
+      "br.com.spartacus.app"
+    ],
     "newArchEnabled": false,
     "runtimeVersion": {
       "policy": "fingerprint"
@@ -78,7 +81,9 @@
       [
         "expo-share-intent",
         {
-          "androidIntentFilters": ["image/*"],
+          "androidIntentFilters": [
+            "image/*"
+          ],
           "disableAndroid": false,
           "disableIOS": true
         }
