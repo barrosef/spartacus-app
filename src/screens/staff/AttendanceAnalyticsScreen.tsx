@@ -17,6 +17,7 @@ import { FilterPanel } from "../../components/ui/FilterPanel";
 import { ReasonPrompt } from "../../components/staff/ReasonPrompt";
 import { UserAvatar } from "../../components/ui/UserAvatar";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { SelectBox } from "../../components/ui/SelectBox";
 import { useDialog } from "../../components/ui/DialogProvider";
 import { useClasses } from "../../hooks/useClasses";
 import type { ClassOption } from "../../context/WizardContext";
@@ -124,10 +125,16 @@ function currentMonthStr(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function shiftMonth(ym: string, delta: number): string {
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+/** Últimos N meses (mais recente primeiro) para o seletor de período. */
+function lastMonths(n: number): { value: string; label: string }[] {
+  const now = new Date();
+  const out: { value: string; label: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    out.push({ value: ym, label: monthLabel(ym) });
+  }
+  return out;
 }
 
 function monthLabel(ym: string): string {
@@ -143,55 +150,33 @@ function formatJustificationDate(iso: string): string {
   return d.toLocaleDateString("pt-BR");
 }
 
-/* ── Top-level: owns the Aprovar|Análise switch ───────────────────────── */
+/* ── Top-level: dono da turma, do período e do painel de filtros ────────
+ *
+ * A turma é o ASSUNTO da tela e as abas são só modos de olhar para ela — por
+ * isso a seleção vem ANTES das abas e é compartilhada entre elas. Antes cada
+ * aba era uma tela própria, com header, painel e estado de turma duplicados:
+ * trocar de aba perdia a turma escolhida e cada uma tinha seus filtros.
+ */
+
+export interface GradFilterOption {
+  key: string;
+  label: string;
+}
 
 interface AttendanceAnalyticsScreenProps {
   onBack: () => void;
 }
 
 export function AttendanceAnalyticsScreen({ onBack }: AttendanceAnalyticsScreenProps) {
-  const [tab, setTab] = useState<Tab>("aprovar");
-
-  const switcher = (
-    <SegmentedControl<Tab>
-      options={[
-        { value: "aprovar", label: "Aprovar" },
-        { value: "analise", label: "Análise" },
-      ]}
-      value={tab}
-      onChange={setTab}
-    />
-  );
-
-  if (tab === "aprovar") {
-    return <AttendanceApprovalScreen onBack={onBack} headerExtra={switcher} />;
-  }
-
-  return <AnalyticsTab onBack={onBack} headerExtra={switcher} />;
-}
-
-/* ── "Análise" tab content ─────────────────────────────────────────────── */
-
-function AnalyticsTab({
-  onBack,
-  headerExtra,
-}: {
-  onBack: () => void;
-  headerExtra: React.ReactNode;
-}) {
   const { classes } = useClasses();
-  const dialog = useDialog();
 
+  const [tab, setTab] = useState<Tab>("aprovar");
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedModalityId, setSelectedModalityId] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [month, setMonth] = useState(() => currentMonthStr());
   const [selectedBeltKey, setSelectedBeltKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [screenState, setScreenState] = useState<AnalyticsScreenState>("idle");
-  const [analytics, setAnalytics] = useState<AttendanceAnalytics | null>(null);
-  const [justificationActionId, setJustificationActionId] = useState<string | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<PendingJustification | null>(null);
+  const [gradOptions, setGradOptions] = useState<GradFilterOption[]>([]);
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
 
@@ -211,123 +196,104 @@ function AnalyticsTab({
     ? classes.filter((c) => c.modalityId === selectedModalityId)
     : classes;
 
-  function onSelectClass(classId: string) {
+  const monthOptions = useMemo(() => lastMonths(12), []);
+
+  const onSelectClass = useCallback((classId: string) => {
     setSelectedClassId(classId);
     setSelectedBeltKey(null);
     setFilterVisible(false);
-  }
-
-  const loadAnalytics = useCallback(async (classId: string, ym: string) => {
-    setScreenState("loading");
-    try {
-      const data = await api.get<AttendanceAnalytics>(
-        `/attendance/analytics/${encodeURIComponent(classId)}?month=${encodeURIComponent(ym)}`,
-      );
-      setAnalytics(data);
-      setScreenState("loaded");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // Defensive fallback — the client already gates on the turma's own
-        // attendanceEngineEnabled/attendanceStartDate before fetching, but
-        // this covers a race (e.g. backoffice toggling the engine mid-session).
-        setScreenState(err.message.includes("data-base") ? "engine_error" : "engine_off");
-      } else {
-        setScreenState("error");
-      }
-    }
   }, []);
 
-  // Reacts to turma/month changes: gate on the engine state we already know
-  // client-side (from the turma's own fields) before ever calling the API.
-  useEffect(() => {
-    if (!selectedClassId) {
-      setScreenState("idle");
-      return;
-    }
-    const cls = classes.find((c) => c.id === selectedClassId);
-    const state = engineStateOf(cls);
-    if (state === "inactive") {
-      setAnalytics(null);
-      setScreenState("engine_off");
-      return;
-    }
-    if (state === "error") {
-      setAnalytics(null);
-      setScreenState("engine_error");
-      return;
-    }
-    void loadAnalytics(selectedClassId, month);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, month, classes]);
+  // Ponto dourado: filtro fora do default. A turma não conta — ela é o
+  // contexto da tela, e está escrita na barra logo abaixo do header.
+  const filterActive =
+    selectedModalityId !== null ||
+    selectedBeltKey !== null ||
+    month !== currentMonthStr();
 
-  const approveJustification = useCallback(
-    async (item: PendingJustification) => {
-      setJustificationActionId(item.attendanceId);
-      try {
-        await api.patch(
-          `/attendance/${encodeURIComponent(item.attendanceId)}/justification/approve`,
-          {},
-        );
-        if (selectedClassId) await loadAnalytics(selectedClassId, month);
-      } catch (err) {
-        dialog.alert({
-          title: "Erro",
-          message:
-            err instanceof Error
-              ? err.message
-              : "Não foi possível aprovar a justificativa.",
-          tone: "danger",
-        });
-      } finally {
-        setJustificationActionId(null);
-      }
-    },
-    [selectedClassId, month, loadAnalytics, dialog],
-  );
+  return (
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} hitSlop={8}>
+          <Feather name="chevron-left" size={24} color={colors.foreground} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Frequência</Text>
+          <Text style={styles.headerSubtitle}>Gestão</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => setFilterVisible(true)}
+          hitSlop={8}
+          style={styles.filterBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Filtros"
+        >
+          <Feather
+            name="sliders"
+            size={22}
+            color={filterActive ? colors.primary : colors.foreground}
+          />
+          {filterActive && <View style={styles.filterDot} />}
+        </TouchableOpacity>
+      </View>
 
-  const rejectJustification = useCallback(
-    async (item: PendingJustification, reason: string) => {
-      setJustificationActionId(item.attendanceId);
-      try {
-        await api.patch(
-          `/attendance/${encodeURIComponent(item.attendanceId)}/justification/reject`,
-          { reason },
-        );
-        if (selectedClassId) await loadAnalytics(selectedClassId, month);
-      } catch (err) {
-        dialog.alert({
-          title: "Erro",
-          message:
-            err instanceof Error
-              ? err.message
-              : "Não foi possível recusar a justificativa.",
-          tone: "danger",
-        });
-      } finally {
-        setJustificationActionId(null);
-      }
-    },
-    [selectedClassId, month, loadAnalytics, dialog],
-  );
+      {/* Contexto: qual turma e qual período estão em tela. Tocar abre o
+          painel — mesmo destino do ícone, no lugar onde o olho já está. */}
+      <TouchableOpacity
+        style={styles.contextBar}
+        onPress={() => setFilterVisible(true)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Trocar turma"
+      >
+        <View style={styles.contextTextWrap}>
+          <Text style={styles.contextLabel}>TURMA</Text>
+          <Text
+            style={[styles.contextClass, !selectedClass && styles.contextPlaceholder]}
+            numberOfLines={1}
+          >
+            {selectedClass ? selectedClass.name : "Selecione uma turma"}
+          </Text>
+          <Text style={styles.contextMeta} numberOfLines={1}>
+            {selectedClass?.schedule ? `${selectedClass.schedule} · ` : ""}
+            {tab === "analise" ? monthLabel(month) : "Aula de hoje"}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+      </TouchableOpacity>
 
-  const gradFilters = (analytics?.byBelt ?? []).filter((b) => b.studentCount > 0);
+      <View style={styles.headerExtra}>
+        <SegmentedControl<Tab>
+          options={[
+            { value: "aprovar", label: "Aprovar" },
+            { value: "analise", label: "Análise" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </View>
 
-  const filteredStudents = useMemo(() => {
-    const list = analytics?.students ?? [];
-    const scoped = selectedBeltKey
-      ? list.filter((s) => beltKeyOf(s.graduation) === selectedBeltKey)
-      : list;
-    return [...scoped].sort((a, b) => {
-      if (a.percent === null && b.percent === null) return a.name.localeCompare(b.name);
-      if (a.percent === null) return 1;
-      if (b.percent === null) return -1;
-      return sortDir === "asc" ? a.percent - b.percent : b.percent - a.percent;
-    });
-  }, [analytics, selectedBeltKey, sortDir]);
+      {tab === "aprovar" ? (
+        <AttendanceApprovalScreen
+          selectedClass={selectedClass}
+          onOpenFilters={() => setFilterVisible(true)}
+        />
+      ) : (
+        <AnalyticsTab
+          selectedClass={selectedClass}
+          month={month}
+          selectedBeltKey={selectedBeltKey}
+          onGradFilters={setGradOptions}
+          onOpenFilters={() => setFilterVisible(true)}
+        />
+      )}
 
-  function renderFilterContent() {
-    return (
-      <>
+      {/* Um painel só, para as duas abas */}
+      <FilterPanel
+        visible={filterVisible}
+        onClose={() => setFilterVisible(false)}
+        title="Filtros"
+      >
         <View style={styles.filterSection}>
           <Text style={styles.filterSectionTitle}>Modalidade</Text>
           <View style={styles.chipRow}>
@@ -394,34 +360,201 @@ function AnalyticsTab({
             )}
           </View>
         </View>
-      </>
+
+        {/* Período e Graduação só valem para a Análise: a Aprovar é sempre a
+            aula de hoje. Mostrar filtro que não afeta nada é ruído. */}
+        {tab === "analise" && (
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Período</Text>
+            <SelectBox value={month} options={monthOptions} onChange={setMonth} />
+          </View>
+        )}
+
+        {tab === "analise" && gradOptions.length > 0 && (
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>Graduação</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[styles.chip, !selectedBeltKey && styles.chipActive]}
+                onPress={() => setSelectedBeltKey(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.chipText, !selectedBeltKey && styles.chipTextActive]}>
+                  Todas
+                </Text>
+              </TouchableOpacity>
+              {gradOptions.map((g) => {
+                const active = selectedBeltKey === g.key;
+                return (
+                  <TouchableOpacity
+                    key={g.key}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setSelectedBeltKey(active ? null : g.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {g.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </FilterPanel>
+    </SafeAreaView>
+  );
+}
+/* ── "Análise" tab content ─────────────────────────────────────────────── */
+
+function AnalyticsTab({
+  selectedClass,
+  month,
+  selectedBeltKey,
+  onGradFilters,
+  onOpenFilters,
+}: {
+  selectedClass: ClassOption | undefined;
+  month: string;
+  selectedBeltKey: string | null;
+  onGradFilters: (options: GradFilterOption[]) => void;
+  onOpenFilters: () => void;
+}) {
+  const dialog = useDialog();
+
+  const selectedClassId = selectedClass?.id ?? null;
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [screenState, setScreenState] = useState<AnalyticsScreenState>("idle");
+  const [analytics, setAnalytics] = useState<AttendanceAnalytics | null>(null);
+  const [justificationActionId, setJustificationActionId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PendingJustification | null>(null);
+
+  const loadAnalytics = useCallback(async (classId: string, ym: string) => {
+    setScreenState("loading");
+    try {
+      const data = await api.get<AttendanceAnalytics>(
+        `/attendance/analytics/${encodeURIComponent(classId)}?month=${encodeURIComponent(ym)}`,
+      );
+      setAnalytics(data);
+      setScreenState("loaded");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Defensive fallback — the client already gates on the turma's own
+        // attendanceEngineEnabled/attendanceStartDate before fetching, but
+        // this covers a race (e.g. backoffice toggling the engine mid-session).
+        setScreenState(err.message.includes("data-base") ? "engine_error" : "engine_off");
+      } else {
+        setScreenState("error");
+      }
+    }
+  }, []);
+
+  // Reacts to turma/month changes: gate on the engine state we already know
+  // client-side (from the turma's own fields) before ever calling the API.
+  useEffect(() => {
+    if (!selectedClassId) {
+      setScreenState("idle");
+      return;
+    }
+    const state = engineStateOf(selectedClass);
+    if (state === "inactive") {
+      setAnalytics(null);
+      setScreenState("engine_off");
+      return;
+    }
+    if (state === "error") {
+      setAnalytics(null);
+      setScreenState("engine_error");
+      return;
+    }
+    void loadAnalytics(selectedClassId, month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassId, month, selectedClass]);
+
+  const approveJustification = useCallback(
+    async (item: PendingJustification) => {
+      setJustificationActionId(item.attendanceId);
+      try {
+        await api.patch(
+          `/attendance/${encodeURIComponent(item.attendanceId)}/justification/approve`,
+          {},
+        );
+        if (selectedClassId) await loadAnalytics(selectedClassId, month);
+      } catch (err) {
+        dialog.alert({
+          title: "Erro",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Não foi possível aprovar a justificativa.",
+          tone: "danger",
+        });
+      } finally {
+        setJustificationActionId(null);
+      }
+    },
+    [selectedClassId, month, loadAnalytics, dialog],
+  );
+
+  const rejectJustification = useCallback(
+    async (item: PendingJustification, reason: string) => {
+      setJustificationActionId(item.attendanceId);
+      try {
+        await api.patch(
+          `/attendance/${encodeURIComponent(item.attendanceId)}/justification/reject`,
+          { reason },
+        );
+        if (selectedClassId) await loadAnalytics(selectedClassId, month);
+      } catch (err) {
+        dialog.alert({
+          title: "Erro",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Não foi possível recusar a justificativa.",
+          tone: "danger",
+        });
+      } finally {
+        setJustificationActionId(null);
+      }
+    },
+    [selectedClassId, month, loadAnalytics, dialog],
+  );
+
+  const gradFilters = useMemo(
+    () => (analytics?.byBelt ?? []).filter((b) => b.studentCount > 0),
+    [analytics],
+  );
+
+  // As opções de graduação só existem depois da análise carregar, então a aba
+  // publica a lista para o painel de filtros, que é do pai (uma tela, um painel).
+  useEffect(() => {
+    onGradFilters(
+      gradFilters.map((b) => ({
+        key: b.key,
+        label:
+          (b.key === "no_graduation"
+            ? "Sem graduação"
+            : graduationLabel(b.belt, b.degree)) + (b.pending ? " · em análise" : ""),
+      })),
     );
-  }
+  }, [gradFilters, onGradFilters]);
+
+  const filteredStudents = useMemo(() => {
+    const list = analytics?.students ?? [];
+    const scoped = selectedBeltKey
+      ? list.filter((s) => beltKeyOf(s.graduation) === selectedBeltKey)
+      : list;
+    return [...scoped].sort((a, b) => {
+      if (a.percent === null && b.percent === null) return a.name.localeCompare(b.name);
+      if (a.percent === null) return 1;
+      if (b.percent === null) return -1;
+      return sortDir === "asc" ? a.percent - b.percent : b.percent - a.percent;
+    });
+  }, [analytics, selectedBeltKey, sortDir]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} hitSlop={8}>
-          <Feather name="chevron-left" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Frequência</Text>
-          <Text style={styles.headerSubtitle}>Gestão · {monthLabel(month)}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setFilterVisible(true)}
-          hitSlop={8}
-          style={styles.filterBtn}
-        >
-          <Feather name="sliders" size={22} color={colors.foreground} />
-          {selectedClassId !== null && <View style={styles.filterDot} />}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.headerExtra}>{headerExtra}</View>
-
-      {/* Body */}
+    <>
       {screenState === "idle" && (
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -432,7 +565,7 @@ function AnalyticsTab({
             Escolha uma turma para ver a análise agregada de frequência.
           </Text>
           <View style={styles.idleAction}>
-            <Button label="Selecionar turma" onPress={() => setFilterVisible(true)} />
+            <Button label="Selecionar turma" onPress={onOpenFilters} />
           </View>
         </View>
       )}
@@ -474,38 +607,6 @@ function AnalyticsTab({
 
       {screenState === "loaded" && analytics && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Turma context + month stepper */}
-          <View style={styles.contextRow}>
-            <Text style={styles.contextClass} numberOfLines={1}>
-              {selectedClass?.name}
-              {selectedClass?.modality ? ` · ${selectedClass.modality}` : ""}
-            </Text>
-            <MonthStepper value={month} onChange={setMonth} />
-          </View>
-
-          {gradFilters.length > 0 && (
-            <View style={styles.chipsWrapRow}>
-              <FilterChip
-                label="Todas graduações"
-                active={!selectedBeltKey}
-                onPress={() => setSelectedBeltKey(null)}
-              />
-              {gradFilters.map((b) => (
-                <FilterChip
-                  key={b.key}
-                  label={
-                    (b.key === "no_graduation" ? "Sem graduação" : graduationLabel(b.belt, b.degree)) +
-                    (b.pending ? " · em análise" : "")
-                  }
-                  active={selectedBeltKey === b.key}
-                  onPress={() =>
-                    setSelectedBeltKey(selectedBeltKey === b.key ? null : b.key)
-                  }
-                />
-              ))}
-            </View>
-          )}
-
           {/* Roll-up */}
           <View style={styles.rollup}>
             <View style={styles.rollupTop}>
@@ -592,15 +693,6 @@ function AnalyticsTab({
         </ScrollView>
       )}
 
-      {/* Filter panel */}
-      <FilterPanel
-        visible={filterVisible}
-        onClose={() => setFilterVisible(false)}
-        title="Selecionar turma"
-      >
-        {renderFilterContent()}
-      </FilterPanel>
-
       {/* Recusar justificativa — motivo obrigatório */}
       <ReasonPrompt
         visible={rejectTarget !== null}
@@ -613,43 +705,9 @@ function AnalyticsTab({
           if (target) void rejectJustification(target, reason);
         }}
       />
-    </SafeAreaView>
+    </>
   );
 }
-
-/* ── Subcomponents ─────────────────────────────────────────────────────── */
-
-function MonthStepper({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const isCurrent = value === currentMonthStr();
-  return (
-    <View style={styles.monthStepper}>
-      <TouchableOpacity onPress={() => onChange(shiftMonth(value, -1))} hitSlop={8}>
-        <Feather name="chevron-left" size={16} color={colors.mutedForeground} />
-      </TouchableOpacity>
-      <Text style={styles.monthStepperLabel}>{monthLabel(value)}</Text>
-      <TouchableOpacity
-        onPress={() => !isCurrent && onChange(shiftMonth(value, 1))}
-        disabled={isCurrent}
-        hitSlop={8}
-      >
-        <Feather name="chevron-right" size={16} color={isCurrent ? colors.border : colors.mutedForeground} />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      style={[styles.filterChip, active && styles.filterChipActive]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 function MiniStat({ value, label, color }: { value: number; label: string; color: string }) {
   return (
     <View style={styles.miniStat}>
@@ -875,44 +933,37 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
 
-  // Context row (turma + month stepper)
-  contextRow: {
+  contextBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
+  contextTextWrap: { flex: 1, minWidth: 0, gap: 1 },
+  contextLabel: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBodySemiBold,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  contextPlaceholder: { color: colors.mutedForeground },
+  contextMeta: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontBody,
+    fontSize: 12,
+  },
+
   contextClass: {
     flex: 1,
     color: colors.foreground,
     fontFamily: typography.fontBodySemiBold,
     fontSize: 14,
   },
-  monthStepper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs + 2,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  monthStepperLabel: {
-    color: colors.foreground,
-    fontFamily: typography.fontHeadingSemi,
-    fontSize: 12,
-    minWidth: 92,
-    textAlign: "center",
-  },
 
   // Graduação chips
-  chipsWrapRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs + 2,
-  },
   filterChip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
