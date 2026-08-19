@@ -7,6 +7,7 @@ import { ShareIntentProvider } from "./lib/shareIntent";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { MediaViewerProvider } from "./components/timeline/MediaViewerContext";
 import { DialogProvider } from "./components/ui/DialogProvider";
+import { useAppUpdate } from "./hooks/useAppUpdate";
 import { colors } from "./theme/tokens";
 
 interface ErrorBoundaryState {
@@ -44,6 +45,9 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App() {
+  // Aviso de nova versão na loja (Android, faixa resolvida pelo próprio Play).
+  useAppUpdate();
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
