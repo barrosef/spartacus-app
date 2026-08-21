@@ -143,7 +143,7 @@ export function RootNavigator() {
   if (appState === "loading" && !resetLanding) {
     return (
       <View style={styles.loading}>
-        <Text style={styles.loadingText}>Spartacus</Text>
+        <SigningInOverlay message="Carregando…" hint="Um instante" />
         {timedOut && (
           <Text style={styles.errorDetail}>
             Firebase Auth não respondeu. Verifique sua conexão.

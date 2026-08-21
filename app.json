@@ -22,9 +22,6 @@
       "web"
     ],
     "icon": "./assets/logo.png",
-    "splash": {
-      "backgroundColor": "#0B0D12"
-    },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png",
@@ -78,6 +75,15 @@
     },
     "plugins": [
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0D12"
+        }
+      ],
       [
         "expo-share-intent",
         {

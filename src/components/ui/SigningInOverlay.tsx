@@ -15,7 +15,13 @@ const logo = require("../../../assets/logo.png");
  *
  * Bloqueia por construção: cobre a tela inteira e não repassa toques.
  */
-export function SigningInOverlay({ message = "Entrando…" }: { message?: string }) {
+export function SigningInOverlay({
+  message = "Entrando…",
+  hint = "Preparando sua timeline",
+}: {
+  message?: string;
+  hint?: string;
+}) {
   const spin = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -73,7 +79,7 @@ export function SigningInOverlay({ message = "Entrando…" }: { message?: string
         />
       </View>
       <Text style={styles.message}>{message}</Text>
-      <Text style={styles.hint}>Preparando sua timeline</Text>
+      <Text style={styles.hint}>{hint}</Text>
     </View>
   );
 }
