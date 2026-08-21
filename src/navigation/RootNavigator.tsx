@@ -11,6 +11,7 @@ import {
 import { AuthNavigator } from "./AuthNavigator";
 import { PendingEmailScreen } from "../screens/auth/PendingEmailScreen";
 import { BlockedStatusScreen } from "../screens/auth/BlockedStatusScreen";
+import { SigningInOverlay } from "../components/ui/SigningInOverlay";
 import { colors, typography } from "../theme/tokens";
 import { markSharedWhileLoggedOut } from "../lib/share/loggedOutShareFlag";
 import { MainNavigator } from "./MainNavigator";
@@ -153,6 +154,15 @@ export function RootNavigator() {
   }
 
   const showAuth = resetLanding || appState === "auth" || signupInProgress;
+
+  // Firebase já autenticou, mas o /auth/me ainda não voltou: sem isso a tela
+  // de login segue em pé com o botão do Google habilitado e a pessoa acha que
+  // travou. O cadastro é exceção — lá o wizard precisa continuar visível.
+  const signingIn = user !== null && !signupInProgress && appState === "auth";
+
+  if (signingIn) {
+    return <SigningInOverlay />;
+  }
 
   return (
     <SignupGuardCtx.Provider value={{ signupInProgress, setSignupInProgress }}>
