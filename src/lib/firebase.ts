@@ -1,11 +1,28 @@
 import { initializeApp } from "firebase/app";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FirebaseAuth from "firebase/auth";
 import {
   initializeAuth,
   getAuth,
   connectAuthEmulator,
   GoogleAuthProvider,
+  type Persistence,
 } from "firebase/auth";
+
+/** `getReactNativePersistence` existe só no build React Native do
+ * @firebase/auth e não está nos tipos públicos do `firebase/auth`. A versão
+ * anterior deste arquivo importava por caminho profundo
+ * (`@firebase/auth/dist/rn/index.js`), o que só funciona se o npm hoistear o
+ * pacote para o topo do node_modules — quando o lock foi regerado no upgrade
+ * do SDK 54, ele passou a ficar aninhado em `firebase/node_modules`, o import
+ * quebrou e a sessão virou memória: todo mundo relogando a cada abertura.
+ * Pelo entrypoint público não há essa dependência de layout. */
+const getReactNativePersistence = (
+  FirebaseAuth as unknown as {
+    getReactNativePersistence?: (storage: unknown) => Persistence;
+  }
+).getReactNativePersistence;
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -29,19 +46,19 @@ export const firebaseApp = initializeApp(firebaseConfig);
 let _auth: ReturnType<typeof getAuth>;
 if (Platform.OS === "web") {
   _auth = getAuth(firebaseApp);
+} else if (getReactNativePersistence) {
+  _auth = initializeAuth(firebaseApp, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
 } else {
-  try {
-    // Lazy imports — só carrega no native (evita crash no web bundler)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getReactNativePersistence } = require("@firebase/auth/dist/rn/index.js");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const AsyncStorage = require("@react-native-async-storage/async-storage").default;
-    _auth = initializeAuth(firebaseApp, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch {
-    _auth = getAuth(firebaseApp);
-  }
+  // Fallback ruidoso de propósito: aqui a sessão NÃO sobrevive ao fechamento
+  // do app, e um catch silencioso escondeu exatamente isso por um mês.
+  console.error(
+    "[Firebase] getReactNativePersistence indisponível — sessão ficará só em " +
+      "memória (o usuário vai relogar a cada abertura). Verifique se o Metro " +
+      "está resolvendo firebase/auth para o build React Native.",
+  );
+  _auth = getAuth(firebaseApp);
 }
 
 // Connect to Firebase Auth Emulator only in __DEV__ (Metro) builds.

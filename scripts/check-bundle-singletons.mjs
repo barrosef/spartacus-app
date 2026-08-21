@@ -18,6 +18,12 @@ import { readFileSync } from "node:fs";
 
 const SINGLETONS = ["@firebase/app", "@firebase/component"];
 
+// No bundle nativo, `firebase/auth` PRECISA resolver para o build React
+// Native: é o único que exporta `getReactNativePersistence`. Sem ele a sessão
+// cai para memória e todo mundo reloga a cada abertura do app — foi o que
+// aconteceu quando o lock regerado aninhou o @firebase/auth.
+const NATIVE_AUTH_BUILD = "@firebase/auth/dist/rn/";
+
 const mapPath = process.argv[2];
 if (!mapPath) {
   console.error("uso: node scripts/check-bundle-singletons.mjs <arquivo.map>");
@@ -37,6 +43,22 @@ for (const pkg of SINGLETONS) {
     files.forEach((f) => console.error(`    ${f}`));
   } else {
     console.log(`✔ ${pkg}: ${files.length} cópia`);
+  }
+}
+
+// Só o bundle android/ios; no web o build de browser é o correto.
+const isNativeBundle = /\/(android|ios)\//.test(mapPath);
+if (isNativeBundle) {
+  const hasRnAuth = sources.some((s) => s.includes(NATIVE_AUTH_BUILD));
+  const hasAnyAuth = sources.some((s) => s.includes("@firebase/auth/"));
+  if (hasAnyAuth && !hasRnAuth) {
+    failed = true;
+    console.error(
+      `✖ firebase/auth: bundle nativo sem o build React Native (${NATIVE_AUTH_BUILD})`,
+    );
+    console.error("    a sessão não persistiria — o usuário relogaria sempre");
+  } else if (hasRnAuth) {
+    console.log("✔ firebase/auth: build React Native no bundle nativo");
   }
 }
 
