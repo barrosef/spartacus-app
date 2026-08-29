@@ -3,7 +3,7 @@
     "name": "Spartacus",
     "slug": "spartacus",
     "owner": "digital-business-one",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "orientation": "portrait",
     "scheme": [
       "spartacus",
@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "br.com.spartacus.app",
-      "versionCode": 58,
+      "versionCode": 59,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0B0D12"
@@ -48,7 +48,7 @@
     },
     "ios": {
       "bundleIdentifier": "br.com.spartacus.app",
-      "buildNumber": "58",
+      "buildNumber": "59",
       "icon": "./assets/icon-ios.png",
       "supportsTablet": false,
       "googleServicesFile": "./GoogleService-Info.plist",
