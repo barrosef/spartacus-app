@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { BackHandler } from "react-native";
 import { View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
@@ -216,6 +217,43 @@ function MainContent() {
     if (key === "staff_doacoes") setShowDonationApproval(true);
     if (key === "staff_moderacao") setStaffScreen("moderacao");
   };
+
+  // Botão voltar do Android. A navegação daqui é estado React (uma pilha de
+  // booleanos), então sem isto o sistema faz o padrão: encerra a Activity e
+  // joga o app para segundo plano — mesmo com uma tela empilhada aberta.
+  //
+  // A ordem espelha a precedência do render abaixo: fecha primeiro o que está
+  // por cima. Retornar true = tratado; false só no topo da pilha, para o
+  // Android sair do app como se espera na tela inicial.
+  //
+  // Componentes internos (MediaViewer, diálogos) registram os próprios
+  // handlers: o RN chama os listeners do último registrado para o primeiro,
+  // então eles têm precedência sobre este.
+  useEffect(() => {
+    const onBack = () => {
+      if (notificationsVisible) { setNotificationsVisible(false); return true; }
+      if (feedFilterVisible) { setFeedFilterVisible(false); return true; }
+      if (drawerVisible) { setDrawerVisible(false); return true; }
+      if (justifyTarget) { setJustifyTarget(null); return true; }
+      if (showPostWizard) { setShowPostWizard(false); setPendingShareMedia(null); return true; }
+      if (showProfile) { setShowProfile(false); fetchProfile(); return true; }
+      if (showFrequency) { setShowFrequency(false); return true; }
+      if (showMyDonations) { setShowMyDonations(false); return true; }
+      if (staffScreen) { setStaffScreen(null); return true; }
+      if (showAttendanceApproval) { setShowAttendanceApproval(false); return true; }
+      if (showDonationApproval) { setShowDonationApproval(false); return true; }
+      // Nas abas, voltar leva ao feed antes de sair do app.
+      if (activeTab !== "feed") { setActiveTab("feed"); return true; }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
+    return () => sub.remove();
+  }, [
+    notificationsVisible, feedFilterVisible, drawerVisible, justifyTarget,
+    showPostWizard, showProfile, showFrequency, showMyDonations, staffScreen,
+    showAttendanceApproval, showDonationApproval, activeTab, fetchProfile,
+  ]);
 
   if (showProfile) {
     const depInfos = dependents.map((d) => ({
