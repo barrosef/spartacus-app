@@ -1,9 +1,21 @@
-import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Keyboard,
+  Dimensions,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 import { MentionAutocomplete } from "./MentionAutocomplete";
+import { useFeedScrollBy } from "./keyboardScroll";
 import type { Mentionable } from "./types";
+
+// Folga entre o campo e o topo do teclado, para não ficar colado.
+const KEYBOARD_GAP = 12;
 
 interface Props {
   entryId: string;
@@ -21,6 +33,37 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
   const [mentions, setMentions] = useState<{ display: string; uid: string }[]>([]);
   const [query, setQuery] = useState<string>("");   // "" = autocomplete escondido
   const [sending, setSending] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const scrollBy = useFeedScrollBy();
+
+  /**
+   * O campo vive inline no card, no meio do feed: ao focar, o teclado sobe e
+   * cobre justamente a linha onde a pessoa está digitando. Aqui medimos onde o
+   * campo ficou na tela e pedimos ao feed a rolagem exata que falta.
+   *
+   * O teclado pode já estar aberto (respondendo a outro comentário) — nesse
+   * caso `Keyboard.metrics()` já responde e não vem evento novo.
+   */
+  const nudgeAboveKeyboard = (keyboardHeight: number) => {
+    if (!scrollBy || !keyboardHeight) return;
+    const keyboardTop = Dimensions.get("window").height - keyboardHeight;
+    inputRef.current?.measureInWindow((_x, y, _w, h) => {
+      const overlap = y + h + KEYBOARD_GAP - keyboardTop;
+      if (overlap > 0) scrollBy(overlap);
+    });
+  };
+
+  const onFocus = () => {
+    const metrics = Keyboard.metrics();
+    if (metrics?.height) {
+      nudgeAboveKeyboard(metrics.height);
+      return;
+    }
+    const sub = Keyboard.addListener("keyboardDidShow", (e) => {
+      sub.remove();
+      nudgeAboveKeyboard(e.endCoordinates.height);
+    });
+  };
 
   const onChange = (t: string) => {
     setText(t);
@@ -70,7 +113,8 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={styles.input} value={text} onChangeText={onChange}
+        <TextInput ref={inputRef} onFocus={onFocus}
+          style={styles.input} value={text} onChangeText={onChange}
           placeholder="Escreva um comentário… use @ para mencionar"
           placeholderTextColor={colors.mutedForeground} multiline />
         <TouchableOpacity style={styles.send} onPress={submit} disabled={sending || !text.trim()}>

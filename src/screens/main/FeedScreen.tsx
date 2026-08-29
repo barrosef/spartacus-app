@@ -15,6 +15,7 @@ import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
 import { useDialog } from "../../components/ui/DialogProvider";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
+import { FeedScrollContext } from "../../components/timeline/comments/keyboardScroll";
 import { PinnedRow } from "../../components/timeline/PinnedRow";
 import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
@@ -81,6 +82,16 @@ export function FeedScreen({
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const scrollOffsetRef = useRef(0);
+
+  // Rola o feed por um delta; usado quando o teclado cobriria o campo de
+  // comentário, que fica inline no card (estilo Instagram).
+  const scrollBy = useCallback((delta: number) => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, scrollOffsetRef.current + delta),
+      animated: true,
+    });
+  }, []);
   const pinnedCardY = useRef(0);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
   const isSocial = userRoles.includes("social");
@@ -295,6 +306,9 @@ export function FeedScreen({
     (event: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
       const { contentOffset, layoutMeasurement, contentSize } =
         event.nativeEvent;
+      // offset corrente: o campo de comentário precisa dele para se descolar
+      // do teclado (ScrollView só aceita posição absoluta em scrollTo).
+      scrollOffsetRef.current = contentOffset.y;
       if (
         contentOffset.y + layoutMeasurement.height >=
         contentSize.height - 200
@@ -357,7 +371,7 @@ export function FeedScreen({
       )}
 
       {screen === "content" && (
-        <>
+        <FeedScrollContext.Provider value={scrollBy}>
         {anamneseStatus !== null && onOpenAnamnese && (
           <AnamneseReminderBanner
             roles={userRoles}
@@ -372,6 +386,9 @@ export function FeedScreen({
         ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        // Sem isto, o primeiro toque com o teclado aberto é consumido só para
+        // fechá-lo: a seta de enviar comentário exigia dois toques.
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -381,7 +398,9 @@ export function FeedScreen({
           />
         }
         onScroll={handleScroll}
-        scrollEventThrottle={400}
+        // 16ms: o handler só compara números e guarda o offset, que precisa
+        // estar fresco quando o campo de comentário pedir a rolagem.
+        scrollEventThrottle={16}
       >
         {displayEntries.map((entry) => {
           const card = (
@@ -468,7 +487,7 @@ export function FeedScreen({
             />
           )}
         </ScrollView>
-        </>
+        </FeedScrollContext.Provider>
       )}
 
       <FilterModal
