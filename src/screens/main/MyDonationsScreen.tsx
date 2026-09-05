@@ -93,7 +93,7 @@ export function MyDonationsScreen({
   /* ── Loading ── */
   if (screen === "loading") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -105,7 +105,7 @@ export function MyDonationsScreen({
   /* ── Empty ── */
   if (screen === "empty") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -126,7 +126,7 @@ export function MyDonationsScreen({
   /* ── Error ── */
   if (screen === "error") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -146,7 +146,7 @@ export function MyDonationsScreen({
 
   /* ── Loaded ── */
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader onBack={onBack} />
 
       {/* Filter tabs */}

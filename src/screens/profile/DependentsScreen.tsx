@@ -113,7 +113,7 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
   // ── Step 1: Basic data ──
   if (sub === "add-step1") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Feather name="chevron-left" size={24} color={colors.foreground}
             onPress={() => { resetForm(); setSub("list"); }} />
@@ -147,7 +147,7 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
   if (sub === "add-step2") {
     const age = birthDate ? calcAge(birthDate) : null;
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Feather name="chevron-left" size={24} color={colors.foreground}
             onPress={() => setSub("add-step1")} />
@@ -175,7 +175,7 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
   // ── Success ──
   if (sub === "success" && createdDep) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Feather name="check" size={40} color={colors.success} />
@@ -201,7 +201,7 @@ export function DependentsScreen({ onBack }: DependentsScreenProps) {
 
   // ── List ──
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Feather name="chevron-left" size={24} color={colors.foreground}
           onPress={onBack} />

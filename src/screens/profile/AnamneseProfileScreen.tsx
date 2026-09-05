@@ -206,7 +206,7 @@ export function AnamneseProfileScreen({ onBack }: Props) {
       : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={onBack}

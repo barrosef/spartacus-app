@@ -267,7 +267,7 @@ export function ModerationScreen({ onBack, viewerRoles }: ModerationScreenProps)
   /* ── Render ── */
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} hitSlop={8}>

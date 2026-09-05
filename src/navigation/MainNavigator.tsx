@@ -367,6 +367,9 @@ function MainContent() {
     }
   };
 
+  // edges só com "top": o inset de baixo é consumido pelo próprio BottomNav,
+  // para o fundo da barra de abas se estender por trás da barra de navegação
+  // do Android em vez de deixar uma faixa lisa acima dela.
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <AppHeader

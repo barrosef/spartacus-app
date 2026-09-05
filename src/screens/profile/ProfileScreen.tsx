@@ -336,7 +336,7 @@ export function ProfileScreen({
     // A failed profile read must not leave a permanently blank screen.
     if (loadError) {
       return (
-        <SafeAreaView style={styles.safe} edges={["top"]}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.header}>
             <Feather
               name="chevron-left"
@@ -443,7 +443,7 @@ export function ProfileScreen({
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Feather
           name="chevron-left"

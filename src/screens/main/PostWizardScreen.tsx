@@ -395,7 +395,7 @@ export function PostWizardScreen({ onClose, initialMedia }: PostWizardScreenProp
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
