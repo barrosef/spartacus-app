@@ -9,6 +9,7 @@ import { MediaViewerProvider } from "./components/timeline/MediaViewerContext";
 import { DialogProvider } from "./components/ui/DialogProvider";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { colors } from "./theme/tokens";
+import { KeyboardDiagnostics } from "./components/debug/KeyboardDiagnostics";
 
 interface ErrorBoundaryState {
   error: Error | null;
@@ -70,6 +71,9 @@ export default function App() {
           <DialogProvider>
             <MediaViewerProvider>
               <RootNavigator />
+              {/* TEMPORÁRIO: medir o comportamento real do teclado neste
+                  device antes de escolher o mecanismo. Remover em seguida. */}
+              <KeyboardDiagnostics />
             </MediaViewerProvider>
           </DialogProvider>
         </ErrorBoundary>
