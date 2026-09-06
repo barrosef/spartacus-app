@@ -3,93 +3,99 @@ import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
   TouchableWithoutFeedback,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
+  Dimensions,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
+import { useKeyboardOffset } from "../../../hooks/useKeyboardOffset";
 import { CommentsSection } from "./CommentsSection";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   entryId: string;
-  count: number;
   canModerate: boolean;
   viewerRoles?: string[];
   onCountChange?: (delta: number) => void;
 }
 
+/** Altura da folha em repouso, como fração da tela (padrão Instagram). */
+const RESTING_TOP = 0.28;
+
 /**
- * Comentários numa folha sobre o feed, em vez de inline dentro do card.
+ * Comentários numa folha sobre o feed, ancorada ao teclado.
  *
- * O motivo é o teclado: inline, o campo fica no meio de um feed rolante e
- * some atrás do teclado — rolar o feed na mão para compensar nunca alinhou
- * direito. Aqui o campo é o último elemento de uma superfície de tela cheia,
- * então o teclado não tem como cobri-lo e nenhuma medição é necessária.
+ * A folha é posicionada por âncoras (top + bottom) em vez de altura fixa, e o
+ * `bottom` acompanha o topo do teclado. Duas consequências:
  *
- * O KeyboardAvoidingView sem `behavior` no Android é o mesmo padrão do
- * RemoveCommentDialog e das telas de formulário: lá o adjustResize já dá
- * conta sozinho.
+ *  - o composer, sendo o último filho, fica sempre logo acima do teclado;
+ *  - com o teclado aberto a folha cresce para cima e ganha altura útil, em
+ *    vez de ficar espremida.
+ *
+ * Nada aqui depende do layout se mexer sozinho: medido em device, o
+ * `adjustResize` NÃO redimensiona a raiz do RN neste app (raiz fica em 800dp
+ * com e sem teclado), e por isso KeyboardAvoidingView e rolagem calculada não
+ * resolveram nas tentativas anteriores. O que funciona são os eventos de
+ * teclado — ver useKeyboardOffset.
  */
 export function CommentsSheet({
-  visible, onClose, entryId, count, canModerate, viewerRoles, onCountChange,
+  visible, onClose, entryId, canModerate, viewerRoles, onCountChange,
 }: Props) {
-  // Sob edge-to-edge o sheet desenha por baixo da barra de navegação.
   const insets = useSafeAreaInsets();
+  const kbOffset = useKeyboardOffset(insets.bottom);
+  const kbOpen = kbOffset > 0;
+
+  const restingTop = Dimensions.get("screen").height * RESTING_TOP;
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}   // botão voltar do Android fecha a folha
+      // Só chega aqui com o teclado fechado: com o teclado aberto o próprio
+      // Android consome o voltar para baixá-lo (é quando a tecla vira "⌄").
+      onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+
+      <View
+        style={[
+          styles.sheet,
+          {
+            bottom: kbOffset,
+            // Aberto o teclado, a folha sobe até abaixo da barra de status.
+            top: kbOpen ? insets.top : restingTop,
+            // Com teclado, o kbOffset já passa da barra de navegação.
+            paddingBottom: kbOpen ? 0 : insets.bottom,
+          },
+        ]}
       >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.backdrop} />
-        </TouchableWithoutFeedback>
-
-        <View style={[styles.sheet, { paddingBottom: insets.bottom }]}>
-          <View style={styles.grabber} />
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {count > 0 ? `Comentários (${count})` : "Comentários"}
-            </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={HIT_SLOP}>
-              <Feather name="x" size={20} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          </View>
-
-          <CommentsSection
-            entryId={entryId}
-            canModerate={canModerate}
-            viewerRoles={viewerRoles}
-            onCountChange={onCountChange}
-          />
+        <View style={styles.grabber} />
+        <View style={styles.header}>
+          <Text style={styles.title}>Comentários</Text>
         </View>
-      </KeyboardAvoidingView>
+
+        <CommentsSection
+          entryId={entryId}
+          canModerate={canModerate}
+          viewerRoles={viewerRoles}
+          onCountChange={onCountChange}
+        />
+      </View>
     </Modal>
   );
 }
 
-const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
-
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  // O backdrop preenche o que sobra acima da folha e fecha ao toque.
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: {
-    // Altura fixa em fração da tela: a folha não deve crescer com o número de
-    // comentários — quem rola é a lista lá dentro.
-    height: "85%",
+    position: "absolute",
+    left: 0,
+    right: 0,
     backgroundColor: colors.background,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
@@ -105,10 +111,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
+    justifyContent: "center",
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

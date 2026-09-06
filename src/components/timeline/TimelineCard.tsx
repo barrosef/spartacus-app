@@ -54,7 +54,6 @@ export function TimelineCard({
       visible={showComments}
       onClose={() => setShowComments(false)}
       entryId={entry.id}
-      count={commentCount}
       canModerate={isStaff}
       viewerRoles={viewerRoles}
       onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}

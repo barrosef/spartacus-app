@@ -1,5 +1,5 @@
 // src/components/timeline/comments/CommentsSection.tsx
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet,
 } from "react-native";
@@ -35,6 +35,7 @@ export function CommentsSection({
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; display: string } | null>(null);
   const [visibleTops, setVisibleTops] = useState(TOPS_PAGE);
   const [removeTarget, setRemoveTarget] = useState<Comment | null>(null);
+  const listRef = useRef<ScrollView>(null);
 
   const canBanApp = viewerRoles.some((r) => r === "owner" || r === "assistant");
 
@@ -73,6 +74,10 @@ export function CommentsSection({
       setComments((prev) => [...prev, created]);
       onCountChange?.(1);
       setReplyingTo(null);
+      // O comentário entra no fim da lista: rolar até ele é o que fecha a
+      // sensação de "enviou". O teclado e o campo ficam onde estão, para
+      // escrever o próximo sem reabrir nada.
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
         message: err instanceof Error ? err.message : "Não foi possível comentar.",
@@ -153,6 +158,7 @@ export function CommentsSection({
       {/* A lista rola por conta própria; o CommentInput fica FORA dela, como
           último filho da folha — é o que garante que o teclado nunca o cubra. */}
       <ScrollView
+        ref={listRef}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
