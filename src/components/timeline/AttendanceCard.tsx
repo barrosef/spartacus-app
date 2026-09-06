@@ -46,7 +46,7 @@ interface AttendanceCardProps {
   isTarget: boolean;
   commentsCount: number;
   commentsOpen: boolean;
-  commentsSection?: React.ReactNode;
+  commentsSheet?: React.ReactNode;
   onConfirm: () => void;
   onAbsent: () => void;
   onJustify: () => void;
@@ -59,7 +59,7 @@ export function AttendanceCard({
   isTarget,
   commentsCount,
   commentsOpen,
-  commentsSection,
+  commentsSheet,
   onConfirm,
   onAbsent,
   onJustify,
@@ -181,7 +181,7 @@ export function AttendanceCard({
       </View>
 
       {/* Comentários inline — parte do próprio card */}
-      {commentsSection}
+      {commentsSheet}
     </View>
   );
 }
