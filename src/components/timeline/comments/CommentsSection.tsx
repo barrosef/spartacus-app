@@ -1,6 +1,8 @@
 // src/components/timeline/comments/CommentsSection.tsx
-import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet,
+} from "react-native";
 import { api } from "../../../lib/api";
 import { auth } from "../../../lib/firebase";
 import { useDialog } from "../../ui/DialogProvider";
@@ -33,6 +35,7 @@ export function CommentsSection({
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; display: string } | null>(null);
   const [visibleTops, setVisibleTops] = useState(TOPS_PAGE);
   const [removeTarget, setRemoveTarget] = useState<Comment | null>(null);
+  const listRef = useRef<ScrollView>(null);
 
   const canBanApp = viewerRoles.some((r) => r === "owner" || r === "assistant");
 
@@ -71,6 +74,10 @@ export function CommentsSection({
       setComments((prev) => [...prev, created]);
       onCountChange?.(1);
       setReplyingTo(null);
+      // O comentário entra no fim da lista: rolar até ele é o que fecha a
+      // sensação de "enviou". O teclado e o campo ficam onde estão, para
+      // escrever o próximo sem reabrir nada.
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
         message: err instanceof Error ? err.message : "Não foi possível comentar.",
@@ -148,44 +155,54 @@ export function CommentsSection({
 
   return (
     <View style={styles.container}>
-      {screen === "loading" ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-      ) : screen === "error" ? (
-        <View style={styles.center}>
-          <Text style={styles.errTxt}>Não foi possível carregar.</Text>
-          <View style={{ marginTop: spacing.sm }}>
-            <Button label="Tentar novamente" onPress={() => load()} />
+      {/* A lista rola por conta própria; o CommentInput fica FORA dela, como
+          último filho da folha — é o que garante que o teclado nunca o cubra. */}
+      <ScrollView
+        ref={listRef}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {screen === "loading" ? (
+          <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+        ) : screen === "error" ? (
+          <View style={styles.center}>
+            <Text style={styles.errTxt}>Não foi possível carregar.</Text>
+            <View style={{ marginTop: spacing.sm }}>
+              <Button label="Tentar novamente" onPress={() => load()} />
+            </View>
           </View>
-        </View>
-      ) : (
-        <>
-          {hiddenTops > 0 ? (
-            <TouchableOpacity
-              style={styles.moreBtn}
-              onPress={() => setVisibleTops((v) => v + TOPS_PAGE)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.moreTxt}>Ver mais ({hiddenTops})</Text>
-            </TouchableOpacity>
-          ) : null}
-          {rows.length === 0 ? (
-            <Text style={styles.empty}>Seja o primeiro a comentar.</Text>
-          ) : (
-            rows.map(({ comment, isReply }) => (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                isReply={isReply}
-                currentUid={currentUid}
-                canModerate={canModerate}
-                onReply={(c) => setReplyingTo({ commentId: c.parentId ?? c.id, display: c.authorName })}
-                onEdit={edit}
-                onDelete={requestRemove}
-              />
-            ))
-          )}
-        </>
-      )}
+        ) : (
+          <>
+            {hiddenTops > 0 ? (
+              <TouchableOpacity
+                style={styles.moreBtn}
+                onPress={() => setVisibleTops((v) => v + TOPS_PAGE)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.moreTxt}>Ver mais ({hiddenTops})</Text>
+              </TouchableOpacity>
+            ) : null}
+            {rows.length === 0 ? (
+              <Text style={styles.empty}>Seja o primeiro a comentar.</Text>
+            ) : (
+              rows.map(({ comment, isReply }) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  isReply={isReply}
+                  currentUid={currentUid}
+                  canModerate={canModerate}
+                  onReply={(c) => setReplyingTo({ commentId: c.parentId ?? c.id, display: c.authorName })}
+                  onEdit={edit}
+                  onDelete={requestRemove}
+                />
+              ))
+            )}
+          </>
+        )}
+      </ScrollView>
 
       <CommentInput
         entryId={entryId}
@@ -206,13 +223,14 @@ export function CommentsSection({
 }
 
 const styles = StyleSheet.create({
-  // Renderizada DENTRO do card (estilo Instagram) — sem fundo/borda próprios;
-  // só um separador no topo. O padding horizontal vem do card.
+  // Corpo da CommentsSheet: ocupa a folha inteira e aplica o padding
+  // horizontal que antes vinha do card do feed.
   container: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.xs,
+    flex: 1,
+    paddingHorizontal: spacing.md,
   },
+  list: { flex: 1 },
+  listContent: { flexGrow: 1, paddingTop: spacing.xs },
   center: { alignItems: "center", justifyContent: "center", padding: spacing.lg },
   errTxt: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14 },
   empty: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14,
