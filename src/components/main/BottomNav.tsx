@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   colors,
   typography,
@@ -44,9 +45,20 @@ export function BottomNav({
   const leftTabs = TABS.slice(0, 2);
   const rightTabs = TABS.slice(2);
 
+  // Sob edge-to-edge (obrigatório na API 36) o app desenha atrás da barra de
+  // navegação do Android. Reservar o inset AQUI, e não no SafeAreaView do
+  // MainNavigator, mantém o fundo da barra de abas se estendendo por baixo
+  // dela — com o inset no SafeAreaView sobraria uma faixa lisa embaixo.
+  // O valor varia: ~48dp nos 3 botões, ~24dp no gesto, 0 no modo imersivo.
+  const insets = useSafeAreaInsets();
+  const containerStyle = [
+    styles.container,
+    { paddingBottom: insets.bottom + spacing.sm },
+  ];
+
   if (!showPostButton) {
     return (
-      <View style={styles.container}>
+      <View style={containerStyle}>
         {TABS.map((tab) => (
           <TabItem
             key={tab.key}
@@ -60,7 +72,7 @@ export function BottomNav({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {leftTabs.map((tab) => (
         <TabItem
           key={tab.key}
@@ -131,7 +143,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(42,45,62,0.4)",
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg + 4,
+    // paddingBottom vem do inset da barra de navegação, em containerStyle.
     paddingHorizontal: spacing.sm,
   },
   tabBtn: {

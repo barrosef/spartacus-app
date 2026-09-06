@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Application from "expo-application";
 import { colors, typography, spacing } from "../../theme/tokens";
 import { isStaffRoles } from "../../constants/roles";
@@ -112,6 +113,10 @@ export function AppDrawer({
     });
   };
 
+  // O drawer vai de topo a base da tela; sem o inset, o rodapé (versão do app)
+  // fica atrás da barra de navegação do Android sob edge-to-edge.
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={visible}
@@ -124,6 +129,7 @@ export function AppDrawer({
         <Animated.View
           style={[
             styles.drawer,
+            { paddingBottom: insets.bottom + spacing.lg },
             { transform: [{ translateX: slideAnim }] },
           ]}
         >
@@ -210,7 +216,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: colors.border,
     paddingTop: spacing.xl + spacing.lg,
-    paddingBottom: spacing.lg,
+    // paddingBottom vem do inset da barra de navegação, aplicado no render.
     zIndex: 2,
   },
   backdrop: {

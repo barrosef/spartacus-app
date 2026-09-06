@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,10 @@ import { auth } from "../../lib/firebase";
 import { useProxy } from "../../context/ProxyContext";
 import { useDialog } from "../../components/ui/DialogProvider";
 import { TimelineCard } from "../../components/timeline/TimelineCard";
-import { FeedScrollContext } from "../../components/timeline/comments/keyboardScroll";
+import {
+  FeedScrollContext,
+  type FeedScrollApi,
+} from "../../components/timeline/comments/keyboardScroll";
 import { PinnedRow } from "../../components/timeline/PinnedRow";
 import { FilterModal } from "../../components/timeline/FilterModal";
 import { LikesModal } from "../../components/timeline/LikesModal";
@@ -84,14 +87,23 @@ export function FeedScreen({
   const scrollRef = useRef<ScrollView>(null);
   const scrollOffsetRef = useRef(0);
 
-  // Rola o feed por um delta; usado quando o teclado cobriria o campo de
-  // comentário, que fica inline no card (estilo Instagram).
-  const scrollBy = useCallback((delta: number) => {
-    scrollRef.current?.scrollTo({
-      y: Math.max(0, scrollOffsetRef.current + delta),
-      animated: true,
-    });
-  }, []);
+  // Usado quando o teclado cobriria o campo de comentário, que fica inline no
+  // card (estilo Instagram): o campo mede a si mesmo e a área visível daqui na
+  // MESMA referência (a janela) e pede a rolagem que falta.
+  const feedScroll = useMemo<FeedScrollApi>(
+    () => ({
+      scrollBy: (delta) =>
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, scrollOffsetRef.current + delta),
+          animated: true,
+        }),
+      measureViewport: (cb) =>
+        scrollRef.current
+          ?.getNativeScrollRef()
+          ?.measureInWindow((_x, y, _w, height) => cb({ y, height })),
+    }),
+    [],
+  );
   const pinnedCardY = useRef(0);
   const isStaff = userRoles.some((r) => STAFF_ROLES.has(r));
   const isSocial = userRoles.includes("social");
@@ -371,7 +383,7 @@ export function FeedScreen({
       )}
 
       {screen === "content" && (
-        <FeedScrollContext.Provider value={scrollBy}>
+        <FeedScrollContext.Provider value={feedScroll}>
         {anamneseStatus !== null && onOpenAnamnese && (
           <AnamneseReminderBanner
             roles={userRoles}

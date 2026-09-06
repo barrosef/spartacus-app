@@ -116,7 +116,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
 
   if (screenState === "loading") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -127,7 +127,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
 
   if (screenState === "error") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -146,7 +146,7 @@ export function StaffGraduacoesScreen({ onBack }: StaffGraduacoesScreenProps) {
   const pendingCount = roster?.pendingCount ?? 0;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader
         onBack={onBack}
         onFilter={() => setFiltersOpen(true)}

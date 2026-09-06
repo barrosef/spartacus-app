@@ -115,7 +115,7 @@ export function ChangePasswordScreen({ onBack }: ChangePasswordScreenProps) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
           <Feather name="chevron-left" size={24} color={colors.foreground} />

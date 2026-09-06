@@ -61,7 +61,7 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
     // Error state with retry — a failed read must not leave a blank screen forever.
     if (loadError) {
       return (
-        <SafeAreaView style={styles.safe} edges={["top"]}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.header}>
             <Feather name="chevron-left" size={24} color={colors.foreground}
               onPress={onBack} />
@@ -146,7 +146,7 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
     };
 
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <Feather name="chevron-left" size={24} color={colors.foreground}
             onPress={() => setSub("edit")} />
@@ -217,7 +217,7 @@ export function ClassesScreen({ onBack }: ClassesScreenProps) {
 
   // ── View current classes ──
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Feather name="chevron-left" size={24} color={colors.foreground}
           onPress={onBack} />

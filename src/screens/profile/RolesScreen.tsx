@@ -44,7 +44,7 @@ export function RolesScreen({ onBack }: RolesScreenProps) {
   }, [fetchRoles]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <Feather
           name="chevron-left"

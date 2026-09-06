@@ -62,14 +62,20 @@ export function CommentsSection({
 
   const submit = async (text: string, parentId: string | null, mentions: string[]) => {
     try {
-      await api.post(`/timeline/${entryId}/comments`, { text, parentId, mentions });
+      // O POST já devolve o comentário criado: aproveitá-lo evita uma segunda
+      // ida ao servidor (recarregar a lista inteira) antes de qualquer coisa
+      // aparecer na tela — era metade da espera que fazia o envio parecer
+      // travado.
+      const created = await api.post<Comment>(
+        `/timeline/${entryId}/comments`, { text, parentId, mentions });
+      setComments((prev) => [...prev, created]);
       onCountChange?.(1);
       setReplyingTo(null);
-      await load(true);
     } catch (err: unknown) {
       dialog.alert({ title: "Erro",
         message: err instanceof Error ? err.message : "Não foi possível comentar.",
         tone: "danger" });
+      throw err;   // devolve o texto ao campo em vez de descartar o que foi escrito
     }
   };
 

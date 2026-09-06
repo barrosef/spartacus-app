@@ -238,7 +238,7 @@ export function JustifyAbsenceScreen({
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} hitSlop={8}>
           <Feather name="chevron-left" size={24} color={colors.foreground} />

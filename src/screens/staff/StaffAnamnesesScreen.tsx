@@ -170,7 +170,7 @@ export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
     const selectedName = items.find((i) => i.uid === selectedUid)?.name ?? "Anamnese";
 
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader title={selectedName} onBack={backToList} />
 
         {detailState === "loading" && (
@@ -276,7 +276,7 @@ export function StaffAnamnesesScreen({ onBack }: StaffAnamnesesScreenProps) {
   /* ── List mode ── */
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader title="Anamneses" onBack={onBack} />
 
       {listState === "loading" && (

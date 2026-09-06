@@ -309,7 +309,7 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   /* ── Loading ── */
   if (screen === "loading") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} subtitle={actingAsName ? `Frequência de ${actingAsName}` : undefined} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -321,7 +321,7 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   /* ── Error ── */
   if (screen === "error") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -342,7 +342,7 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
   /* ── Empty ── */
   if (screen === "empty" || !data) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} subtitle={actingAsName ? `Frequência de ${actingAsName}` : undefined} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -388,7 +388,7 @@ export function FrequencyHistoryScreen({ onBack }: FrequencyHistoryScreenProps) 
     (!!selectedMonth && selectedMonth !== monthOptions[0]?.month);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader
         onBack={onBack}
         subtitle={actingAsName ? `Frequência de ${actingAsName}` : undefined}

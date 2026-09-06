@@ -152,7 +152,7 @@ export function StaffMatriculasScreen({
   /* ── Loading ── */
   if (screenState === "loading") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -164,7 +164,7 @@ export function StaffMatriculasScreen({
   /* ── Error ── */
   if (screenState === "error") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -185,7 +185,7 @@ export function StaffMatriculasScreen({
   /* ── Empty ── */
   if (screenState === "empty") {
     return (
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScreenHeader onBack={onBack} />
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
@@ -202,7 +202,7 @@ export function StaffMatriculasScreen({
 
   /* ── Loaded ── */
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <ScreenHeader onBack={onBack} />
 
       {!canAct && (

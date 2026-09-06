@@ -12,6 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius } from "../../theme/tokens";
 
 export interface AppNotification {
@@ -78,6 +79,10 @@ export function NotificationsPanel({
 
   const hasUnread = notifications.some((n) => !n.read);
 
+  // O painel ocupa toda a altura; sem o inset, o último item da lista fica
+  // atrás da barra de navegação do Android sob edge-to-edge.
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={visible}
@@ -140,7 +145,10 @@ export function NotificationsPanel({
           ) : (
             <ScrollView
               style={styles.list}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: insets.bottom + spacing.md },
+              ]}
               showsVerticalScrollIndicator={false}
             >
               {notifications.map((n) => (
