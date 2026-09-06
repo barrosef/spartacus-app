@@ -1,8 +1,6 @@
 // src/components/timeline/comments/CommentsSection.tsx
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StyleSheet,
-} from "react-native";
+import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from "react-native";
 import { api } from "../../../lib/api";
 import { auth } from "../../../lib/firebase";
 import { useDialog } from "../../ui/DialogProvider";
@@ -150,53 +148,44 @@ export function CommentsSection({
 
   return (
     <View style={styles.container}>
-      {/* A lista rola por conta própria; o CommentInput fica FORA dela, como
-          último filho da folha — é o que garante que o teclado nunca o cubra. */}
-      <ScrollView
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {screen === "loading" ? (
-          <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-        ) : screen === "error" ? (
-          <View style={styles.center}>
-            <Text style={styles.errTxt}>Não foi possível carregar.</Text>
-            <View style={{ marginTop: spacing.sm }}>
-              <Button label="Tentar novamente" onPress={() => load()} />
-            </View>
+      {screen === "loading" ? (
+        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+      ) : screen === "error" ? (
+        <View style={styles.center}>
+          <Text style={styles.errTxt}>Não foi possível carregar.</Text>
+          <View style={{ marginTop: spacing.sm }}>
+            <Button label="Tentar novamente" onPress={() => load()} />
           </View>
-        ) : (
-          <>
-            {hiddenTops > 0 ? (
-              <TouchableOpacity
-                style={styles.moreBtn}
-                onPress={() => setVisibleTops((v) => v + TOPS_PAGE)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.moreTxt}>Ver mais ({hiddenTops})</Text>
-              </TouchableOpacity>
-            ) : null}
-            {rows.length === 0 ? (
-              <Text style={styles.empty}>Seja o primeiro a comentar.</Text>
-            ) : (
-              rows.map(({ comment, isReply }) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  isReply={isReply}
-                  currentUid={currentUid}
-                  canModerate={canModerate}
-                  onReply={(c) => setReplyingTo({ commentId: c.parentId ?? c.id, display: c.authorName })}
-                  onEdit={edit}
-                  onDelete={requestRemove}
-                />
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+        </View>
+      ) : (
+        <>
+          {hiddenTops > 0 ? (
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={() => setVisibleTops((v) => v + TOPS_PAGE)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.moreTxt}>Ver mais ({hiddenTops})</Text>
+            </TouchableOpacity>
+          ) : null}
+          {rows.length === 0 ? (
+            <Text style={styles.empty}>Seja o primeiro a comentar.</Text>
+          ) : (
+            rows.map(({ comment, isReply }) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                isReply={isReply}
+                currentUid={currentUid}
+                canModerate={canModerate}
+                onReply={(c) => setReplyingTo({ commentId: c.parentId ?? c.id, display: c.authorName })}
+                onEdit={edit}
+                onDelete={requestRemove}
+              />
+            ))
+          )}
+        </>
+      )}
 
       <CommentInput
         entryId={entryId}
@@ -217,14 +206,13 @@ export function CommentsSection({
 }
 
 const styles = StyleSheet.create({
-  // Corpo da CommentsSheet: ocupa a folha inteira e aplica o padding
-  // horizontal que antes vinha do card do feed.
+  // Renderizada DENTRO do card (estilo Instagram) — sem fundo/borda próprios;
+  // só um separador no topo. O padding horizontal vem do card.
   container: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
   },
-  list: { flex: 1 },
-  listContent: { flexGrow: 1, paddingTop: spacing.xs },
   center: { alignItems: "center", justifyContent: "center", padding: spacing.lg },
   errTxt: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14 },
   empty: { color: colors.mutedForeground, fontFamily: typography.fontBody, fontSize: 14,

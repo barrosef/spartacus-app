@@ -10,7 +10,7 @@ interface AccountCardProps {
   entry: TimelineEntry;
   commentsCount: number;
   commentsOpen: boolean;
-  commentsSheet?: React.ReactNode;
+  commentsSection?: React.ReactNode;
   onToggleComments: () => void;
 }
 
@@ -18,7 +18,7 @@ export function AccountCard({
   entry,
   commentsCount,
   commentsOpen,
-  commentsSheet,
+  commentsSection,
   onToggleComments,
 }: AccountCardProps) {
   const targetName = entry.targetName ?? entry.authorName;
@@ -106,7 +106,7 @@ export function AccountCard({
       </View>
 
       {/* Comentários inline — parte do próprio card */}
-      {commentsSheet}
+      {commentsSection}
     </View>
   );
 }
