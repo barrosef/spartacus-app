@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   TextInput,
@@ -6,11 +6,16 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "../../../theme/tokens";
 import { MentionAutocomplete } from "./MentionAutocomplete";
+import { useFeedScroll } from "./keyboardScroll";
 import type { Mentionable } from "./types";
+
+// Folga entre o campo e o topo do teclado, para não ficar colado.
+const KEYBOARD_GAP = 12;
 
 interface Props {
   entryId: string;
@@ -28,6 +33,49 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
   const [mentions, setMentions] = useState<{ display: string; uid: string }[]>([]);
   const [query, setQuery] = useState<string>("");   // "" = autocomplete escondido
   const [sending, setSending] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const feedScroll = useFeedScroll();
+
+  /**
+   * O campo vive inline no card, no meio do feed: ao focar, o teclado sobe e
+   * cobre justamente a linha onde a pessoa está digitando. Aqui descobrimos o
+   * quanto ele ficou escondido e pedimos ao feed exatamente essa rolagem.
+   *
+   * Campo e área visível são medidos os dois com `measureInWindow`, na mesma
+   * referência. Medir um na janela e calcular o outro a partir de
+   * `Dimensions` + altura do teclado (como antes) mistura dois sistemas: sob
+   * edge-to-edge a altura do teclado inclui a barra de navegação e o
+   * `adjustResize` encolhe a raiz do RN, então as duas contas divergem pela
+   * altura da barra — era esse o desalinhamento.
+   *
+   * Com `adjustResize` a área visível do feed já exclui o teclado, então
+   * nenhuma altura de teclado entra na conta.
+   */
+  const nudgeAboveKeyboard = () => {
+    if (!feedScroll) return;
+    feedScroll.measureViewport(({ y: viewY, height: viewH }) => {
+      inputRef.current?.measureInWindow((_x, y, _w, h) => {
+        const hidden = y + h + KEYBOARD_GAP - (viewY + viewH);
+        if (hidden > 0) feedScroll.scrollBy(hidden);
+      });
+    });
+  };
+
+  const onFocus = () => {
+    // Só faz sentido medir depois que o teclado subiu e o layout encolheu.
+    // Se ele já está aberto (respondendo a outro comentário) não vem evento
+    // novo, e o layout já está no lugar: mede agora.
+    if (Keyboard.isVisible()) {
+      requestAnimationFrame(nudgeAboveKeyboard);
+      return;
+    }
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      sub.remove();
+      // Um frame de folga: no Android o didShow pode chegar antes de o
+      // adjustResize ser aplicado à raiz.
+      requestAnimationFrame(nudgeAboveKeyboard);
+    });
+  };
 
   const onChange = (t: string) => {
     setText(t);
@@ -90,7 +138,7 @@ export function CommentInput({ entryId, replyingTo, onSubmit, onCancelReply }: P
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput
+        <TextInput ref={inputRef} onFocus={onFocus}
           style={styles.input} value={text} onChangeText={onChange}
           placeholder="Escreva um comentário… use @ para mencionar"
           placeholderTextColor={colors.mutedForeground} multiline />

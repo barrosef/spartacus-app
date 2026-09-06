@@ -3,7 +3,7 @@ import { PostCard } from "./PostCard";
 import { AttendanceCard } from "./AttendanceCard";
 import { DonationCard } from "./DonationCard";
 import { AccountCard } from "./AccountCard";
-import { CommentsSheet } from "./comments/CommentsSheet";
+import { CommentsSection } from "./comments/CommentsSection";
 import type { TimelineEntry } from "./types";
 
 interface TimelineCardProps {
@@ -42,24 +42,16 @@ export function TimelineCard({
 
   const toggleComments = () => setShowComments((v) => !v);
 
-  // Os comentários abrem numa folha sobre o feed, não mais inline no card:
-  // inline, o campo de escrita ficava no meio de um feed rolante e sumia
-  // atrás do teclado. Cada card só recebe o nó para renderizar como irmão.
-  //
-  // Montado sempre, e não só quando aberto, para a folha ter animação de
-  // saída. Não custa requisição: com visible={false} o Modal do RN devolve
-  // null, então a CommentsSection — e o fetch dela — só monta ao abrir.
-  const commentsSheet = (
-    <CommentsSheet
-      visible={showComments}
-      onClose={() => setShowComments(false)}
+  // Seção inline renderizada DENTRO do card (estilo Instagram) — cada card
+  // a recebe como nó e a posiciona como último filho do seu container.
+  const commentsSection = showComments ? (
+    <CommentsSection
       entryId={entry.id}
-      count={commentCount}
       canModerate={isStaff}
       viewerRoles={viewerRoles}
       onCountChange={(delta) => setCommentCount((c) => Math.max(0, c + delta))}
     />
-  );
+  ) : null;
 
   switch (entry.type) {
     case "post":
@@ -71,7 +63,7 @@ export function TimelineCard({
           isSocial={isSocial}
           commentsCount={commentCount}
           commentsOpen={showComments}
-          commentsSheet={commentsSheet}
+          commentsSection={commentsSection}
           onLike={() => onLike(entry.id)}
           onViewLikes={() => onViewLikes(entry.id)}
           onToggleComments={toggleComments}
@@ -87,7 +79,7 @@ export function TimelineCard({
           isTarget={isTarget}
           commentsCount={commentCount}
           commentsOpen={showComments}
-          commentsSheet={commentsSheet}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onJustify={() => onJustify(entry.id)}
@@ -103,7 +95,7 @@ export function TimelineCard({
           isTarget={isTarget}
           commentsCount={commentCount}
           commentsOpen={showComments}
-          commentsSheet={commentsSheet}
+          commentsSection={commentsSection}
           onConfirm={() => onConfirm(entry.id)}
           onAbsent={() => onAbsent(entry.id)}
           onRequestReview={() => onRequestReview(entry.id)}
@@ -117,7 +109,7 @@ export function TimelineCard({
           entry={entry}
           commentsCount={commentCount}
           commentsOpen={showComments}
-          commentsSheet={commentsSheet}
+          commentsSection={commentsSection}
           onToggleComments={toggleComments}
         />
       );
